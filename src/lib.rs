@@ -3,11 +3,13 @@ use std::collections::HashMap;
 
 mod error;
 
+mod validator;
+
 #[cfg(test)]
 mod tests;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
-struct Address(String);
+pub struct Address(String);
 
 impl Address {
     pub fn new(addr: &str) -> Self {
@@ -15,23 +17,25 @@ impl Address {
     }
 }
 
-type Policy = Option<Address>;
+pub type Policy = Option<Address>;
+pub const ADA: Policy = None;
 
-struct Output {
+// TODO: Find max size stuff
+pub struct Output {
     value: HashMap<Policy, u64>,
 }
 
-struct UnBuiltTransaction {
+pub struct UnBuiltTransaction {
     inputs: Vec<Output>,
     outputs: Vec<Output>,
 }
 
-struct Transaction {
+pub struct Transaction {
     inputs: Vec<Output>,
     outputs: Vec<Output>,
 }
 
-trait SmartContract {
+pub trait SmartContract {
     type Endpoint;
 
     fn handle_endpoint<D: DataSource>(
@@ -52,12 +56,12 @@ trait SmartContract {
     }
 }
 
-trait DataSource {}
+pub trait DataSource {}
 
-trait TxBuilder {
+pub trait TxBuilder {
     fn build(&self, unbuilt_tx: UnBuiltTransaction) -> Result<Transaction>;
 }
 
-trait TxIssuer {
+pub trait TxIssuer {
     fn issue(&self, tx: Transaction) -> Result<()>;
 }

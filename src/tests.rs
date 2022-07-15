@@ -3,7 +3,8 @@ use crate::{
 };
 use std::cell::RefCell;
 
-mod always_mints_tests;
+mod always_mints_contract;
+mod escrow_contract;
 
 struct MockBackend {
     me: Address,
@@ -11,12 +12,16 @@ struct MockBackend {
 }
 
 impl MockBackend {
-    fn my_balance(&self, policy: &Policy) -> u64 {
+    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
         self.outputs
             .borrow()
             .iter()
-            .filter_map(|(a, o)| if a == &self.me { Some(o) } else { None }) // My outputs
-            .fold(0, |acc, o| acc + o.value[policy]) // Sum up policy values
+            .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
+            .fold(0, |acc, o| acc + o.value[policy]) // Sum up policy values TODO: Panics
+    }
+
+    fn my_balance(&self, policy: &Policy) -> u64 {
+        self.balance_at_address(&self.me, policy)
     }
 }
 

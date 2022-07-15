@@ -1,7 +1,9 @@
 use crate::tests::MockBackend;
-use crate::{Address, DataSource, Output, SmartContract, UnBuiltTransaction};
+use crate::{error, Address, DataSource, Output, SmartContract, UnBuiltTransaction};
 use std::cell::RefCell;
 use std::collections::HashMap;
+
+use error::Result;
 
 struct AlwaysMintsSmartContract;
 
@@ -20,21 +22,23 @@ impl SmartContract for AlwaysMintsSmartContract {
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
         _source: &D,
-    ) -> crate::Result<UnBuiltTransaction> {
-        let unbuilt_tx = match endpoint {
-            Endpoint::Mint { amount } => {
-                let mut value = HashMap::new();
-                let address = Address::new(MINT_POLICY_ADDR);
-                value.insert(Some(address), amount);
-                let output = Output { value };
-                UnBuiltTransaction {
-                    inputs: vec![],
-                    outputs: vec![output],
-                }
-            }
-        };
-        Ok(unbuilt_tx)
+    ) -> Result<UnBuiltTransaction> {
+        match endpoint {
+            Endpoint::Mint { amount } => mint(amount),
+        }
     }
+}
+
+fn mint(amount: u64) -> Result<UnBuiltTransaction> {
+    let mut value = HashMap::new();
+    let address = Address::new(MINT_POLICY_ADDR);
+    value.insert(Some(address), amount);
+    let output = Output { value };
+    let utx = UnBuiltTransaction {
+        inputs: vec![],
+        outputs: vec![output],
+    };
+    Ok(utx)
 }
 
 #[test]
