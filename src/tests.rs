@@ -8,6 +8,7 @@ use std::ops::Deref;
 
 mod always_mints_contract;
 mod escrow_contract;
+mod transfer;
 
 struct FakeBackends {
     me: Address,
@@ -31,7 +32,13 @@ impl FakeBackends {
             .borrow()
             .iter()
             .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
-            .fold(0, |acc, o| acc + o.values[policy]) // Sum up policy values TODO: Panics
+            .fold(0, |acc, o| {
+                if let Some(val) = o.values.get(policy) {
+                    acc + val
+                } else {
+                    acc
+                }
+            }) // Sum up policy values TODO: Panics
     }
 
     fn my_balance(&self, policy: &Policy) -> u64 {
