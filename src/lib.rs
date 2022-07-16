@@ -1,14 +1,16 @@
+use crate::transaction::{Transaction, UnBuiltTransaction};
 use error::*;
 use std::collections::HashMap;
 
 mod error;
 
-mod validator;
+pub mod transaction;
+pub mod validator;
 
 #[cfg(test)]
 mod tests;
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Address(String);
 
 impl Address {
@@ -20,19 +22,13 @@ impl Address {
 pub type Policy = Option<Address>;
 pub const ADA: Policy = None;
 
-// TODO: Find max size stuff
+pub type Value = (Policy, u64);
+
+// TODO: Find max size instead of u64
+#[derive(Clone, PartialEq, Debug)]
 pub struct Output {
-    value: HashMap<Policy, u64>,
-}
-
-pub struct UnBuiltTransaction {
-    inputs: Vec<Output>,
-    outputs: Vec<Output>,
-}
-
-pub struct Transaction {
-    inputs: Vec<Output>,
-    outputs: Vec<Output>,
+    owner: Address,
+    values: HashMap<Policy, u64>,
 }
 
 pub trait SmartContract {
