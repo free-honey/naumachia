@@ -16,13 +16,17 @@ impl SmartContract for TransferADASmartContract {
         endpoint: Self::Endpoint,
         source: &D,
     ) -> crate::Result<UnBuiltTransaction> {
-        let u_tx = UnBuiltTransaction::new();
-        Ok(u_tx)
+        match endpoint {
+            Endpoint::Transfer { amount, recipient } => {
+                let u_tx = UnBuiltTransaction::new().with_transfer(amount, recipient, ADA);
+                Ok(u_tx)
+            }
+        }
     }
 }
 
 #[test]
-fn can_transfer_and_get_remainder() {
+fn can_transfer_and_keep_remainder() {
     let me = Address::new("me");
     let alice = Address::new("alice");
 

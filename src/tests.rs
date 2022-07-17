@@ -1,8 +1,11 @@
+use crate::error::Result;
+use crate::transaction::Action;
 use crate::{
     Address, DataSource, Output, Policy, Transaction, TxBuilder, TxIssuer, UnBuiltTransaction,
     Value,
 };
 use std::cell::RefCell;
+use std::cmp::min;
 use std::collections::HashMap;
 use std::ops::Deref;
 
@@ -27,6 +30,15 @@ impl FakeBackends {
         self.outputs.borrow_mut().push((address, output));
     }
 
+    fn outputs_at_address(&self, address: &Address) -> Vec<Output> {
+        self.outputs
+            .borrow()
+            .clone()
+            .into_iter()
+            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+            .collect()
+    }
+
     fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
         self.outputs
             .borrow()
@@ -38,11 +50,60 @@ impl FakeBackends {
                 } else {
                     acc
                 }
-            }) // Sum up policy values TODO: Panics
+            }) // Sum up policy values
     }
 
     fn my_balance(&self, policy: &Policy) -> u64 {
         self.balance_at_address(&self.me, policy)
+    }
+
+    // TODO: Dedupe
+    fn handle_actions(&self, actions: Vec<Action>) -> Result<(Vec<Output>, Vec<Output>)> {
+        let mut min_input_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
+        let mut min_output_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
+        for action in actions {
+            match action {
+                Action::Transfer {
+                    amount,
+                    recipient,
+                    policy,
+                } => {
+                    // Input
+                    let owner = self.me.clone();
+                    let in_policy = policy.clone();
+                    if let Some(h_map) = min_input_values.get(&owner) {
+                        let mut inner = h_map.borrow_mut();
+                        let mut new_total = amount;
+                        if let Some(total) = inner.get(&in_policy) {
+                            new_total += total;
+                        }
+                        inner.insert(in_policy, new_total);
+                    } else {
+                        let mut new_map = HashMap::new();
+                        new_map.insert(in_policy, amount);
+                        min_input_values.insert(owner, RefCell::new(new_map));
+                    }
+                    // Output
+                    let owner = recipient;
+                    let out_policy = policy.clone();
+                    if let Some(h_map) = min_output_values.get(&owner) {
+                        let mut inner = h_map.borrow_mut();
+                        let mut new_total = amount;
+                        if let Some(total) = inner.get(&out_policy) {
+                            new_total += total;
+                        }
+                        inner.insert(out_policy, new_total);
+                    } else {
+                        let mut new_map = HashMap::new();
+                        new_map.insert(out_policy, amount);
+                        min_output_values.insert(owner, RefCell::new(new_map));
+                    }
+                }
+            }
+        }
+        dbg!(min_input_values);
+        dbg!(min_output_values);
+        todo!()
     }
 }
 
@@ -52,8 +113,9 @@ impl TxBuilder for FakeBackends {
     /// No Fees, MinAda, or Collateral
     fn build(&self, unbuilt_tx: UnBuiltTransaction) -> crate::Result<Transaction> {
         let UnBuiltTransaction {
-            inputs,
+            mut inputs,
             output_values,
+            actions,
         } = unbuilt_tx;
         let combined_inputs = combined_totals(&inputs);
 
@@ -61,10 +123,13 @@ impl TxBuilder for FakeBackends {
             owner: self.me.clone(),
             values: combined_inputs,
         };
-        Ok(Transaction {
-            inputs,
-            outputs: vec![output],
-        })
+        let mut outputs = Vec::new();
+        outputs.push(output);
+        let (action_inputs, action_outputs) = self.handle_actions(actions)?;
+        inputs.extend(action_inputs);
+        outputs.extend(action_outputs);
+
+        Ok(Transaction { inputs, outputs })
     }
 }
 

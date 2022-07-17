@@ -32,6 +32,16 @@ impl UnBuiltTransaction {
         self.output_values.push(output_value);
         self
     }
+
+    pub fn with_transfer(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
+        let action = Action::Transfer {
+            amount,
+            recipient,
+            policy,
+        };
+        self.actions.push(action);
+        self
+    }
 }
 
 #[derive(PartialEq, Debug)]
