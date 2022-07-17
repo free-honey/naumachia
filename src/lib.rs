@@ -10,6 +10,8 @@ pub mod validator;
 #[cfg(test)]
 mod tests;
 
+// TODO: As of now, wallet, script, and policy addresses are the same. This is an
+//       over-simplification in many ways. Wallet and address also need to be disambiguated.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Address(String);
 
@@ -24,7 +26,8 @@ pub const ADA: Policy = None;
 
 pub type Value = (Policy, u64);
 
-// TODO: Find max size instead of u64
+// TODO: Find max size instead of u64. It might not actually matter since we'll never be able to
+//       select more than actually exists on chain. But maybe for minting?
 #[derive(Clone, PartialEq, Debug)]
 pub struct Output {
     owner: Address,
@@ -54,6 +57,8 @@ pub trait SmartContract {
 
 pub trait DataSource {}
 
+// TODO: I have a suspiscion that a lot of this can be in a struct and just the input selection will
+//       need to be injected? TBD.
 pub trait TxBuilder {
     fn build(&self, unbuilt_tx: UnBuiltTransaction) -> Result<Transaction>;
 }
