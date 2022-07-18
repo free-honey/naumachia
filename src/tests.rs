@@ -92,7 +92,6 @@ impl FakeBackends {
         Ok((inputs, outputs))
     }
 
-    // Naive
     fn select_inputs_for_all(
         &self,
         values: Vec<(Address, Vec<(Policy, u64)>)>,
@@ -104,24 +103,46 @@ impl FakeBackends {
             total_inputs.extend(outputs);
             total_remainders.extend(remainders)
         }
+        dbg!(&total_inputs);
         Ok((total_inputs, total_remainders))
     }
 
+    // LOL Super Naive Solution, just select ALL inputs!
+    // TODO: Real solution prolly, but this is _good_enough_ for tests
     fn select_inputs_for_one(
         &self,
         address: &Address,
         values: &Vec<(Policy, u64)>,
     ) -> Result<(Vec<Output>, Vec<(u64, Address, Policy)>)> {
-        let address_inputs = self.outputs_at_address(address);
-        todo!();
+        let mut unfilled_values = values.clone();
+        let mut address_values = HashMap::new();
+        let inputs = self.outputs_at_address(address);
+        &inputs
+            .iter()
+            .flat_map(|o| o.values.iter().collect::<Vec<_>>())
+            .for_each(|(policy, amt)| {
+                let mut new_total = *amt;
+                if let Some(total) = address_values.get(policy) {
+                    new_total += total;
+                }
+                address_values.insert(policy, new_total);
+            });
+        let mut remainders = Vec::new();
+        Ok((inputs, remainders))
     }
 
     fn create_outputs_for(
         &self,
         values: Vec<(Address, Vec<(Policy, u64)>)>,
     ) -> Result<Vec<Output>> {
-        // todo!()
-        Ok(Vec::new())
+        let outputs = values
+            .into_iter()
+            .map(|(owner, val_vec)| {
+                let values = val_vec.into_iter().collect();
+                Output { owner, values }
+            })
+            .collect();
+        Ok(outputs)
     }
 }
 
