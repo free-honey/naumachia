@@ -7,6 +7,8 @@ mod error;
 pub mod transaction;
 pub mod validator;
 
+pub mod fakes;
+
 #[cfg(test)]
 mod tests;
 
@@ -55,7 +57,9 @@ pub trait SmartContract {
     }
 }
 
-pub trait DataSource {}
+pub trait DataSource {
+    fn me(&self) -> &Address;
+}
 
 // TODO: I have a suspiscion that a lot of this can be in a struct and just the input selection will
 //       need to be injected? TBD.

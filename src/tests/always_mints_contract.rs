@@ -1,7 +1,7 @@
-use crate::tests::FakeBackends;
-use crate::{error, Address, DataSource, SmartContract, UnBuiltTransaction};
+use crate::{error, Address, DataSource, Policy, SmartContract, UnBuiltTransaction};
 use std::cell::RefCell;
 
+use crate::fakes::FakeBackends;
 use error::Result;
 
 struct AlwaysMintsSmartContract;
@@ -9,7 +9,6 @@ struct AlwaysMintsSmartContract;
 enum Endpoint {
     Mint {
         amount: u64, // TODO: Too big?
-        recipient: Address,
     },
 }
 
@@ -20,18 +19,19 @@ impl SmartContract for AlwaysMintsSmartContract {
 
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
-        _source: &D,
+        source: &D,
     ) -> Result<UnBuiltTransaction> {
         match endpoint {
-            Endpoint::Mint { amount, recipient } => mint(amount, recipient),
+            Endpoint::Mint { amount } => {
+                let recipient = source.me().clone();
+                mint(amount, recipient, Some(Address::new(MINT_POLICY_ADDR)))
+            }
         }
     }
 }
 
-fn mint(amount: u64, recipient: Address) -> Result<UnBuiltTransaction> {
-    let policy_addr = Address::new(MINT_POLICY_ADDR);
-    let value = (Some(policy_addr), amount);
-    let utx = UnBuiltTransaction::new().with_output_value((recipient, value));
+fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransaction> {
+    let utx = UnBuiltTransaction::new().with_mint(amount, recipient, policy);
     Ok(utx)
 }
 
@@ -44,10 +44,7 @@ fn can_mint_from_always_true_minting_policy() {
     };
     // Call mint endpoint
     let amount = 69;
-    let call = Endpoint::Mint {
-        amount,
-        recipient: me,
-    };
+    let call = Endpoint::Mint { amount };
     AlwaysMintsSmartContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
     // Wait 1 block? IDK if we need to wait. That's an implementation detail of a specific data
     // source I think? Could be wrong.

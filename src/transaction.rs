@@ -6,6 +6,11 @@ pub enum Action {
         recipient: Address,
         policy: Policy,
     },
+    Mint {
+        amount: u64,
+        recipient: Address,
+        policy: Policy,
+    },
 }
 
 pub struct UnBuiltTransaction {
@@ -23,18 +28,28 @@ impl UnBuiltTransaction {
         }
     }
 
-    pub fn with_input(mut self, input: Output) -> Self {
-        self.inputs.push(input);
-        self
-    }
-
-    pub fn with_output_value(mut self, output_value: (Address, Value)) -> Self {
-        self.output_values.push(output_value);
-        self
-    }
+    // pub fn with_input(mut self, input: Output) -> Self {
+    //     self.inputs.push(input);
+    //     self
+    // }
+    //
+    // pub fn with_output_value(mut self, output_value: (Address, Value)) -> Self {
+    //     self.output_values.push(output_value);
+    //     self
+    // }
 
     pub fn with_transfer(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
         let action = Action::Transfer {
+            amount,
+            recipient,
+            policy,
+        };
+        self.actions.push(action);
+        self
+    }
+
+    pub fn with_mint(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
+        let action = Action::Mint {
             amount,
             recipient,
             policy,

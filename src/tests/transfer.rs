@@ -1,4 +1,4 @@
-use crate::tests::FakeBackends;
+use crate::fakes::FakeBackends;
 use crate::{Address, DataSource, Output, SmartContract, UnBuiltTransaction, ADA};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -53,8 +53,6 @@ fn can_transfer_and_keep_remainder() {
         recipient: alice.clone(),
     };
 
-    println!("{:?}", &backend);
-
     TransferADASmartContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
 
     let alice_expected = amount;
@@ -68,6 +66,4 @@ fn can_transfer_and_keep_remainder() {
     let expected_extra_amount = extra_amount;
     let actual_extra_amount = backend.balance_at_address(&me, &extra_policy);
     assert_eq!(expected_extra_amount, actual_extra_amount);
-
-    println!("{:?}", &backend);
 }
