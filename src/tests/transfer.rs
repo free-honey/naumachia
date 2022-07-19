@@ -21,7 +21,7 @@ impl SmartContract for TransferADASmartContract {
     ) -> crate::Result<UnBuiltTransaction> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
-                let u_tx = UnBuiltTransaction::new().with_transfer(amount, recipient, ADA);
+                let u_tx = UnBuiltTransaction::default().with_transfer(amount, recipient, ADA);
                 Ok(u_tx)
             }
         }

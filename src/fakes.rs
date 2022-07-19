@@ -94,6 +94,8 @@ impl FakeBackends {
         Ok((inputs, outputs))
     }
 
+    // TODO: Remove allow
+    #[allow(clippy::type_complexity)]
     fn select_inputs_for_all(
         &self,
         values: Vec<(Address, Vec<(Policy, u64)>)>,
@@ -111,10 +113,12 @@ impl FakeBackends {
     // LOL Super Naive Solution, just select ALL inputs!
     // TODO: Use Random Improve prolly: https://cips.cardano.org/cips/cip2/
     //       but this is _good_enough_ for tests.
+    // TODO: Remove allow
+    #[allow(clippy::type_complexity)]
     fn select_inputs_for_one(
         &self,
         address: &Address,
-        values: &Vec<(Policy, u64)>,
+        values: &[(Policy, u64)],
     ) -> Result<(Vec<Output>, Vec<(u64, Address, Policy)>)> {
         let mut address_values = HashMap::new();
         let all_address_outputs = self.outputs_at_address(address);
@@ -145,7 +149,7 @@ impl FakeBackends {
         }
         let other_remainders: Vec<_> = address_values
             .into_iter()
-            .map(|(policy, amt)| (amt, address.clone(), policy.clone()))
+            .map(|(policy, amt)| (amt, address.clone(), policy))
             .collect();
         remainders.extend(other_remainders);
         Ok((all_address_outputs, remainders))
@@ -212,7 +216,7 @@ impl TxBuilder for FakeBackends {
         let mut outputs = Vec::new();
         let combined_inputs = combined_totals(&inputs);
 
-        if combined_inputs.len() > 0 {
+        if !combined_inputs.is_empty() {
             let output = Output::new(self.me.clone(), combined_inputs);
             outputs.push(output);
         }

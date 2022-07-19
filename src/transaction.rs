@@ -14,6 +14,7 @@ pub enum Action {
     },
 }
 
+#[derive(Default)]
 pub struct UnBuiltTransaction {
     pub inputs: Vec<Output>,
     pub output_values: Vec<(Address, Value)>,
@@ -21,14 +22,6 @@ pub struct UnBuiltTransaction {
 }
 
 impl UnBuiltTransaction {
-    pub fn new() -> Self {
-        UnBuiltTransaction {
-            inputs: vec![],
-            output_values: vec![],
-            actions: vec![],
-        }
-    }
-
     // pub fn with_input(mut self, input: Output) -> Self {
     //     self.inputs.push(input);
     //     self

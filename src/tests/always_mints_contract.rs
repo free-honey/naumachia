@@ -33,7 +33,7 @@ impl SmartContract for AlwaysMintsSmartContract {
 }
 
 fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransaction> {
-    let utx = UnBuiltTransaction::new().with_mint(amount, recipient, policy);
+    let utx = UnBuiltTransaction::default().with_mint(amount, recipient, policy);
     Ok(utx)
 }
 
@@ -41,7 +41,7 @@ fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransa
 fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
     let backend = FakeBackends {
-        me: me.clone(),
+        me,
         outputs: RefCell::new(vec![]),
     };
     // Call mint endpoint
