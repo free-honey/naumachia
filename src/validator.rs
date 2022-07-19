@@ -1,4 +1,4 @@
-use crate::Address;
+use crate::address::Address;
 
 // TODO: Move
 pub struct TxContext;

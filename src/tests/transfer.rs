@@ -1,5 +1,8 @@
+use crate::address::ADA;
 use crate::fakes::FakeBackends;
-use crate::{Address, DataSource, Output, SmartContract, UnBuiltTransaction, ADA};
+use crate::output::Output;
+use crate::smart_contract::{DataSource, SmartContract};
+use crate::{Address, UnBuiltTransaction};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -36,10 +39,7 @@ fn can_transfer_and_keep_remainder() {
     let extra_policy = Some(Address::new("arcade token"));
     let extra_amount = 50;
     values.insert(extra_policy.clone(), extra_amount);
-    let input = Output {
-        owner: me.clone(),
-        values: values.clone(),
-    };
+    let input = Output::new(me.clone(), values.clone());
 
     let amount = 590;
 

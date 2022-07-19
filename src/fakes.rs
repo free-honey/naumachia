@@ -1,11 +1,12 @@
+use crate::address::{Address, Policy};
 use crate::transaction::Action;
-use crate::{
-    Address, DataSource, Output, Policy, Transaction, TxBuilder, TxIssuer, UnBuiltTransaction,
-};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::error::Result;
+use crate::output::Output;
+use crate::smart_contract::{DataSource, TxBuilder, TxIssuer};
+use crate::{Transaction, UnBuiltTransaction};
 
 #[derive(Debug)]
 pub struct FakeBackends {
@@ -41,7 +42,7 @@ impl FakeBackends {
             .iter()
             .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
             .fold(0, |acc, o| {
-                if let Some(val) = o.values.get(policy) {
+                if let Some(val) = o.values().get(policy) {
                     acc + val
                 } else {
                     acc
@@ -120,7 +121,7 @@ impl FakeBackends {
         all_address_outputs
             .clone()
             .into_iter()
-            .flat_map(|o| o.values.into_iter().collect::<Vec<_>>())
+            .flat_map(|o| o.values().clone().into_iter().collect::<Vec<_>>())
             .for_each(|(policy, amt)| {
                 let mut new_total = amt;
                 if let Some(total) = address_values.get(&policy) {
@@ -144,7 +145,7 @@ impl FakeBackends {
         }
         let other_remainders: Vec<_> = address_values
             .into_iter()
-            .map(|(policy, amt)| (amt, address.clone(), policy))
+            .map(|(policy, amt)| (amt, address.clone(), policy.clone()))
             .collect();
         remainders.extend(other_remainders);
         Ok((all_address_outputs, remainders))
@@ -158,7 +159,7 @@ impl FakeBackends {
             .into_iter()
             .map(|(owner, val_vec)| {
                 let values = val_vec.into_iter().collect();
-                Output { owner, values }
+                Output::new(owner, values)
             })
             .collect();
         Ok(outputs)
@@ -212,10 +213,7 @@ impl TxBuilder for FakeBackends {
         let combined_inputs = combined_totals(&inputs);
 
         if combined_inputs.len() > 0 {
-            let output = Output {
-                owner: self.me.clone(),
-                values: combined_inputs,
-            };
+            let output = Output::new(self.me.clone(), combined_inputs);
             outputs.push(output);
         }
 
@@ -230,7 +228,7 @@ impl TxBuilder for FakeBackends {
 fn combined_totals(inputs: &Vec<Output>) -> HashMap<Policy, u64> {
     let mut combined_values = HashMap::new();
     for input in inputs {
-        for (policy, amount) in input.values.iter() {
+        for (policy, amount) in input.values().iter() {
             let mut new_total: u64 = *amount;
             if let Some(total) = combined_values.get(policy) {
                 new_total += total;
@@ -254,7 +252,7 @@ impl TxIssuer for FakeBackends {
         }
 
         for tx_o in tx.outputs() {
-            my_outputs.push((tx_o.owner.clone(), tx_o.clone()))
+            my_outputs.push((tx_o.owner().clone(), tx_o.clone()))
         }
         Ok(())
     }

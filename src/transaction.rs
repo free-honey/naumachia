@@ -1,4 +1,5 @@
-use crate::{Address, Output, Policy, Value};
+use crate::address::{Address, Policy};
+use crate::output::{Output, Value};
 
 pub enum Action {
     Transfer {

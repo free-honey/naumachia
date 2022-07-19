@@ -1,7 +1,9 @@
-use crate::{error, Address, DataSource, Policy, SmartContract, UnBuiltTransaction};
+use crate::{error, Policy, UnBuiltTransaction};
 use std::cell::RefCell;
 
+use crate::address::Address;
 use crate::fakes::FakeBackends;
+use crate::smart_contract::{DataSource, SmartContract};
 use error::Result;
 
 struct AlwaysMintsSmartContract;
