@@ -33,6 +33,7 @@ fn can_transfer_and_keep_remainder() {
     let input_amount = 666;
     let mut values = HashMap::new();
     values.insert(ADA, input_amount);
+    values.insert(Some(Address::new("arcade token")), 50);
     let input = Output {
         owner: me.clone(),
         values: values.clone(),

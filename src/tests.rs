@@ -87,7 +87,7 @@ impl FakeBackends {
 
         let out_vecs = nested_map_to_vecs(min_output_values);
         dbg!(&out_vecs);
-        let outputs = self.create_outputs_for(Vec::new())?;
+        let outputs = self.create_outputs_for(out_vecs)?;
 
         Ok((inputs, outputs))
     }
@@ -108,27 +108,46 @@ impl FakeBackends {
     }
 
     // LOL Super Naive Solution, just select ALL inputs!
-    // TODO: Real solution prolly, but this is _good_enough_ for tests
+    // TODO: Real solution prolly: https://cips.cardano.org/cips/cip2/
+    //       but this is _good_enough_ for tests. Random Improve is prolly the way to go eventually.
     fn select_inputs_for_one(
         &self,
         address: &Address,
         values: &Vec<(Policy, u64)>,
     ) -> Result<(Vec<Output>, Vec<(u64, Address, Policy)>)> {
-        let mut unfilled_values = values.clone();
         let mut address_values = HashMap::new();
-        let inputs = self.outputs_at_address(address);
-        &inputs
-            .iter()
-            .flat_map(|o| o.values.iter().collect::<Vec<_>>())
+        let all_address_outputs = self.outputs_at_address(address);
+        &all_address_outputs
+            .clone()
+            .into_iter()
+            .flat_map(|o| o.values.into_iter().collect::<Vec<_>>())
             .for_each(|(policy, amt)| {
-                let mut new_total = *amt;
-                if let Some(total) = address_values.get(policy) {
+                let mut new_total = amt;
+                if let Some(total) = address_values.get(&policy) {
                     new_total += total;
                 }
                 address_values.insert(policy, new_total);
             });
         let mut remainders = Vec::new();
-        Ok((inputs, remainders))
+        // TODO: REfactor :(
+        for (policy, amt) in values.iter() {
+            if let Some(available) = address_values.remove(policy) {
+                if amt <= &available {
+                    let remaining = available - amt;
+                    remainders.push((remaining, address.clone(), policy.clone()));
+                } else {
+                    return Err(format!("Not enough {:?}", policy));
+                }
+            } else {
+                return Err(format!("Not enough {:?}", policy));
+            }
+        }
+        let other_remainders: Vec<_> = address_values
+            .into_iter()
+            .map(|(policy, amt)| (amt, address.clone(), policy))
+            .collect();
+        remainders.extend(other_remainders);
+        Ok((all_address_outputs, remainders))
     }
 
     fn create_outputs_for(
