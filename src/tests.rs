@@ -1,20 +1,17 @@
-use crate::error::Result;
-use crate::transaction::Action;
 use crate::{
-    Address, DataSource, Output, Policy, Transaction, TxBuilder, TxIssuer, UnBuiltTransaction,
-    Value,
+    error::Result, transaction::Action, Address, DataSource, Output, Policy, Transaction,
+    TxBuilder, TxIssuer, UnBuiltTransaction,
 };
-use std::cell::RefCell;
-use std::cmp::min;
-use std::collections::HashMap;
-use std::ops::Deref;
+use std::{cell::RefCell, collections::HashMap};
 
 mod always_mints_contract;
 mod escrow_contract;
 mod transfer;
 
+#[derive(Debug)]
 struct FakeBackends {
     me: Address,
+    // TODO: Might make sense to make this swapable to
     outputs: RefCell<Vec<(Address, Output)>>,
 }
 
@@ -77,7 +74,6 @@ impl FakeBackends {
         }
         // inputs
         let in_vecs = nested_map_to_vecs(min_input_values);
-        dbg!(&in_vecs);
         let (inputs, remainders) = self.select_inputs_for_all(in_vecs)?;
 
         // outputs
@@ -86,7 +82,6 @@ impl FakeBackends {
         });
 
         let out_vecs = nested_map_to_vecs(min_output_values);
-        dbg!(&out_vecs);
         let outputs = self.create_outputs_for(out_vecs)?;
 
         Ok((inputs, outputs))
@@ -103,13 +98,12 @@ impl FakeBackends {
             total_inputs.extend(outputs);
             total_remainders.extend(remainders)
         }
-        dbg!(&total_inputs);
         Ok((total_inputs, total_remainders))
     }
 
     // LOL Super Naive Solution, just select ALL inputs!
-    // TODO: Real solution prolly: https://cips.cardano.org/cips/cip2/
-    //       but this is _good_enough_ for tests. Random Improve is prolly the way to go eventually.
+    // TODO: Use Random Improve prolly: https://cips.cardano.org/cips/cip2/
+    //       but this is _good_enough_ for tests.
     fn select_inputs_for_one(
         &self,
         address: &Address,
@@ -117,7 +111,7 @@ impl FakeBackends {
     ) -> Result<(Vec<Output>, Vec<(u64, Address, Policy)>)> {
         let mut address_values = HashMap::new();
         let all_address_outputs = self.outputs_at_address(address);
-        &all_address_outputs
+        all_address_outputs
             .clone()
             .into_iter()
             .flat_map(|o| o.values.into_iter().collect::<Vec<_>>())
@@ -201,17 +195,20 @@ impl TxBuilder for FakeBackends {
     fn build(&self, unbuilt_tx: UnBuiltTransaction) -> crate::Result<Transaction> {
         let UnBuiltTransaction {
             mut inputs,
-            output_values,
             actions,
+            ..
         } = unbuilt_tx;
+        let mut outputs = Vec::new();
         let combined_inputs = combined_totals(&inputs);
 
-        let output = Output {
-            owner: self.me.clone(),
-            values: combined_inputs,
-        };
-        let mut outputs = Vec::new();
-        outputs.push(output);
+        if combined_inputs.len() > 0 {
+            let output = Output {
+                owner: self.me.clone(),
+                values: combined_inputs,
+            };
+            outputs.push(output);
+        }
+
         let (action_inputs, action_outputs) = self.handle_actions(actions)?;
         inputs.extend(action_inputs);
         outputs.extend(action_outputs);
@@ -235,8 +232,18 @@ fn combined_totals(inputs: &Vec<Output>) -> HashMap<Policy, u64> {
 }
 
 impl TxIssuer for FakeBackends {
-    fn issue(&self, tx: Transaction) -> crate::Result<()> {
+    fn issue(&self, tx: Transaction) -> Result<()> {
+        dbg!(&tx);
         let mut my_outputs = self.outputs.borrow_mut();
+        for tx_i in tx.inputs() {
+            let index = tx
+                .inputs()
+                .iter()
+                .position(|x| x == tx_i)
+                .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
+            my_outputs.remove(index);
+        }
+
         for tx_o in tx.outputs() {
             my_outputs.push((tx_o.owner.clone(), tx_o.clone()))
         }

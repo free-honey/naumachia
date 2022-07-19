@@ -54,4 +54,8 @@ impl Transaction {
     pub fn outputs(&self) -> &Vec<Output> {
         &self.outputs
     }
+
+    pub fn inputs(&self) -> &Vec<Output> {
+        &self.inputs
+    }
 }

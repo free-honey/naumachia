@@ -1,8 +1,7 @@
-use crate::tests::FakeBackends;
-use crate::validator::{TxContext, ValidatorCode};
-use crate::{Address, DataSource, Output, SmartContract, UnBuiltTransaction, ADA};
-use std::cell::RefCell;
-use std::collections::HashMap;
+// use crate::tests::FakeBackends;
+// use crate::validator::{TxContext, ValidatorCode};
+// use crate::{Address, DataSource, Output, SmartContract, UnBuiltTransaction, ADA};
+// use std::cell::RefCell;
 
 // {-# INLINABLE meetsTarget #-}
 // meetsTarget :: TxInfo -> EscrowTarget DatumHash -> Bool
@@ -26,40 +25,41 @@ use std::collections::HashMap;
 //         Refund ->
 //             traceIfFalse "escrowDeadline-before" ((escrowDeadline - 1) `before` txInfoValidRange scriptContextTxInfo)
 //             && traceIfFalse "txSignedBy" (scriptContextTxInfo `txSignedBy` unPaymentPubKeyHash contributor)
-struct EscrowValidatorScript;
 
-impl ValidatorCode for EscrowValidatorScript {
-    fn execute<D, R>(datum: D, redeemer: R, ctx: TxContext) -> bool {
-        todo!()
-    }
+// pub struct EscrowValidatorScript;
 
-    fn address() -> Address {
-        todo!()
-    }
-}
-
-struct EscrowContract;
-
-enum Endpoint {
-    Escrow { amount: u64 },
-}
-
-impl SmartContract for EscrowContract {
-    type Endpoint = Endpoint;
-
-    fn handle_endpoint<D: DataSource>(
-        endpoint: Self::Endpoint,
-        source: &D,
-    ) -> crate::Result<UnBuiltTransaction> {
-        match endpoint {
-            Endpoint::Escrow { amount } => escrow(amount),
-        }
-    }
-}
-
-fn escrow(amount: u64) -> crate::Result<UnBuiltTransaction> {
-    todo!()
-}
+// impl ValidatorCode for EscrowValidatorScript {
+//     fn execute<D, R>(datum: D, redeemer: R, ctx: TxContext) -> bool {
+//         todo!()
+//     }
+//
+//     fn address() -> Address {
+//         todo!()
+//     }
+// }
+//
+// struct EscrowContract;
+//
+// enum Endpoint {
+//     Escrow { amount: u64 },
+// }
+//
+// impl SmartContract for EscrowContract {
+//     type Endpoint = Endpoint;
+//
+//     fn handle_endpoint<D: DataSource>(
+//         endpoint: Self::Endpoint,
+//         source: &D,
+//     ) -> crate::Result<UnBuiltTransaction> {
+//         match endpoint {
+//             Endpoint::Escrow { amount } => escrow(amount),
+//         }
+//     }
+// }
+//
+// fn escrow(amount: u64) -> crate::Result<UnBuiltTransaction> {
+//     todo!()
+// }
 
 // #[test]
 // fn escrow__can_create_instance() {

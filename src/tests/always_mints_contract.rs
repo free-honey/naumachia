@@ -1,7 +1,6 @@
 use crate::tests::FakeBackends;
-use crate::{error, Address, DataSource, Output, SmartContract, UnBuiltTransaction};
+use crate::{error, Address, DataSource, SmartContract, UnBuiltTransaction};
 use std::cell::RefCell;
-use std::collections::HashMap;
 
 use error::Result;
 

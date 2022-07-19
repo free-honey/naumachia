@@ -1,5 +1,5 @@
 use crate::tests::FakeBackends;
-use crate::{Address, DataSource, Output, Policy, SmartContract, UnBuiltTransaction, ADA};
+use crate::{Address, DataSource, Output, SmartContract, UnBuiltTransaction, ADA};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -14,7 +14,7 @@ impl SmartContract for TransferADASmartContract {
 
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
-        source: &D,
+        _source: &D,
     ) -> crate::Result<UnBuiltTransaction> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
@@ -33,7 +33,9 @@ fn can_transfer_and_keep_remainder() {
     let input_amount = 666;
     let mut values = HashMap::new();
     values.insert(ADA, input_amount);
-    values.insert(Some(Address::new("arcade token")), 50);
+    let extra_policy = Some(Address::new("arcade token"));
+    let extra_amount = 50;
+    values.insert(extra_policy.clone(), extra_amount);
     let input = Output {
         owner: me.clone(),
         values: values.clone(),
@@ -51,13 +53,21 @@ fn can_transfer_and_keep_remainder() {
         recipient: alice.clone(),
     };
 
+    println!("{:?}", &backend);
+
     TransferADASmartContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
 
     let alice_expected = amount;
-    let me_expected = input_amount - amount;
-
     let alice_actual = backend.balance_at_address(&alice, &ADA);
-    let me_actual = backend.balance_at_address(&me, &ADA);
     assert_eq!(alice_expected, alice_actual);
+
+    let me_expected = input_amount - amount;
+    let me_actual = backend.balance_at_address(&me, &ADA);
     assert_eq!(me_expected, me_actual);
+
+    let expected_extra_amount = extra_amount;
+    let actual_extra_amount = backend.balance_at_address(&me, &extra_policy);
+    assert_eq!(expected_extra_amount, actual_extra_amount);
+
+    println!("{:?}", &backend);
 }
