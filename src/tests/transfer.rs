@@ -44,7 +44,7 @@ fn can_transfer_and_keep_remainder() {
     let amount = 590;
 
     let backend = FakeBackends {
-        me: me.clone(),
+        signer: me.clone(),
         outputs: RefCell::new(vec![(me.clone(), input)]),
     };
 

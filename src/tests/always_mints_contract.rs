@@ -41,7 +41,7 @@ fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransa
 fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
     let backend = FakeBackends {
-        me,
+        signer: me,
         outputs: RefCell::new(vec![]),
     };
     // Call mint endpoint

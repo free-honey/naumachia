@@ -8,19 +8,85 @@ use crate::output::Output;
 use crate::smart_contract::{DataSource, TxBuilder, TxIssuer};
 use crate::{Transaction, UnBuiltTransaction};
 
+pub struct FakeBackendsBuilder {
+    signer: Address,
+    outputs: Vec<(Address, Output)>,
+}
+
+impl FakeBackendsBuilder {
+    pub fn new(signer: Address) -> FakeBackendsBuilder {
+        FakeBackendsBuilder {
+            signer,
+            outputs: Vec::new(),
+        }
+    }
+
+    pub fn start_output(self, owner: Address) -> OutputBuilder {
+        OutputBuilder {
+            inner: self,
+            owner,
+            values: HashMap::new(),
+        }
+    }
+
+    fn add_output(&mut self, address: Address, output: Output) {
+        self.outputs.push((address, output))
+    }
+
+    pub fn build(&self) -> FakeBackends {
+        FakeBackends {
+            signer: self.signer.clone(),
+            outputs: RefCell::new(self.outputs.clone()),
+        }
+    }
+}
+
+pub struct OutputBuilder {
+    inner: FakeBackendsBuilder,
+    owner: Address,
+    values: HashMap<Policy, u64>,
+}
+
+impl OutputBuilder {
+    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder {
+        let mut new_total = amount;
+        if let Some(total) = self.values.get(&policy) {
+            new_total += total;
+        }
+        self.values.insert(policy, new_total);
+        self
+    }
+
+    pub fn finish_output(self) -> FakeBackendsBuilder {
+        let OutputBuilder {
+            mut inner,
+            owner,
+            values,
+        } = self;
+        let address = owner.clone();
+        let output = Output::new(address, values);
+        inner.add_output(owner, output);
+        inner
+    }
+}
+
 #[derive(Debug)]
 pub struct FakeBackends {
-    pub me: Address,
+    pub signer: Address,
     // TODO: Might make sense to make this swapable to
     pub outputs: RefCell<Vec<(Address, Output)>>,
 }
 
 impl FakeBackends {
-    pub fn new(me: Address) -> Self {
+    pub fn new(signer: Address) -> Self {
         FakeBackends {
-            me,
+            signer,
             outputs: RefCell::new(vec![]),
         }
+    }
+
+    pub fn change_signer(&mut self, new_signer: Address) {
+        self.signer = new_signer;
     }
 
     pub fn with_output(&mut self, address: Address, output: Output) {
@@ -51,7 +117,7 @@ impl FakeBackends {
     }
 
     pub fn my_balance(&self, policy: &Policy) -> u64 {
-        self.balance_at_address(&self.me, policy)
+        self.balance_at_address(&self.signer, policy)
     }
 
     fn handle_actions(&self, actions: Vec<Action>) -> Result<(Vec<Output>, Vec<Output>)> {
@@ -65,7 +131,7 @@ impl FakeBackends {
                     policy,
                 } => {
                     // Input
-                    add_amount_to_nested_map(&mut min_input_values, amount, &self.me, &policy);
+                    add_amount_to_nested_map(&mut min_input_values, amount, &self.signer, &policy);
 
                     // Output
                     add_amount_to_nested_map(&mut min_output_values, amount, &recipient, &policy);
@@ -201,7 +267,7 @@ fn add_amount_to_nested_map(
 
 impl DataSource for FakeBackends {
     fn me(&self) -> &Address {
-        &self.me
+        &self.signer
     }
 }
 
@@ -217,7 +283,7 @@ impl TxBuilder for FakeBackends {
         let combined_inputs = combined_totals(&inputs);
 
         if !combined_inputs.is_empty() {
-            let output = Output::new(self.me.clone(), combined_inputs);
+            let output = Output::new(self.signer.clone(), combined_inputs);
             outputs.push(output);
         }
 
