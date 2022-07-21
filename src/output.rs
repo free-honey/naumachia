@@ -1,31 +1,39 @@
 use crate::{Address, Policy};
 use std::collections::HashMap;
 
-// enum NewOutput<Datum> {
-//     Wallet(Address, HashMap<Policy, u64>),
-//     Validator(Address, HashMap<Policy, u64>, Datum),
-// }
-
-pub type Value = (Policy, u64);
-
 // TODO: Find max size instead of u64. It might not actually matter since we'll never be able to
 //       select more than actually exists on chain. But maybe for minting?
 #[derive(Clone, PartialEq, Debug)]
-pub struct Output {
-    owner: Address,
-    values: HashMap<Policy, u64>,
+pub enum Output<Datum> {
+    Wallet {
+        owner: Address,
+        values: HashMap<Policy, u64>,
+    },
+    Validator {
+        owner: Address,
+        values: HashMap<Policy, u64>,
+        datum: Datum,
+    },
 }
 
-impl Output {
-    pub fn new(owner: Address, values: HashMap<Policy, u64>) -> Self {
-        Output { owner, values }
+pub type Value = (Policy, u64);
+
+impl<Datum> Output<Datum> {
+    pub fn wallet(owner: Address, values: HashMap<Policy, u64>) -> Self {
+        Output::Wallet { owner, values }
     }
 
     pub fn owner(&self) -> &Address {
-        &self.owner
+        match self {
+            Output::Wallet { owner, .. } => owner,
+            Output::Validator { owner, .. } => owner,
+        }
     }
 
     pub fn values(&self) -> &HashMap<Policy, u64> {
-        &self.values
+        match self {
+            Output::Wallet { values, .. } => values,
+            Output::Validator { values, .. } => values,
+        }
     }
 }

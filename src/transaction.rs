@@ -1,7 +1,10 @@
-use crate::address::{Address, Policy};
-use crate::output::{Output, Value};
+use crate::{
+    address::{Address, Policy},
+    output::Output,
+};
+use std::collections::HashMap;
 
-pub enum Action {
+pub enum Action<Datum> {
     Transfer {
         amount: u64,
         recipient: Address,
@@ -12,26 +15,26 @@ pub enum Action {
         recipient: Address,
         policy: Policy,
     },
+    InitScript {
+        datum: Datum,
+        values: HashMap<Policy, u64>,
+        address: Address,
+    },
 }
 
-#[derive(Default)]
-pub struct UnBuiltTransaction {
-    pub inputs: Vec<Output>,
-    pub output_values: Vec<(Address, Value)>,
-    pub actions: Vec<Action>,
+pub struct UnBuiltTransaction<Datum> {
+    pub actions: Vec<Action<Datum>>,
 }
 
-impl UnBuiltTransaction {
-    // pub fn with_input(mut self, input: Output) -> Self {
-    //     self.inputs.push(input);
-    //     self
-    // }
-    //
-    // pub fn with_output_value(mut self, output_value: (Address, Value)) -> Self {
-    //     self.output_values.push(output_value);
-    //     self
-    // }
+impl<Datum> Default for UnBuiltTransaction<Datum> {
+    fn default() -> Self {
+        UnBuiltTransaction {
+            actions: Vec::new(),
+        }
+    }
+}
 
+impl<Datum> UnBuiltTransaction<Datum> {
     pub fn with_transfer(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
         let action = Action::Transfer {
             amount,
@@ -51,20 +54,35 @@ impl UnBuiltTransaction {
         self.actions.push(action);
         self
     }
+
+    pub fn with_script_init(
+        mut self,
+        datum: Datum,
+        values: HashMap<Policy, u64>,
+        address: Address,
+    ) -> Self {
+        let action = Action::InitScript {
+            datum,
+            values,
+            address,
+        };
+        self.actions.push(action);
+        self
+    }
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Transaction {
-    pub inputs: Vec<Output>,
-    pub outputs: Vec<Output>,
+pub struct Transaction<Datum> {
+    pub inputs: Vec<Output<Datum>>,
+    pub outputs: Vec<Output<Datum>>,
 }
 
-impl Transaction {
-    pub fn outputs(&self) -> &Vec<Output> {
+impl<Datum> Transaction<Datum> {
+    pub fn outputs(&self) -> &Vec<Output<Datum>> {
         &self.outputs
     }
 
-    pub fn inputs(&self) -> &Vec<Output> {
+    pub fn inputs(&self) -> &Vec<Output<Datum>> {
         &self.inputs
     }
 }

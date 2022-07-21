@@ -1,10 +1,11 @@
-use crate::address::ADA;
-use crate::fakes::FakeBackends;
-use crate::output::Output;
-use crate::smart_contract::{DataSource, SmartContract};
-use crate::{Address, UnBuiltTransaction};
-use std::cell::RefCell;
-use std::collections::HashMap;
+use crate::{
+    address::ADA,
+    fakes::FakeBackends,
+    output::Output,
+    smart_contract::{DataSource, SmartContract},
+    Address, UnBuiltTransaction,
+};
+use std::{cell::RefCell, collections::HashMap};
 
 struct TransferADASmartContract;
 
@@ -14,11 +15,12 @@ enum Endpoint {
 
 impl SmartContract for TransferADASmartContract {
     type Endpoint = Endpoint;
+    type Datum = ();
 
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
         _source: &D,
-    ) -> crate::Result<UnBuiltTransaction> {
+    ) -> crate::Result<UnBuiltTransaction<()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
                 let u_tx = UnBuiltTransaction::default().with_transfer(amount, recipient, ADA);
@@ -39,7 +41,7 @@ fn can_transfer_and_keep_remainder() {
     let extra_policy = Some(Address::new("arcade token"));
     let extra_amount = 50;
     values.insert(extra_policy.clone(), extra_amount);
-    let input = Output::new(me.clone(), values.clone());
+    let input = Output::wallet(me.clone(), values.clone());
 
     let amount = 590;
 

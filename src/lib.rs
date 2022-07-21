@@ -1,5 +1,7 @@
-use crate::address::{Address, Policy};
-use crate::transaction::{Transaction, UnBuiltTransaction};
+use crate::{
+    address::{Address, Policy},
+    transaction::{Transaction, UnBuiltTransaction},
+};
 use error::*;
 
 mod error;
