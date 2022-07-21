@@ -121,6 +121,8 @@ impl<Datum: Clone> FakeBackends<Datum> {
         self.balance_at_address(&self.signer, policy)
     }
 
+    // TODO: Remove allow
+    #[allow(clippy::type_complexity)]
     fn handle_actions(
         &self,
         actions: Vec<Action<Datum>>,
@@ -158,7 +160,7 @@ impl<Datum: Clone> FakeBackends<Datum> {
                             &mut min_input_values,
                             *amount,
                             &self.signer,
-                            &policy,
+                            policy,
                         );
                     }
                     let output = Output::Validator {
