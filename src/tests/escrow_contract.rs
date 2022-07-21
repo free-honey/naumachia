@@ -3,6 +3,7 @@ use crate::fakes::FakeBackendsBuilder;
 use crate::smart_contract::{DataSource, SmartContract};
 use crate::validator::{TxContext, ValidatorCode};
 use crate::{Address, UnBuiltTransaction};
+use std::collections::HashMap;
 
 pub struct EscrowValidatorScript;
 
@@ -12,7 +13,7 @@ impl ValidatorCode for EscrowValidatorScript {
     }
 
     fn address() -> Address {
-        todo!()
+        Address::new("escrow validator")
     }
 }
 
@@ -23,7 +24,9 @@ enum Endpoint {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum EscrowDatum {}
+struct EscrowDatum {
+    receiver: Address,
+}
 
 impl SmartContract for EscrowContract {
     type Endpoint = Endpoint;
@@ -39,8 +42,13 @@ impl SmartContract for EscrowContract {
     }
 }
 
-fn escrow(_amount: u64, _receiver: Address) -> crate::Result<UnBuiltTransaction<EscrowDatum>> {
-    todo!()
+fn escrow(amount: u64, receiver: Address) -> crate::Result<UnBuiltTransaction<EscrowDatum>> {
+    let address = EscrowValidatorScript::address();
+    let datum = EscrowDatum { receiver };
+    let mut values = HashMap::new();
+    values.insert(ADA, amount);
+    let u_tx = UnBuiltTransaction::default().with_script_init(datum, values, address);
+    Ok(u_tx)
 }
 
 #[test]
@@ -53,17 +61,13 @@ fn escrow__can_create_instance() {
         .finish_output()
         .build();
 
-    // Call mint endpoint
     let amount = 50;
     let call = Endpoint::Escrow {
         amount,
         receiver: alice,
     };
     EscrowContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
-    // Wait 1 block? IDK if we need to wait. That's an implementation detail of a specific data
-    // source I think? Could be wrong.
 
-    // Check my balance for minted tokens
     let address = EscrowValidatorScript::address();
     let expected = amount;
     let actual = backend.balance_at_address(&address, &ADA);

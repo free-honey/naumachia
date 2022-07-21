@@ -19,7 +19,7 @@ pub enum Output<Datum> {
 pub type Value = (Policy, u64);
 
 impl<Datum> Output<Datum> {
-    pub fn new_wallet(owner: Address, values: HashMap<Policy, u64>) -> Self {
+    pub fn wallet(owner: Address, values: HashMap<Policy, u64>) -> Self {
         Output::Wallet { owner, values }
     }
 

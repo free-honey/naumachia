@@ -1,7 +1,8 @@
 use crate::address::{Address, Policy};
-use crate::output::{Output, Value};
+use crate::output::Output;
+use std::collections::HashMap;
 
-pub enum Action {
+pub enum Action<Datum> {
     Transfer {
         amount: u64,
         recipient: Address,
@@ -12,26 +13,26 @@ pub enum Action {
         recipient: Address,
         policy: Policy,
     },
+    InitScript {
+        datum: Datum,
+        values: HashMap<Policy, u64>,
+        address: Address,
+    },
 }
 
-#[derive(Default)]
 pub struct UnBuiltTransaction<Datum> {
-    pub inputs: Vec<Output<Datum>>,
-    pub output_values: Vec<(Address, Value)>,
-    pub actions: Vec<Action>,
+    pub actions: Vec<Action<Datum>>,
+}
+
+impl<Datum> Default for UnBuiltTransaction<Datum> {
+    fn default() -> Self {
+        UnBuiltTransaction {
+            actions: Vec::new(),
+        }
+    }
 }
 
 impl<Datum> UnBuiltTransaction<Datum> {
-    // pub fn with_input(mut self, input: Output) -> Self {
-    //     self.inputs.push(input);
-    //     self
-    // }
-    //
-    // pub fn with_output_value(mut self, output_value: (Address, Value)) -> Self {
-    //     self.output_values.push(output_value);
-    //     self
-    // }
-
     pub fn with_transfer(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
         let action = Action::Transfer {
             amount,
@@ -47,6 +48,21 @@ impl<Datum> UnBuiltTransaction<Datum> {
             amount,
             recipient,
             policy,
+        };
+        self.actions.push(action);
+        self
+    }
+
+    pub fn with_script_init(
+        mut self,
+        datum: Datum,
+        values: HashMap<Policy, u64>,
+        address: Address,
+    ) -> Self {
+        let action = Action::InitScript {
+            datum,
+            values,
+            address,
         };
         self.actions.push(action);
         self
