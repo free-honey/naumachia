@@ -15,13 +15,13 @@ pub enum Action {
 }
 
 #[derive(Default)]
-pub struct UnBuiltTransaction {
-    pub inputs: Vec<Output>,
+pub struct UnBuiltTransaction<Datum> {
+    pub inputs: Vec<Output<Datum>>,
     pub output_values: Vec<(Address, Value)>,
     pub actions: Vec<Action>,
 }
 
-impl UnBuiltTransaction {
+impl<Datum> UnBuiltTransaction<Datum> {
     // pub fn with_input(mut self, input: Output) -> Self {
     //     self.inputs.push(input);
     //     self
@@ -54,17 +54,17 @@ impl UnBuiltTransaction {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Transaction {
-    pub inputs: Vec<Output>,
-    pub outputs: Vec<Output>,
+pub struct Transaction<Datum> {
+    pub inputs: Vec<Output<Datum>>,
+    pub outputs: Vec<Output<Datum>>,
 }
 
-impl Transaction {
-    pub fn outputs(&self) -> &Vec<Output> {
+impl<Datum> Transaction<Datum> {
+    pub fn outputs(&self) -> &Vec<Output<Datum>> {
         &self.outputs
     }
 
-    pub fn inputs(&self) -> &Vec<Output> {
+    pub fn inputs(&self) -> &Vec<Output<Datum>> {
         &self.inputs
     }
 }

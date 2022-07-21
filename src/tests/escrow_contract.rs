@@ -1,14 +1,13 @@
 use crate::address::ADA;
-use crate::fakes::{FakeBackends, FakeBackendsBuilder};
+use crate::fakes::FakeBackendsBuilder;
 use crate::smart_contract::{DataSource, SmartContract};
 use crate::validator::{TxContext, ValidatorCode};
 use crate::{Address, UnBuiltTransaction};
-use std::cell::RefCell;
 
 pub struct EscrowValidatorScript;
 
 impl ValidatorCode for EscrowValidatorScript {
-    fn execute<D, R>(datum: D, redeemer: R, ctx: TxContext) -> bool {
+    fn execute<D, R>(_datum: D, _redeemer: R, _ctx: TxContext) -> bool {
         todo!()
     }
 
@@ -23,20 +22,24 @@ enum Endpoint {
     Escrow { amount: u64, receiver: Address },
 }
 
+#[derive(Clone, PartialEq, Debug)]
+enum EscrowDatum {}
+
 impl SmartContract for EscrowContract {
     type Endpoint = Endpoint;
+    type Datum = EscrowDatum;
 
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
-        source: &D,
-    ) -> crate::Result<UnBuiltTransaction> {
+        _source: &D,
+    ) -> crate::Result<UnBuiltTransaction<EscrowDatum>> {
         match endpoint {
             Endpoint::Escrow { amount, receiver } => escrow(amount, receiver),
         }
     }
 }
 
-fn escrow(amount: u64, receiver: Address) -> crate::Result<UnBuiltTransaction> {
+fn escrow(_amount: u64, _receiver: Address) -> crate::Result<UnBuiltTransaction<EscrowDatum>> {
     todo!()
 }
 
