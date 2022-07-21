@@ -1,5 +1,4 @@
-use crate::error::Result;
-use crate::{Address, Transaction, UnBuiltTransaction};
+use crate::{error::Result, Address, Transaction, UnBuiltTransaction};
 
 pub trait SmartContract {
     type Endpoint;

@@ -1,8 +1,10 @@
-use crate::address::ADA;
-use crate::fakes::FakeBackendsBuilder;
-use crate::smart_contract::{DataSource, SmartContract};
-use crate::validator::{TxContext, ValidatorCode};
-use crate::{Address, UnBuiltTransaction};
+use crate::{
+    address::ADA,
+    fakes::FakeBackendsBuilder,
+    smart_contract::{DataSource, SmartContract},
+    validator::{TxContext, ValidatorCode},
+    Address, UnBuiltTransaction,
+};
 use std::collections::HashMap;
 
 pub struct EscrowValidatorScript;

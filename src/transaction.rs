@@ -1,5 +1,7 @@
-use crate::address::{Address, Policy};
-use crate::output::Output;
+use crate::{
+    address::{Address, Policy},
+    output::Output,
+};
 use std::collections::HashMap;
 
 pub enum Action<Datum> {

@@ -1,10 +1,11 @@
-use crate::address::ADA;
-use crate::fakes::FakeBackends;
-use crate::output::Output;
-use crate::smart_contract::{DataSource, SmartContract};
-use crate::{Address, UnBuiltTransaction};
-use std::cell::RefCell;
-use std::collections::HashMap;
+use crate::{
+    address::ADA,
+    fakes::FakeBackends,
+    output::Output,
+    smart_contract::{DataSource, SmartContract},
+    Address, UnBuiltTransaction,
+};
+use std::{cell::RefCell, collections::HashMap};
 
 struct TransferADASmartContract;
 

@@ -1,13 +1,13 @@
-use crate::address::{Address, Policy};
-use crate::transaction::Action;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt::Debug;
+use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
-use crate::error::Result;
-use crate::output::Output;
-use crate::smart_contract::{DataSource, TxBuilder, TxIssuer};
-use crate::{Transaction, UnBuiltTransaction};
+use crate::{
+    address::{Address, Policy},
+    error::Result,
+    output::Output,
+    smart_contract::{DataSource, TxBuilder, TxIssuer},
+    transaction::Action,
+    Transaction, UnBuiltTransaction,
+};
 
 pub struct FakeBackendsBuilder<Datum> {
     signer: Address,
