@@ -6,6 +6,7 @@ use crate::{
     Policy, UnBuiltTransaction,
 };
 use std::cell::RefCell;
+use std::marker::PhantomData;
 
 use error::Result;
 
@@ -22,11 +23,12 @@ const MINT_POLICY_ADDR: &str = "mint_policy";
 impl SmartContract for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
     type Datum = ();
+    type Redeemer = ();
 
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
         source: &D,
-    ) -> Result<UnBuiltTransaction<()>> {
+    ) -> Result<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Mint { amount } => {
                 let recipient = source.me().clone();
@@ -36,7 +38,7 @@ impl SmartContract for AlwaysMintsSmartContract {
     }
 }
 
-fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransaction<()>> {
+fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransaction<(), ()>> {
     let utx = UnBuiltTransaction::default().with_mint(amount, recipient, policy);
     Ok(utx)
 }
@@ -47,6 +49,7 @@ fn can_mint_from_always_true_minting_policy() {
     let backend = FakeBackends {
         signer: me,
         outputs: RefCell::new(vec![]),
+        _redeemer: PhantomData::default(),
     };
     // Call mint endpoint
     let amount = 69;

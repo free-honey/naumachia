@@ -1,3 +1,5 @@
+use std::hash::Hash;
+use std::marker::{PhantomData, PhantomPinned};
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
 use crate::{
@@ -9,20 +11,22 @@ use crate::{
     Transaction, UnBuiltTransaction,
 };
 
-pub struct FakeBackendsBuilder<Datum> {
+pub struct FakeBackendsBuilder<Datum, Redeemer> {
     signer: Address,
     outputs: Vec<(Address, Output<Datum>)>,
+    _redeemer: PhantomData<Redeemer>,
 }
 
-impl<Datum: Clone> FakeBackendsBuilder<Datum> {
-    pub fn new(signer: Address) -> FakeBackendsBuilder<Datum> {
+impl<Datum: Clone, Redeemer> FakeBackendsBuilder<Datum, Redeemer> {
+    pub fn new(signer: Address) -> FakeBackendsBuilder<Datum, Redeemer> {
         FakeBackendsBuilder {
             signer,
             outputs: Vec::new(),
+            _redeemer: PhantomData::default(),
         }
     }
 
-    pub fn start_output(self, owner: Address) -> OutputBuilder<Datum> {
+    pub fn start_output(self, owner: Address) -> OutputBuilder<Datum, Redeemer> {
         OutputBuilder {
             inner: self,
             owner,
@@ -34,22 +38,23 @@ impl<Datum: Clone> FakeBackendsBuilder<Datum> {
         self.outputs.push((address, output))
     }
 
-    pub fn build(&self) -> FakeBackends<Datum> {
+    pub fn build(&self) -> FakeBackends<Datum, Redeemer> {
         FakeBackends {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
+            _redeemer: PhantomData::default(),
         }
     }
 }
 
-pub struct OutputBuilder<Datum> {
-    inner: FakeBackendsBuilder<Datum>,
+pub struct OutputBuilder<Datum, Redeemer> {
+    inner: FakeBackendsBuilder<Datum, Redeemer>,
     owner: Address,
     values: HashMap<Policy, u64>,
 }
 
-impl<Datum: Clone> OutputBuilder<Datum> {
-    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum> {
+impl<Datum: Clone, Redeemer> OutputBuilder<Datum, Redeemer> {
+    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum, Redeemer> {
         let mut new_total = amount;
         if let Some(total) = self.values.get(&policy) {
             new_total += total;
@@ -58,7 +63,7 @@ impl<Datum: Clone> OutputBuilder<Datum> {
         self
     }
 
-    pub fn finish_output(self) -> FakeBackendsBuilder<Datum> {
+    pub fn finish_output(self) -> FakeBackendsBuilder<Datum, Redeemer> {
         let OutputBuilder {
             mut inner,
             owner,
@@ -72,17 +77,19 @@ impl<Datum: Clone> OutputBuilder<Datum> {
 }
 
 #[derive(Debug)]
-pub struct FakeBackends<Datum> {
+pub struct FakeBackends<Datum, Redeemer> {
     pub signer: Address,
     // TODO: Might make sense to make this swapable to
     pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+    pub _redeemer: PhantomData<Redeemer>,
 }
 
-impl<Datum: Clone> FakeBackends<Datum> {
+impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
     pub fn new(signer: Address) -> Self {
         FakeBackends {
             signer,
             outputs: RefCell::new(vec![]),
+            _redeemer: PhantomData::default(),
         }
     }
 
@@ -94,7 +101,7 @@ impl<Datum: Clone> FakeBackends<Datum> {
         self.outputs.borrow_mut().push((address, output));
     }
 
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    pub(crate) fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
         self.outputs
             .borrow()
             .clone()
@@ -125,10 +132,11 @@ impl<Datum: Clone> FakeBackends<Datum> {
     #[allow(clippy::type_complexity)]
     fn handle_actions(
         &self,
-        actions: Vec<Action<Datum>>,
+        actions: Vec<Action<Datum, Redeemer>>,
     ) -> Result<(Vec<Output<Datum>>, Vec<Output<Datum>>)> {
         let mut min_input_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
         let mut min_output_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
+        let mut specific_inputs: Vec<Output<Datum>> = Vec::new();
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
         for action in actions {
             match action {
@@ -170,11 +178,19 @@ impl<Datum: Clone> FakeBackends<Datum> {
                     };
                     specific_outputs.push(output);
                 }
+                Action::RedeemScriptOutput {
+                    output,
+                    redeemer,
+                    script,
+                } => {
+                    todo!()
+                }
             }
         }
         // inputs
         let in_vecs = nested_map_to_vecs(min_input_values);
-        let (inputs, remainders) = self.select_inputs_for_all(in_vecs)?;
+        let (mut inputs, remainders) = self.select_inputs_for_all(in_vecs)?;
+        inputs.extend(specific_inputs);
 
         // outputs
         remainders.iter().for_each(|(amt, recp, policy)| {
@@ -215,8 +231,8 @@ impl<Datum: Clone> FakeBackends<Datum> {
         values: &[(Policy, u64)],
     ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, Policy)>)> {
         let mut address_values = HashMap::new();
-        let all_address_outputs = self.outputs_at_address(address);
-        all_address_outputs
+        let all_available_outputs = self.outputs_at_address(address);
+        all_available_outputs
             .clone()
             .into_iter()
             .flat_map(|o| o.values().clone().into_iter().collect::<Vec<_>>())
@@ -249,7 +265,7 @@ impl<Datum: Clone> FakeBackends<Datum> {
             .map(|(policy, amt)| (amt, address.clone(), policy))
             .collect();
         remainders.extend(other_remainders);
-        Ok((all_address_outputs, remainders))
+        Ok((all_available_outputs, remainders))
     }
 
     fn create_outputs_for(
@@ -296,24 +312,38 @@ fn add_amount_to_nested_map(
     }
 }
 
-impl<Datum> DataSource for FakeBackends<Datum> {
+impl<Datum, Redeemer> DataSource for FakeBackends<Datum, Redeemer> {
     fn me(&self) -> &Address {
         &self.signer
     }
 }
 
-impl<Datum: Clone> TxBuilder<Datum> for FakeBackends<Datum> {
+impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash> TxBuilder<Datum, Redeemer>
+    for FakeBackends<Datum, Redeemer>
+{
     /// No Fees, MinAda, or Collateral
-    fn build(&self, unbuilt_tx: UnBuiltTransaction<Datum>) -> crate::Result<Transaction<Datum>> {
+    fn build(
+        &self,
+        unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
+    ) -> crate::Result<Transaction<Datum, Redeemer>> {
         let UnBuiltTransaction { actions } = unbuilt_tx;
         let (inputs, outputs) = self.handle_actions(actions)?;
+        let redeemers = Vec::new();
 
-        Ok(Transaction { inputs, outputs })
+        Ok(Transaction {
+            inputs,
+            outputs,
+            redeemers,
+        })
     }
 }
 
-impl<Datum: Clone + PartialEq + Debug> TxIssuer<Datum> for FakeBackends<Datum> {
-    fn issue(&self, tx: Transaction<Datum>) -> Result<()> {
+impl<Datum, Redeemer> TxIssuer<Datum, Redeemer> for FakeBackends<Datum, Redeemer>
+where
+    Datum: Clone + PartialEq + Debug,
+    Redeemer: Clone + PartialEq + Eq + Hash,
+{
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
         let mut my_outputs = self.outputs.borrow_mut();
         for tx_i in tx.inputs() {
             let index = tx

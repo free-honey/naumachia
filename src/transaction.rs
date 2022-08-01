@@ -1,10 +1,12 @@
+use crate::validator::ValidatorCode;
 use crate::{
     address::{Address, Policy},
     output::Output,
 };
 use std::collections::HashMap;
+use std::hash::Hash;
 
-pub enum Action<Datum> {
+pub enum Action<Datum, Redeemer> {
     Transfer {
         amount: u64,
         recipient: Address,
@@ -20,13 +22,18 @@ pub enum Action<Datum> {
         values: HashMap<Policy, u64>,
         address: Address,
     },
+    RedeemScriptOutput {
+        output: Output<Datum>,
+        redeemer: Redeemer,
+        script: Box<dyn ValidatorCode<Datum, Redeemer>>, // Is there a way to do this without `dyn`?
+    },
 }
 
-pub struct UnBuiltTransaction<Datum> {
-    pub actions: Vec<Action<Datum>>,
+pub struct UnBuiltTransaction<Datum, Redeemer> {
+    pub actions: Vec<Action<Datum, Redeemer>>,
 }
 
-impl<Datum> Default for UnBuiltTransaction<Datum> {
+impl<Datum, Redeemer> Default for UnBuiltTransaction<Datum, Redeemer> {
     fn default() -> Self {
         UnBuiltTransaction {
             actions: Vec::new(),
@@ -34,7 +41,7 @@ impl<Datum> Default for UnBuiltTransaction<Datum> {
     }
 }
 
-impl<Datum> UnBuiltTransaction<Datum> {
+impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
     pub fn with_transfer(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
         let action = Action::Transfer {
             amount,
@@ -72,12 +79,13 @@ impl<Datum> UnBuiltTransaction<Datum> {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Transaction<Datum> {
+pub struct Transaction<Datum, Redeemer: Clone + PartialEq + Eq> {
     pub inputs: Vec<Output<Datum>>,
     pub outputs: Vec<Output<Datum>>,
+    pub redeemers: Vec<(Output<Datum>, Redeemer)>,
 }
 
-impl<Datum> Transaction<Datum> {
+impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {
     pub fn outputs(&self) -> &Vec<Output<Datum>> {
         &self.outputs
     }

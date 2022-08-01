@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 // TODO: Find max size instead of u64. It might not actually matter since we'll never be able to
 //       select more than actually exists on chain. But maybe for minting?
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq)]
 pub enum Output<Datum> {
     Wallet {
         owner: Address,
