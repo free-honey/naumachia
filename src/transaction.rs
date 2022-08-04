@@ -76,6 +76,21 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
         self.actions.push(action);
         self
     }
+
+    pub fn with_script_redeem(
+        mut self,
+        output: Output<Datum>,
+        redeemer: Redeemer,
+        script: Box<dyn ValidatorCode<Datum, Redeemer>>,
+    ) -> Self {
+        let action = Action::RedeemScriptOutput {
+            output,
+            redeemer,
+            script,
+        };
+        self.actions.push(action);
+        self
+    }
 }
 
 #[derive(PartialEq, Debug)]

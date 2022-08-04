@@ -8,6 +8,8 @@ use crate::{
 };
 use std::collections::HashMap;
 
+use crate::error::Result;
+
 pub struct EscrowValidatorScript;
 
 impl<D, R> ValidatorCode<D, R> for EscrowValidatorScript {
@@ -44,18 +46,25 @@ impl SmartContract for EscrowContract {
     ) -> crate::Result<UnBuiltTransaction<EscrowDatum, ()>> {
         match endpoint {
             Endpoint::Escrow { amount, receiver } => escrow(amount, receiver),
-            Endpoint::Claim { .. } => Err("bonk".to_string()),
+            Endpoint::Claim { output } => claim(output),
         }
     }
 }
 
-fn escrow(amount: u64, receiver: Address) -> crate::Result<UnBuiltTransaction<EscrowDatum, ()>> {
+fn escrow(amount: u64, receiver: Address) -> Result<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = EscrowValidatorScript;
     let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
     let mut values = HashMap::new();
     values.insert(ADA, amount);
     let u_tx = UnBuiltTransaction::default().with_script_init(datum, values, address);
+    Ok(u_tx)
+}
+
+fn claim(output: Output<EscrowDatum>) -> Result<UnBuiltTransaction<EscrowDatum, ()>> {
+    let redeemer = ();
+    let script = Box::new(EscrowValidatorScript);
+    let u_tx = UnBuiltTransaction::default().with_script_redeem(output, redeemer, script);
     Ok(u_tx)
 }
 
@@ -92,8 +101,11 @@ fn escrow__can_create_instance() {
 
     // The recipient tries to spend and succeeds
     backend.signer = alice.clone();
-    let attempt = EscrowContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
+    EscrowContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
 
     let alice_balance = backend.balance_at_address(&alice, &ADA);
     assert_eq!(alice_balance, escrow_amount);
+
+    let script_balance = backend.balance_at_address(&escrow_address, &ADA);
+    assert_eq!(script_balance, 0);
 }

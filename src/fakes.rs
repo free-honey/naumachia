@@ -204,6 +204,8 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         Ok((inputs, outputs))
     }
 
+    // TODO: This function assumes that there is only one value entry per address, but the interface
+    //   doesn't communicate that. Plz fix
     // TODO: Remove allow
     #[allow(clippy::type_complexity)]
     fn select_inputs_for_all(
