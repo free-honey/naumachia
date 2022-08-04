@@ -75,9 +75,8 @@ fn escrow(amount: u64, receiver: Address) -> Result<UnBuiltTransaction<EscrowDat
 
 // TODO: Check if can claim first
 fn claim(output: Output<EscrowDatum>) -> Result<UnBuiltTransaction<EscrowDatum, ()>> {
-    let redeemer = ();
     let script = Box::new(EscrowValidatorScript);
-    let u_tx = UnBuiltTransaction::default().with_script_redeem(output, redeemer, script);
+    let u_tx = UnBuiltTransaction::default().with_script_redeem(output, (), script);
     Ok(u_tx)
 }
 

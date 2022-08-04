@@ -366,12 +366,12 @@ fn can_spend_inputs<Datum: Clone + PartialEq + Debug, Redeemer: Clone + PartialE
             Output::Validator { owner, datum, .. } => {
                 let script = tx
                     .scripts
-                    .get(&owner)
+                    .get(owner)
                     .ok_or(format!("Can't find script for address: {:?}", &owner))?;
                 let (_, redeemer) = tx
                     .redeemers
                     .iter()
-                    .find(|(utxo, _)| &utxo == &input)
+                    .find(|(utxo, _)| utxo == input)
                     .ok_or(format!("Can't find redeemer for output: {:?}", &owner))?;
 
                 script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
