@@ -1,15 +1,21 @@
 use crate::{error::Result, Address, Transaction, UnBuiltTransaction};
+use std::hash::Hash;
 
 pub trait SmartContract {
     type Endpoint;
     type Datum;
+    type Redeemer: Clone + PartialEq + Eq + Hash;
 
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
         source: &D,
-    ) -> Result<UnBuiltTransaction<Self::Datum>>;
+    ) -> Result<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
 
-    fn hit_endpoint<D: DataSource, B: TxBuilder<Self::Datum>, I: TxIssuer<Self::Datum>>(
+    fn hit_endpoint<
+        D: DataSource,
+        B: TxBuilder<Self::Datum, Self::Redeemer>,
+        I: TxIssuer<Self::Datum, Self::Redeemer>,
+    >(
         endpoint: Self::Endpoint,
         source: &D,
         builder: &B,
@@ -28,10 +34,13 @@ pub trait DataSource {
 
 // TODO: I have a suspicion that a lot of this can be in a struct and just the input selection will
 //       need to be injected? TBD.
-pub trait TxBuilder<Datum> {
-    fn build(&self, unbuilt_tx: UnBuiltTransaction<Datum>) -> Result<Transaction<Datum>>;
+pub trait TxBuilder<Datum, Redeemer: Clone + PartialEq + Eq + Hash> {
+    fn build(
+        &self,
+        unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
+    ) -> Result<Transaction<Datum, Redeemer>>;
 }
 
-pub trait TxIssuer<Datum> {
-    fn issue(&self, tx: Transaction<Datum>) -> Result<()>;
+pub trait TxIssuer<Datum, Redeemer: Clone + PartialEq + Eq + Hash> {
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>;
 }

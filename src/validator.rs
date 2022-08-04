@@ -1,9 +1,14 @@
 use crate::address::Address;
 
-// TODO: Move
-pub struct TxContext;
+use crate::error::Result;
 
-pub trait ValidatorCode {
-    fn execute<D, R>(datum: D, redeemer: R, ctx: TxContext) -> bool;
-    fn address() -> Address;
+// TODO: Move
+#[derive(Clone)]
+pub struct TxContext {
+    pub signer: Address,
+}
+
+pub trait ValidatorCode<D, R> {
+    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> Result<()>;
+    fn address(&self) -> Address;
 }

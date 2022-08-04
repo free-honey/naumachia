@@ -5,6 +5,7 @@ use crate::{
     smart_contract::{DataSource, SmartContract},
     Address, UnBuiltTransaction,
 };
+use std::marker::PhantomData;
 use std::{cell::RefCell, collections::HashMap};
 
 struct TransferADASmartContract;
@@ -16,11 +17,12 @@ enum Endpoint {
 impl SmartContract for TransferADASmartContract {
     type Endpoint = Endpoint;
     type Datum = ();
+    type Redeemer = ();
 
     fn handle_endpoint<D: DataSource>(
         endpoint: Self::Endpoint,
         _source: &D,
-    ) -> crate::Result<UnBuiltTransaction<()>> {
+    ) -> crate::Result<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
                 let u_tx = UnBuiltTransaction::default().with_transfer(amount, recipient, ADA);
@@ -48,6 +50,7 @@ fn can_transfer_and_keep_remainder() {
     let backend = FakeBackends {
         signer: me.clone(),
         outputs: RefCell::new(vec![(me.clone(), input)]),
+        _redeemer: PhantomData::default(),
     };
 
     let call = Endpoint::Transfer {
