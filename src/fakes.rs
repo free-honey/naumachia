@@ -1,4 +1,3 @@
-use std::cmp::min;
 use std::hash::Hash;
 use std::marker::{PhantomData, PhantomPinned};
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
@@ -135,10 +134,9 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         &self,
         actions: Vec<Action<Datum, Redeemer>>,
     ) -> Result<(Vec<Output<Datum>>, Vec<Output<Datum>>)> {
-        // let mut min_input_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
         let mut min_input_values: HashMap<Policy, u64> = HashMap::new();
         let mut min_output_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
-        let mut specific_inputs: Vec<Output<Datum>> = Vec::new();
+        let mut script_inputs: Vec<Output<Datum>> = Vec::new();
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
         for action in actions {
             match action {
@@ -180,14 +178,13 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
                     redeemer,
                     script,
                 } => {
-                    todo!()
+                    script_inputs.push(output);
                 }
             }
         }
         // inputs
         let (mut inputs, remainders) =
-            self.select_inputs_for_one(&self.signer, &min_input_values)?;
-        inputs.extend(specific_inputs);
+            self.select_inputs_for_one(&self.signer, &min_input_values, script_inputs)?;
 
         // outputs
         remainders.iter().for_each(|(amt, recp, policy)| {
@@ -210,19 +207,17 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         &self,
         address: &Address,
         values: &HashMap<Policy, u64>,
+        script_inputs: Vec<Output<Datum>>,
     ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, Policy)>)> {
         let mut address_values = HashMap::new();
-        let all_available_outputs = self.outputs_at_address(address);
+        let mut all_available_outputs = self.outputs_at_address(address);
+        all_available_outputs.extend(script_inputs);
         all_available_outputs
             .clone()
             .into_iter()
             .flat_map(|o| o.values().clone().into_iter().collect::<Vec<_>>())
-            .for_each(|(policy, amt)| {
-                let mut new_total = amt;
-                if let Some(total) = address_values.get(&policy) {
-                    new_total += total;
-                }
-                address_values.insert(policy, new_total);
+            .for_each(|(policy, amount)| {
+                add_to_map(&mut address_values, policy, amount);
             });
         let mut remainders = Vec::new();
 
@@ -333,10 +328,9 @@ where
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
         let mut my_outputs = self.outputs.borrow_mut();
         for tx_i in tx.inputs() {
-            let index = tx
-                .inputs()
+            let index = my_outputs
                 .iter()
-                .position(|x| x == tx_i)
+                .position(|(addr, x)| x == tx_i)
                 .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
             my_outputs.remove(index);
         }

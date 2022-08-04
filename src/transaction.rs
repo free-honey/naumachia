@@ -4,7 +4,6 @@ use crate::{
     output::Output,
 };
 use std::collections::HashMap;
-use std::hash::Hash;
 
 pub enum Action<Datum, Redeemer> {
     Transfer {
