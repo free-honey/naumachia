@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::hash::Hash;
 use std::marker::{PhantomData, PhantomPinned};
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
@@ -134,7 +135,8 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         &self,
         actions: Vec<Action<Datum, Redeemer>>,
     ) -> Result<(Vec<Output<Datum>>, Vec<Output<Datum>>)> {
-        let mut min_input_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
+        // let mut min_input_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
+        let mut min_input_values: HashMap<Policy, u64> = HashMap::new();
         let mut min_output_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
         let mut specific_inputs: Vec<Output<Datum>> = Vec::new();
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
@@ -146,7 +148,7 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
                     policy,
                 } => {
                     // Input
-                    add_amount_to_nested_map(&mut min_input_values, amount, &self.signer, &policy);
+                    add_to_map(&mut min_input_values, policy.clone(), amount);
 
                     // Output
                     add_amount_to_nested_map(&mut min_output_values, amount, &recipient, &policy);
@@ -164,12 +166,7 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
                     address,
                 } => {
                     for (policy, amount) in values.iter() {
-                        add_amount_to_nested_map(
-                            &mut min_input_values,
-                            *amount,
-                            &self.signer,
-                            policy,
-                        );
+                        add_to_map(&mut min_input_values, policy.clone(), *amount);
                     }
                     let output = Output::Validator {
                         owner: address,
@@ -188,8 +185,8 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
             }
         }
         // inputs
-        let in_vecs = nested_map_to_vecs(min_input_values);
-        let (mut inputs, remainders) = self.select_inputs_for_all(in_vecs)?;
+        let (mut inputs, remainders) =
+            self.select_inputs_for_one(&self.signer, &min_input_values)?;
         inputs.extend(specific_inputs);
 
         // outputs
@@ -204,24 +201,6 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         Ok((inputs, outputs))
     }
 
-    // TODO: This function assumes that there is only one value entry per address, but the interface
-    //   doesn't communicate that. Plz fix
-    // TODO: Remove allow
-    #[allow(clippy::type_complexity)]
-    fn select_inputs_for_all(
-        &self,
-        values: Vec<(Address, Vec<(Policy, u64)>)>,
-    ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, Policy)>)> {
-        let mut total_inputs = Vec::new();
-        let mut total_remainders = Vec::new();
-        for (owner, values) in values {
-            let (outputs, remainders) = self.select_inputs_for_one(&owner, &values)?;
-            total_inputs.extend(outputs);
-            total_remainders.extend(remainders)
-        }
-        Ok((total_inputs, total_remainders))
-    }
-
     // LOL Super Naive Solution, just select ALL inputs!
     // TODO: Use Random Improve prolly: https://cips.cardano.org/cips/cip2/
     //       but this is _good_enough_ for tests.
@@ -230,7 +209,7 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
     fn select_inputs_for_one(
         &self,
         address: &Address,
-        values: &[(Policy, u64)],
+        values: &HashMap<Policy, u64>,
     ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, Policy)>)> {
         let mut address_values = HashMap::new();
         let all_available_outputs = self.outputs_at_address(address);
@@ -254,11 +233,9 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
                     let remaining = available - amt;
                     remainders.push((remaining, address.clone(), policy.clone()));
                 } else {
-                    dbg!("boo");
                     return Err(format!("Not enough {:?}", policy));
                 }
             } else {
-                dbg!("beep");
                 return Err(format!("Not enough {:?}", policy));
             }
         }
@@ -283,6 +260,14 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
             .collect();
         Ok(outputs)
     }
+}
+
+fn add_to_map(h_map: &mut HashMap<Policy, u64>, policy: Policy, amount: u64) {
+    let mut new_total = amount;
+    if let Some(total) = h_map.get(&policy) {
+        new_total += total;
+    }
+    h_map.insert(policy.clone(), new_total);
 }
 
 fn nested_map_to_vecs(
