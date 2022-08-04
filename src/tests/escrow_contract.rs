@@ -12,13 +12,25 @@ use crate::error::Result;
 
 pub struct EscrowValidatorScript;
 
-impl<D, R> ValidatorCode<D, R> for EscrowValidatorScript {
-    fn execute(&self, _datum: D, _redeemer: R, _ctx: TxContext) -> bool {
-        todo!()
+impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
+    fn execute(&self, datum: EscrowDatum, _redeemer: (), ctx: TxContext) -> Result<()> {
+        signer_is_recipient(&datum, &ctx)?;
+        Ok(())
     }
 
     fn address(&self) -> Address {
         Address::new("escrow validator")
+    }
+}
+
+fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> Result<()> {
+    if datum.receiver != ctx.signer {
+        Err(format!(
+            "Signer: {:?} doesn't match receiver: {:?}",
+            ctx.signer, datum.receiver
+        ))
+    } else {
+        Ok(())
     }
 }
 
@@ -61,6 +73,7 @@ fn escrow(amount: u64, receiver: Address) -> Result<UnBuiltTransaction<EscrowDat
     Ok(u_tx)
 }
 
+// TODO: Check if can claim first
 fn claim(output: Output<EscrowDatum>) -> Result<UnBuiltTransaction<EscrowDatum, ()>> {
     let redeemer = ();
     let script = Box::new(EscrowValidatorScript);
@@ -97,21 +110,19 @@ fn escrow__can_create_instance() {
     assert_eq!(expected, actual);
 
     let instance = backend.outputs_at_address(&escrow_address).pop().unwrap();
-    dbg!(&instance);
     // The creator tries to spend escrow but fails because not recipient
     let call = Endpoint::Claim { output: instance };
 
     let attempt = EscrowContract::hit_endpoint(call.clone(), &backend, &backend, &backend);
     assert!(attempt.is_err());
 
-    //
-    // // The recipient tries to spend and succeeds
-    // backend.signer = alice.clone();
-    // EscrowContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
-    //
-    // let alice_balance = backend.balance_at_address(&alice, &ADA);
-    // assert_eq!(alice_balance, escrow_amount);
-    //
-    // let script_balance = backend.balance_at_address(&escrow_address, &ADA);
-    // assert_eq!(script_balance, 0);
+    // The recipient tries to spend and succeeds
+    backend.signer = alice.clone();
+    EscrowContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
+
+    let alice_balance = backend.balance_at_address(&alice, &ADA);
+    assert_eq!(alice_balance, escrow_amount);
+
+    let script_balance = backend.balance_at_address(&escrow_address, &ADA);
+    assert_eq!(script_balance, 0);
 }

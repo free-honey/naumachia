@@ -92,11 +92,11 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
     }
 }
 
-#[derive(PartialEq, Debug)]
 pub struct Transaction<Datum, Redeemer: Clone + PartialEq + Eq> {
     pub inputs: Vec<Output<Datum>>,
     pub outputs: Vec<Output<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
+    pub scripts: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
 }
 
 impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {

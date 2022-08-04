@@ -1,7 +1,8 @@
 use std::hash::Hash;
-use std::marker::{PhantomData, PhantomPinned};
+use std::marker::PhantomData;
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
+use crate::validator::{TxContext, ValidatorCode};
 use crate::{
     address::{Address, Policy},
     error::Result,
@@ -133,11 +134,19 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
     fn handle_actions(
         &self,
         actions: Vec<Action<Datum, Redeemer>>,
-    ) -> Result<(Vec<Output<Datum>>, Vec<Output<Datum>>)> {
+    ) -> Result<(
+        Vec<Output<Datum>>,
+        Vec<Output<Datum>>,
+        Vec<(Output<Datum>, Redeemer)>,
+        HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
+    )> {
         let mut min_input_values: HashMap<Policy, u64> = HashMap::new();
         let mut min_output_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
         let mut script_inputs: Vec<Output<Datum>> = Vec::new();
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
+
+        let mut redeemers = Vec::new();
+        let mut scripts = HashMap::new();
         for action in actions {
             match action {
                 Action::Transfer {
@@ -178,12 +187,15 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
                     redeemer,
                     script,
                 } => {
-                    script_inputs.push(output);
+                    script_inputs.push(output.clone());
+                    let script_address = script.address();
+                    redeemers.push((output, redeemer));
+                    scripts.insert(script_address, script);
                 }
             }
         }
         // inputs
-        let (mut inputs, remainders) =
+        let (inputs, remainders) =
             self.select_inputs_for_one(&self.signer, &min_input_values, script_inputs)?;
 
         // outputs
@@ -195,7 +207,7 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         let mut outputs = self.create_outputs_for(out_vecs)?;
         outputs.extend(specific_outputs);
 
-        Ok((inputs, outputs))
+        Ok((inputs, outputs, redeemers, scripts))
     }
 
     // LOL Super Naive Solution, just select ALL inputs!
@@ -309,13 +321,13 @@ impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash> TxBuilder<Datum, Red
         unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
     ) -> crate::Result<Transaction<Datum, Redeemer>> {
         let UnBuiltTransaction { actions } = unbuilt_tx;
-        let (inputs, outputs) = self.handle_actions(actions)?;
-        let redeemers = Vec::new();
+        let (inputs, outputs, redeemers, scripts) = self.handle_actions(actions)?;
 
         Ok(Transaction {
             inputs,
             outputs,
             redeemers,
+            scripts,
         })
     }
 }
@@ -326,11 +338,12 @@ where
     Redeemer: Clone + PartialEq + Eq + Hash,
 {
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
+        can_spend_inputs(&tx, self.signer.clone())?;
         let mut my_outputs = self.outputs.borrow_mut();
         for tx_i in tx.inputs() {
             let index = my_outputs
                 .iter()
-                .position(|(addr, x)| x == tx_i)
+                .position(|(_, x)| x == tx_i)
                 .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
             my_outputs.remove(index);
         }
@@ -340,4 +353,30 @@ where
         }
         Ok(())
     }
+}
+
+fn can_spend_inputs<Datum: Clone + PartialEq + Debug, Redeemer: Clone + PartialEq + Eq + Hash>(
+    tx: &Transaction<Datum, Redeemer>,
+    signer: Address,
+) -> Result<()> {
+    let ctx = TxContext { signer };
+    for input in &tx.inputs {
+        match input {
+            Output::Wallet { .. } => {} // TODO: Make sure not spending other's outputs
+            Output::Validator { owner, datum, .. } => {
+                let script = tx
+                    .scripts
+                    .get(&owner)
+                    .ok_or(format!("Can't find script for address: {:?}", &owner))?;
+                let (_, redeemer) = tx
+                    .redeemers
+                    .iter()
+                    .find(|(utxo, _)| &utxo == &input)
+                    .ok_or(format!("Can't find redeemer for output: {:?}", &owner))?;
+
+                script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
+            }
+        }
+    }
+    Ok(())
 }
