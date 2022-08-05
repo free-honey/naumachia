@@ -122,7 +122,7 @@ where
         }
         // inputs
         let (inputs, remainders) = self.select_inputs_for_one(
-            &self.txo_record.signer(),
+            self.txo_record.signer(),
             &min_input_values,
             script_inputs,
         )?;
