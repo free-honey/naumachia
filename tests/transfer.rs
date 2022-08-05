@@ -49,7 +49,7 @@ fn can_transfer_and_keep_remainder() {
 
     let txo_record = FakeRecord {
         signer: me.clone(),
-        outputs: RefCell::new(vec![(me.clone(), input.clone())]),
+        outputs: RefCell::new(vec![(me.clone(), input)]),
     };
     let backend = Backend {
         smart_contract: TransferADASmartContract,
