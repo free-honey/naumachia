@@ -8,7 +8,6 @@ use crate::{
     address::{Address, Policy},
     error::Result,
     output::Output,
-    smart_contract::{DataSource, TxBuilder},
     transaction::Action,
     Transaction, UnBuiltTransaction,
 };
@@ -370,34 +369,6 @@ fn add_amount_to_nested_map(
         let mut new_map = HashMap::new();
         new_map.insert(policy.clone(), amount);
         output_map.insert(owner.clone(), RefCell::new(new_map));
-    }
-}
-
-impl<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> DataSource
-    for Backend<Datum, Redeemer, Record>
-{
-    fn me(&self) -> &Address {
-        self.txo_record.signer()
-    }
-}
-
-impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash, Record: TxORecord<Datum, Redeemer>>
-    TxBuilder<Datum, Redeemer> for Backend<Datum, Redeemer, Record>
-{
-    /// No Fees, MinAda, or Collateral
-    fn build(
-        &self,
-        unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
-    ) -> Result<Transaction<Datum, Redeemer>> {
-        let UnBuiltTransaction { actions } = unbuilt_tx;
-        let (inputs, outputs, redeemers, scripts) = self.handle_actions(actions)?;
-
-        Ok(Transaction {
-            inputs,
-            outputs,
-            redeemers,
-            scripts,
-        })
     }
 }
 
