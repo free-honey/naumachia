@@ -6,8 +6,7 @@ use naumachia::{
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
 };
-use std::marker::PhantomData;
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, marker::PhantomData};
 
 struct TransferADASmartContract;
 

@@ -1,14 +1,12 @@
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::{cell::RefCell, collections::HashMap, fmt::Debug};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
-use crate::smart_contract::SmartContract;
-use crate::validator::{TxContext, ValidatorCode};
 use crate::{
     address::{Address, Policy},
     error::Result,
     output::Output,
+    smart_contract::SmartContract,
     transaction::Action,
+    validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
 
@@ -22,30 +20,35 @@ pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
 }
 
 #[derive(Debug)]
-pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
+pub struct Backend<
+    SC: SmartContract,
+    Datum,
+    Redeemer: Clone + Eq,
+    Record: TxORecord<Datum, Redeemer>,
+> {
+    pub smart_contract: SC,
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
     pub txo_record: Record,
 }
 
-impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
+impl<SC: SmartContract<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer, Record>
+    Backend<SC, Datum, Redeemer, Record>
 where
     Datum: Clone,
     Redeemer: Clone + Eq,
     Record: TxORecord<Datum, Redeemer>,
 {
-    pub fn new(txo_record: Record) -> Self {
+    pub fn new(smart_contract: SC, txo_record: Record) -> Self {
         Backend {
+            smart_contract,
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
             txo_record,
         }
     }
 
-    pub fn hit_endpoint<SC: SmartContract<Datum = Datum, Redeemer = Redeemer>>(
-        &self,
-        endpoint: SC::Endpoint,
-    ) -> Result<()> {
+    pub fn hit_endpoint(&self, endpoint: SC::Endpoint) -> Result<()> {
         let unbuilt_tx = SC::handle_endpoint(endpoint, self.txo_record.signer())?;
         let tx = self.build(unbuilt_tx)?;
         self.txo_record.issue(tx)?;
