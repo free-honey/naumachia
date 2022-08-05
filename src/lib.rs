@@ -2,8 +2,6 @@ use crate::{
     address::{Address, Policy},
     transaction::{Transaction, UnBuiltTransaction},
 };
-use error::*;
-
 mod error;
 
 pub mod address;

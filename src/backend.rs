@@ -2,12 +2,13 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
+use crate::smart_contract::SmartContract;
 use crate::validator::{TxContext, ValidatorCode};
 use crate::{
     address::{Address, Policy},
     error::Result,
     output::Output,
-    smart_contract::{DataSource, TxBuilder, TxIssuer},
+    smart_contract::{DataSource, TxBuilder},
     transaction::Action,
     Transaction, UnBuiltTransaction,
 };
@@ -18,7 +19,9 @@ pub struct FakeBackendsBuilder<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<Datum: Clone, Redeemer> FakeBackendsBuilder<Datum, Redeemer> {
+impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+    FakeBackendsBuilder<Datum, Redeemer>
+{
     pub fn new(signer: Address) -> FakeBackendsBuilder<Datum, Redeemer> {
         FakeBackendsBuilder {
             signer,
@@ -45,8 +48,6 @@ impl<Datum: Clone, Redeemer> FakeBackendsBuilder<Datum, Redeemer> {
             outputs: RefCell::new(self.outputs.clone()),
         };
         Backend {
-            // signer: self.signer.clone(),
-            // outputs: RefCell::new(self.outputs.clone()),
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
             txo_record,
@@ -59,7 +60,9 @@ pub struct FakeRecord<Datum> {
     pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
 }
 
-impl<Datum: Clone> TxORecord<Datum> for FakeRecord<Datum> {
+impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+    TxORecord<Datum, Redeemer> for FakeRecord<Datum>
+{
     fn signer(&self) -> &Address {
         &self.signer
     }
@@ -86,15 +89,35 @@ impl<Datum: Clone> TxORecord<Datum> for FakeRecord<Datum> {
                 }
             }) // Sum up policy values
     }
+
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
+        can_spend_inputs(&tx, self.signer.clone())?;
+        let mut my_outputs = self.outputs.borrow_mut();
+        for tx_i in tx.inputs() {
+            let index = my_outputs
+                .iter()
+                .position(|(_, x)| x == tx_i)
+                .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
+            my_outputs.remove(index);
+        }
+
+        for tx_o in tx.outputs() {
+            my_outputs.push((tx_o.owner().clone(), tx_o.clone()))
+        }
+        Ok(())
+    }
 }
 
-pub struct OutputBuilder<Datum, Redeemer> {
+pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+{
     inner: FakeBackendsBuilder<Datum, Redeemer>,
     owner: Address,
     values: HashMap<Policy, u64>,
 }
 
-impl<Datum: Clone, Redeemer> OutputBuilder<Datum, Redeemer> {
+impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+    OutputBuilder<Datum, Redeemer>
+{
     pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum, Redeemer> {
         let mut new_total = amount;
         if let Some(total) = self.values.get(&policy) {
@@ -117,67 +140,43 @@ impl<Datum: Clone, Redeemer> OutputBuilder<Datum, Redeemer> {
     }
 }
 
-pub trait TxORecord<Datum> {
+pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
     fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>; // TODO: Move to other trait
 }
 
 #[derive(Debug)]
-pub struct Backend<Datum, Redeemer, Record: TxORecord<Datum>> {
-    // pub signer: Address,
-    // TODO: Might make sense to make this swapable to
-    // pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
     pub txo_record: Record,
 }
 
-impl<Datum: Clone, Redeemer, Record: TxORecord<Datum>> Backend<Datum, Redeemer, Record> {
-    pub fn new(signer: Address, txo_record: Record) -> Self {
+impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
+where
+    Datum: Clone,
+    Redeemer: Clone + Eq,
+    Record: TxORecord<Datum, Redeemer>,
+{
+    pub fn new(txo_record: Record) -> Self {
         Backend {
-            // signer,
-            // outputs: RefCell::new(vec![]),
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
             txo_record,
         }
     }
-    //
-    // pub fn change_signer(&mut self, new_signer: Address) {
-    //     self.signer = new_signer;
-    // }
 
-    // pub fn with_output(&mut self, address: Address, output: Output<Datum>) {
-    //     self.txo_record.outputs.borrow_mut().push((address, output));
-    // }
-
-    // pub(crate) fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
-    //     self.outputs
-    //         .borrow()
-    //         .clone()
-    //         .into_iter()
-    //         .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-    //         .collect()
-    // }
-
-    // pub fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-    //     self.outputs
-    //         .borrow()
-    //         .iter()
-    //         .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
-    //         .fold(0, |acc, o| {
-    //             if let Some(val) = o.values().get(policy) {
-    //                 acc + val
-    //             } else {
-    //                 acc
-    //             }
-    //         }) // Sum up policy values
-    // }
-
-    // pub fn my_balance(&self, policy: &Policy) -> u64 {
-    //     self.balance_at_address(&self.signer, policy)
-    // }
+    pub fn hit_endpoint<SC: SmartContract<Datum = Datum, Redeemer = Redeemer>>(
+        &self,
+        endpoint: SC::Endpoint,
+    ) -> Result<()> {
+        let unbuilt_tx = SC::handle_endpoint(endpoint, self.txo_record.signer())?;
+        let tx = self.build(unbuilt_tx)?;
+        self.txo_record.issue(tx)?;
+        Ok(())
+    }
 
     // TODO: Remove allow
     #[allow(clippy::type_complexity)]
@@ -320,6 +319,21 @@ impl<Datum: Clone, Redeemer, Record: TxORecord<Datum>> Backend<Datum, Redeemer, 
             .collect();
         Ok(outputs)
     }
+
+    fn build(
+        &self,
+        unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
+    ) -> Result<Transaction<Datum, Redeemer>> {
+        let UnBuiltTransaction { actions } = unbuilt_tx;
+        let (inputs, outputs, redeemers, scripts) = self.handle_actions(actions)?;
+
+        Ok(Transaction {
+            inputs,
+            outputs,
+            redeemers,
+            scripts,
+        })
+    }
 }
 
 fn add_to_map(h_map: &mut HashMap<Policy, u64>, policy: Policy, amount: u64) {
@@ -359,20 +373,22 @@ fn add_amount_to_nested_map(
     }
 }
 
-impl<Datum, Redeemer, Record: TxORecord<Datum>> DataSource for Backend<Datum, Redeemer, Record> {
+impl<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> DataSource
+    for Backend<Datum, Redeemer, Record>
+{
     fn me(&self) -> &Address {
         self.txo_record.signer()
     }
 }
 
-impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash, Record: TxORecord<Datum>>
+impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash, Record: TxORecord<Datum, Redeemer>>
     TxBuilder<Datum, Redeemer> for Backend<Datum, Redeemer, Record>
 {
     /// No Fees, MinAda, or Collateral
     fn build(
         &self,
         unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
-    ) -> crate::Result<Transaction<Datum, Redeemer>> {
+    ) -> Result<Transaction<Datum, Redeemer>> {
         let UnBuiltTransaction { actions } = unbuilt_tx;
         let (inputs, outputs, redeemers, scripts) = self.handle_actions(actions)?;
 
@@ -382,39 +398,6 @@ impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash, Record: TxORecord<Da
             redeemers,
             scripts,
         })
-    }
-}
-
-impl<Datum, Redeemer> TxIssuer<Datum, Redeemer> for Backend<Datum, Redeemer, FakeRecord<Datum>>
-where
-    Datum: Clone + PartialEq + Debug,
-    Redeemer: Clone + PartialEq + Eq + Hash,
-{
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
-        self.txo_record.issue(tx)
-    }
-}
-
-impl<Datum, Redeemer> TxIssuer<Datum, Redeemer> for FakeRecord<Datum>
-where
-    Datum: Clone + PartialEq + Debug,
-    Redeemer: Clone + PartialEq + Eq + Hash,
-{
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
-        can_spend_inputs(&tx, self.signer.clone())?;
-        let mut my_outputs = self.outputs.borrow_mut();
-        for tx_i in tx.inputs() {
-            let index = my_outputs
-                .iter()
-                .position(|(_, x)| x == tx_i)
-                .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
-            my_outputs.remove(index);
-        }
-
-        for tx_o in tx.outputs() {
-            my_outputs.push((tx_o.owner().clone(), tx_o.clone()))
-        }
-        Ok(())
     }
 }
 

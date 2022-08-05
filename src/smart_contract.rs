@@ -6,9 +6,9 @@ pub trait SmartContract {
     type Datum;
     type Redeemer: Clone + PartialEq + Eq + Hash;
 
-    fn handle_endpoint<D: DataSource>(
+    fn handle_endpoint(
         endpoint: Self::Endpoint,
-        source: &D,
+        issuer: &Address,
     ) -> Result<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
 
     fn hit_endpoint<
@@ -21,7 +21,8 @@ pub trait SmartContract {
         builder: &B,
         tx_issuer: &I,
     ) -> Result<()> {
-        let unbuilt_tx = Self::handle_endpoint(endpoint, source)?;
+        let issuer = source.me();
+        let unbuilt_tx = Self::handle_endpoint(endpoint, &issuer)?;
         let tx = builder.build(unbuilt_tx)?;
         tx_issuer.issue(tx)?;
         Ok(())
