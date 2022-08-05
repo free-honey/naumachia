@@ -3,7 +3,7 @@ use naumachia::{
     address::{Address, ADA},
     backend::{
         fake_backend::{FakeBackendsBuilder, FakeRecord},
-        Backend, TxORecord,
+        TxORecord,
     },
     error::Result,
     output::Output,
@@ -37,6 +37,7 @@ fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> Result<()> {
     }
 }
 
+#[derive(Clone)]
 struct EscrowContract;
 
 #[derive(Clone)]
@@ -88,7 +89,7 @@ fn escrow__can_create_instance() {
     let me = Address::new("me");
     let alice = Address::new("alice");
     let start_amount = 100;
-    let mut backend = FakeBackendsBuilder::new(me.clone())
+    let mut backend = FakeBackendsBuilder::new(EscrowContract, me.clone())
         .start_output(me.clone())
         .with_value(ADA, start_amount)
         .finish_output()
@@ -100,7 +101,7 @@ fn escrow__can_create_instance() {
         receiver: alice.clone(),
     };
     let script = EscrowValidatorScript;
-    Backend::hit_endpoint::<EscrowContract>(&backend, call).unwrap();
+    backend.hit_endpoint(call).unwrap();
 
     let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let expected = escrow_amount;
@@ -128,12 +129,12 @@ fn escrow__can_create_instance() {
     // The creator tries to spend escrow but fails because not recipient
     let call = Endpoint::Claim { output: instance };
 
-    let attempt = Backend::hit_endpoint::<EscrowContract>(&backend, call.clone());
+    let attempt = backend.hit_endpoint(call.clone());
     assert!(attempt.is_err());
 
     // The recipient tries to spend and succeeds
     backend.txo_record.signer = alice.clone();
-    Backend::hit_endpoint::<EscrowContract>(&backend, call).unwrap();
+    backend.hit_endpoint(call).unwrap();
 
     let alice_balance = <FakeRecord<EscrowDatum> as TxORecord<EscrowDatum, ()>>::balance_at_address(
         &backend.txo_record,
