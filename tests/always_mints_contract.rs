@@ -1,12 +1,13 @@
-use crate::{
-    address::Address, backend::Backend, error, smart_contract::SmartContract, Policy,
-    UnBuiltTransaction,
+use naumachia::address::Policy;
+use naumachia::{
+    address::Address,
+    backend::{fake_backend::FakeRecord, Backend, TxORecord},
+    error::Result,
+    smart_contract::SmartContract,
+    transaction::UnBuiltTransaction,
 };
 use std::cell::RefCell;
 use std::marker::PhantomData;
-
-use crate::backend::{FakeRecord, TxORecord};
-use error::Result;
 
 struct AlwaysMintsSmartContract;
 

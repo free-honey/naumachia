@@ -1,8 +1,10 @@
-use crate::backend::{FakeRecord, TxORecord};
-use crate::error::Result;
-use crate::{
-    address::ADA, backend::Backend, output::Output, smart_contract::SmartContract, Address,
-    UnBuiltTransaction,
+use naumachia::{
+    address::{Address, ADA},
+    backend::{fake_backend::FakeRecord, Backend, TxORecord},
+    error::Result,
+    output::Output,
+    smart_contract::SmartContract,
+    transaction::UnBuiltTransaction,
 };
 use std::marker::PhantomData;
 use std::{cell::RefCell, collections::HashMap};

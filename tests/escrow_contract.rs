@@ -1,15 +1,17 @@
-use crate::backend::{Backend, FakeRecord, TxORecord};
-use crate::output::Output;
-use crate::{
-    address::ADA,
-    backend::FakeBackendsBuilder,
+#![allow(non_snake_case)]
+use naumachia::{
+    address::{Address, ADA},
+    backend::{
+        fake_backend::{FakeBackendsBuilder, FakeRecord},
+        Backend, TxORecord,
+    },
+    error::Result,
+    output::Output,
     smart_contract::SmartContract,
+    transaction::UnBuiltTransaction,
     validator::{TxContext, ValidatorCode},
-    Address, UnBuiltTransaction,
 };
 use std::collections::HashMap;
-
-use crate::error::Result;
 
 pub struct EscrowValidatorScript;
 
