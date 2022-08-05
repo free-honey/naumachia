@@ -1,13 +1,14 @@
 use crate::{
     address::Address,
+    backend::Backend,
     error,
-    fakes::FakeBackends,
     smart_contract::{DataSource, SmartContract},
     Policy, UnBuiltTransaction,
 };
 use std::cell::RefCell;
 use std::marker::PhantomData;
 
+use crate::backend::{FakeRecord, TxORecord};
 use error::Result;
 
 struct AlwaysMintsSmartContract;
@@ -46,10 +47,16 @@ fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransa
 #[test]
 fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
-    let backend = FakeBackends {
-        signer: me,
+    let txo_record = FakeRecord {
+        signer: me.clone(),
         outputs: RefCell::new(vec![]),
+    };
+    let backend = Backend {
+        // signer: me.clone(),
+        // outputs: RefCell::new(vec![]),
+        _datum: PhantomData::default(),
         _redeemer: PhantomData::default(),
+        txo_record,
     };
     // Call mint endpoint
     let amount = 69;
@@ -60,6 +67,8 @@ fn can_mint_from_always_true_minting_policy() {
 
     // Check my balance for minted tokens
     let expected = amount;
-    let actual = backend.my_balance(&Some(Address::new(MINT_POLICY_ADDR))); // TODO: Use policy address
+    let actual = backend
+        .txo_record
+        .balance_at_address(&me, &Some(Address::new(MINT_POLICY_ADDR))); // TODO: Use policy address
     assert_eq!(expected, actual)
 }

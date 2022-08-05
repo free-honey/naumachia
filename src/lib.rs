@@ -12,7 +12,7 @@ pub mod smart_contract;
 pub mod transaction;
 pub mod validator;
 
-pub mod fakes;
+pub mod backend;
 
 #[cfg(test)]
 mod tests;

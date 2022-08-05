@@ -1,6 +1,7 @@
+use crate::backend::{FakeRecord, TxORecord};
 use crate::{
     address::ADA,
-    fakes::FakeBackends,
+    backend::Backend,
     output::Output,
     smart_contract::{DataSource, SmartContract},
     Address, UnBuiltTransaction,
@@ -47,10 +48,16 @@ fn can_transfer_and_keep_remainder() {
 
     let amount = 590;
 
-    let backend = FakeBackends {
+    let txo_record = FakeRecord {
         signer: me.clone(),
-        outputs: RefCell::new(vec![(me.clone(), input)]),
+        outputs: RefCell::new(vec![(me.clone(), input.clone())]),
+    };
+    let backend = Backend {
+        // signer: me.clone(),
+        // outputs: RefCell::new(vec![(me.clone(), input)]),
+        _datum: PhantomData::default(),
         _redeemer: PhantomData::default(),
+        txo_record,
     };
 
     let call = Endpoint::Transfer {
@@ -61,14 +68,14 @@ fn can_transfer_and_keep_remainder() {
     TransferADASmartContract::hit_endpoint(call, &backend, &backend, &backend).unwrap();
 
     let alice_expected = amount;
-    let alice_actual = backend.balance_at_address(&alice, &ADA);
+    let alice_actual = backend.txo_record.balance_at_address(&alice, &ADA);
     assert_eq!(alice_expected, alice_actual);
 
     let me_expected = input_amount - amount;
-    let me_actual = backend.balance_at_address(&me, &ADA);
+    let me_actual = backend.txo_record.balance_at_address(&me, &ADA);
     assert_eq!(me_expected, me_actual);
 
     let expected_extra_amount = extra_amount;
-    let actual_extra_amount = backend.balance_at_address(&me, &extra_policy);
+    let actual_extra_amount = backend.txo_record.balance_at_address(&me, &extra_policy);
     assert_eq!(expected_extra_amount, actual_extra_amount);
 }

@@ -39,12 +39,52 @@ impl<Datum: Clone, Redeemer> FakeBackendsBuilder<Datum, Redeemer> {
         self.outputs.push((address, output))
     }
 
-    pub fn build(&self) -> FakeBackends<Datum, Redeemer> {
-        FakeBackends {
+    pub fn build(&self) -> Backend<Datum, Redeemer, FakeRecord<Datum>> {
+        let txo_record = FakeRecord {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
+        };
+        Backend {
+            // signer: self.signer.clone(),
+            // outputs: RefCell::new(self.outputs.clone()),
+            _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
+            txo_record,
         }
+    }
+}
+
+pub struct FakeRecord<Datum> {
+    pub signer: Address,
+    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+}
+
+impl<Datum: Clone> TxORecord<Datum> for FakeRecord<Datum> {
+    fn signer(&self) -> &Address {
+        &self.signer
+    }
+
+    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+        self.outputs
+            .borrow()
+            .clone()
+            .into_iter()
+            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+            .collect()
+    }
+
+    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
+        self.outputs
+            .borrow()
+            .iter()
+            .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
+            .fold(0, |acc, o| {
+                if let Some(val) = o.values().get(policy) {
+                    acc + val
+                } else {
+                    acc
+                }
+            }) // Sum up policy values
     }
 }
 
@@ -77,57 +117,67 @@ impl<Datum: Clone, Redeemer> OutputBuilder<Datum, Redeemer> {
     }
 }
 
-#[derive(Debug)]
-pub struct FakeBackends<Datum, Redeemer> {
-    pub signer: Address,
-    // TODO: Might make sense to make this swapable to
-    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
-    pub _redeemer: PhantomData<Redeemer>,
+pub trait TxORecord<Datum> {
+    fn signer(&self) -> &Address;
+    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
+    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;
 }
 
-impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
-    pub fn new(signer: Address) -> Self {
-        FakeBackends {
-            signer,
-            outputs: RefCell::new(vec![]),
+#[derive(Debug)]
+pub struct Backend<Datum, Redeemer, Record: TxORecord<Datum>> {
+    // pub signer: Address,
+    // TODO: Might make sense to make this swapable to
+    // pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+    pub _datum: PhantomData<Datum>,
+    pub _redeemer: PhantomData<Redeemer>,
+    pub txo_record: Record,
+}
+
+impl<Datum: Clone, Redeemer, Record: TxORecord<Datum>> Backend<Datum, Redeemer, Record> {
+    pub fn new(signer: Address, txo_record: Record) -> Self {
+        Backend {
+            // signer,
+            // outputs: RefCell::new(vec![]),
+            _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
+            txo_record,
         }
     }
+    //
+    // pub fn change_signer(&mut self, new_signer: Address) {
+    //     self.signer = new_signer;
+    // }
 
-    pub fn change_signer(&mut self, new_signer: Address) {
-        self.signer = new_signer;
-    }
+    // pub fn with_output(&mut self, address: Address, output: Output<Datum>) {
+    //     self.txo_record.outputs.borrow_mut().push((address, output));
+    // }
 
-    pub fn with_output(&mut self, address: Address, output: Output<Datum>) {
-        self.outputs.borrow_mut().push((address, output));
-    }
+    // pub(crate) fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    //     self.outputs
+    //         .borrow()
+    //         .clone()
+    //         .into_iter()
+    //         .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+    //         .collect()
+    // }
 
-    pub(crate) fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
-        self.outputs
-            .borrow()
-            .clone()
-            .into_iter()
-            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-            .collect()
-    }
+    // pub fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
+    //     self.outputs
+    //         .borrow()
+    //         .iter()
+    //         .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
+    //         .fold(0, |acc, o| {
+    //             if let Some(val) = o.values().get(policy) {
+    //                 acc + val
+    //             } else {
+    //                 acc
+    //             }
+    //         }) // Sum up policy values
+    // }
 
-    pub fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-        self.outputs
-            .borrow()
-            .iter()
-            .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
-            .fold(0, |acc, o| {
-                if let Some(val) = o.values().get(policy) {
-                    acc + val
-                } else {
-                    acc
-                }
-            }) // Sum up policy values
-    }
-
-    pub fn my_balance(&self, policy: &Policy) -> u64 {
-        self.balance_at_address(&self.signer, policy)
-    }
+    // pub fn my_balance(&self, policy: &Policy) -> u64 {
+    //     self.balance_at_address(&self.signer, policy)
+    // }
 
     // TODO: Remove allow
     #[allow(clippy::type_complexity)]
@@ -195,8 +245,11 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
             }
         }
         // inputs
-        let (inputs, remainders) =
-            self.select_inputs_for_one(&self.signer, &min_input_values, script_inputs)?;
+        let (inputs, remainders) = self.select_inputs_for_one(
+            &self.txo_record.signer(),
+            &min_input_values,
+            script_inputs,
+        )?;
 
         // outputs
         remainders.iter().for_each(|(amt, recp, policy)| {
@@ -222,7 +275,7 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         script_inputs: Vec<Output<Datum>>,
     ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, Policy)>)> {
         let mut address_values = HashMap::new();
-        let mut all_available_outputs = self.outputs_at_address(address);
+        let mut all_available_outputs = self.txo_record.outputs_at_address(address);
         all_available_outputs.extend(script_inputs);
         all_available_outputs
             .clone()
@@ -306,14 +359,14 @@ fn add_amount_to_nested_map(
     }
 }
 
-impl<Datum, Redeemer> DataSource for FakeBackends<Datum, Redeemer> {
+impl<Datum, Redeemer, Record: TxORecord<Datum>> DataSource for Backend<Datum, Redeemer, Record> {
     fn me(&self) -> &Address {
-        &self.signer
+        self.txo_record.signer()
     }
 }
 
-impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash> TxBuilder<Datum, Redeemer>
-    for FakeBackends<Datum, Redeemer>
+impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash, Record: TxORecord<Datum>>
+    TxBuilder<Datum, Redeemer> for Backend<Datum, Redeemer, Record>
 {
     /// No Fees, MinAda, or Collateral
     fn build(
@@ -332,7 +385,17 @@ impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash> TxBuilder<Datum, Red
     }
 }
 
-impl<Datum, Redeemer> TxIssuer<Datum, Redeemer> for FakeBackends<Datum, Redeemer>
+impl<Datum, Redeemer> TxIssuer<Datum, Redeemer> for Backend<Datum, Redeemer, FakeRecord<Datum>>
+where
+    Datum: Clone + PartialEq + Debug,
+    Redeemer: Clone + PartialEq + Eq + Hash,
+{
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
+        self.txo_record.issue(tx)
+    }
+}
+
+impl<Datum, Redeemer> TxIssuer<Datum, Redeemer> for FakeRecord<Datum>
 where
     Datum: Clone + PartialEq + Debug,
     Redeemer: Clone + PartialEq + Eq + Hash,
