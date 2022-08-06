@@ -49,6 +49,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
     }
 }
 
+#[derive(Debug)]
 pub struct FakeRecord<Datum, Redeemer> {
     pub signer: Address,
     pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
