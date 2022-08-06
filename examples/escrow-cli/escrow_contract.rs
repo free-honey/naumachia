@@ -1,12 +1,8 @@
-use naumachia::backend::fake_backend::{FakeRecord, TestBackendsBuilder};
-use naumachia::backend::TxORecord;
-use naumachia::smart_contract::SmartContract;
 use naumachia::{
     address::{Address, ADA},
     error::Result as NauResult,
     logic::SCLogic,
     output::Output,
-    smart_contract::SmartContractTrait,
     transaction::UnBuiltTransaction,
     validator::{TxContext, ValidatorCode},
 };
@@ -46,7 +42,7 @@ pub enum Endpoint {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct EscrowDatum {
+pub struct EscrowDatum {
     receiver: Address,
 }
 

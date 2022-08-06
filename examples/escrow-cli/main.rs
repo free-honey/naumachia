@@ -1,18 +1,6 @@
 use clap::Parser;
 use escrow_contract::Endpoint;
-use naumachia::backend::fake_backend::{FakeRecord, TestBackendsBuilder};
-use naumachia::backend::TxORecord;
-use naumachia::smart_contract::SmartContract;
-use naumachia::{
-    address::{Address, ADA},
-    error::Result as NauResult,
-    logic::SCLogic,
-    output::Output,
-    smart_contract::SmartContractTrait,
-    transaction::UnBuiltTransaction,
-    validator::{TxContext, ValidatorCode},
-};
-use std::collections::HashMap;
+use naumachia::{address::Address, error::Result as NauResult, smart_contract::SmartContractTrait};
 
 mod escrow_contract;
 
@@ -33,7 +21,7 @@ enum ActionParams {
 fn main() {
     let args = Args::parse();
 
-    let contract = FakeEscrowSmartContract;
+    let contract = MockEscrowSmartContract;
 
     let handler = Handler::new(contract);
 
@@ -70,18 +58,18 @@ where
         Ok(())
     }
 
-    pub fn claim(&self, output: &str) -> Result<(), String> {
-        let call = todo!("Need to add some ID field to outputs");
-        self.contract.hit_endpoint(call)?;
-        println!();
-        println!("Successfully claimed output {}!", output);
-        Ok(())
+    pub fn claim(&self, _output: &str) -> Result<(), String> {
+        let _call = todo!("Need to add some ID field to outputs");
+        // self.contract.hit_endpoint(_call)?;
+        // println!();
+        // println!("Successfully claimed output {}!", output);
+        // Ok(())
     }
 }
 
-struct FakeEscrowSmartContract;
+struct MockEscrowSmartContract;
 
-impl SmartContractTrait for FakeEscrowSmartContract {
+impl SmartContractTrait for MockEscrowSmartContract {
     type Endpoint = Endpoint;
     type Lookup = ();
     type LookupResponse = ();
