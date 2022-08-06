@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+# cc 3413ccdfa5b134510975540aa6c20909fa6bb9f52410fa6d4f7d94d3a4af316a # shrinks to (signer, recipient, amount, backend, decoys) = (Address("alice"), Address("bob"), 0, Backend { _datum: PhantomData, _redeemer: PhantomData, txo_record: FakeRecord { signer: Address("alice"), outputs: RefCell { value: [] }, _redeemer: PhantomData } }, [Address("")])
+# cc 1d54949b4e959d0e42537dc047d6b9761bd383ec334905ed2645dc3abe4b0d2f # shrinks to (signer, recipient, amount, backend, decoys) = (Address("alice"), Address("bob"), 0, Backend { _datum: PhantomData, _redeemer: PhantomData, txo_record: FakeRecord { signer: Address("alice"), outputs: RefCell { value: [] }, _redeemer: PhantomData } }, [])
+cc 34595a3b5af674c393c4b397198dc29d8a783285e7171f5ed4adc6d96ca4a7ef # shrinks to (signer, recipient, amount, backend, decoys) = (Address("alice"), Address("bob"), 0, Backend { _datum: PhantomData, _redeemer: PhantomData, txo_record: FakeRecord { signer: Address("alice"), outputs: RefCell { value: [] }, _redeemer: PhantomData } }, [])

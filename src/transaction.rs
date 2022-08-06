@@ -92,7 +92,7 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
     }
 }
 
-pub struct Transaction<Datum, Redeemer: Clone + PartialEq + Eq> {
+pub struct Transaction<Datum, Redeemer> {
     pub inputs: Vec<Output<Datum>>,
     pub outputs: Vec<Output<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,

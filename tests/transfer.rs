@@ -1,12 +1,12 @@
+use naumachia::backend::fake_backend::TestBackendsBuilder;
+use naumachia::smart_contract::SmartContract;
 use naumachia::{
     address::{Address, ADA},
-    backend::{fake_backend::FakeRecord, Backend, TxORecord},
+    backend::TxORecord,
     error::Result,
-    output::Output,
-    smart_contract::SmartContract,
+    logic::Logic,
     transaction::UnBuiltTransaction,
 };
-use std::{cell::RefCell, collections::HashMap, marker::PhantomData};
 
 struct TransferADASmartContract;
 
@@ -14,7 +14,7 @@ enum Endpoint {
     Transfer { amount: u64, recipient: Address },
 }
 
-impl SmartContract for TransferADASmartContract {
+impl Logic for TransferADASmartContract {
     type Endpoint = Endpoint;
     type Datum = ();
     type Redeemer = ();
@@ -38,51 +38,36 @@ fn can_transfer_and_keep_remainder() {
     let alice = Address::new("alice");
 
     let input_amount = 666;
-    let mut values = HashMap::new();
-    values.insert(ADA, input_amount);
     let extra_policy = Some(Address::new("arcade token"));
     let extra_amount = 50;
-    values.insert(extra_policy.clone(), extra_amount);
-    let input = Output::wallet(me.clone(), values.clone());
 
     let amount = 590;
 
-    let txo_record = FakeRecord {
-        signer: me.clone(),
-        outputs: RefCell::new(vec![(me.clone(), input)]),
-    };
-    let backend = Backend {
-        smart_contract: TransferADASmartContract,
-        _datum: PhantomData::default(),
-        _redeemer: PhantomData::default(),
-        txo_record,
-    };
+    let backend = TestBackendsBuilder::new(&me)
+        .start_output(&me)
+        .with_value(ADA, input_amount)
+        .with_value(extra_policy.clone(), extra_amount)
+        .finish_output()
+        .build();
+
+    let contract = SmartContract::new(&TransferADASmartContract, &backend);
 
     let call = Endpoint::Transfer {
         amount,
         recipient: alice.clone(),
     };
 
-    backend.hit_endpoint(call).unwrap();
+    contract.hit_endpoint(call).unwrap();
 
     let alice_expected = amount;
-    let alice_actual = <FakeRecord<()> as TxORecord<(), ()>>::balance_at_address(
-        &backend.txo_record,
-        &alice,
-        &ADA,
-    );
+    let alice_actual = backend.txo_record.balance_at_address(&alice, &ADA);
     assert_eq!(alice_expected, alice_actual);
 
     let me_expected = input_amount - amount;
-    let me_actual =
-        <FakeRecord<()> as TxORecord<(), ()>>::balance_at_address(&backend.txo_record, &me, &ADA);
+    let me_actual = backend.txo_record.balance_at_address(&me, &ADA);
     assert_eq!(me_expected, me_actual);
 
     let expected_extra_amount = extra_amount;
-    let actual_extra_amount = <FakeRecord<()> as TxORecord<(), ()>>::balance_at_address(
-        &backend.txo_record,
-        &me,
-        &extra_policy,
-    );
+    let actual_extra_amount = backend.txo_record.balance_at_address(&me, &extra_policy);
     assert_eq!(expected_extra_amount, actual_extra_amount);
 }

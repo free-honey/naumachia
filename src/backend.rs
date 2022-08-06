@@ -4,7 +4,6 @@ use crate::{
     address::{Address, Policy},
     error::Result,
     output::Output,
-    smart_contract::SmartContract,
     transaction::Action,
     validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
@@ -12,7 +11,10 @@ use crate::{
 
 pub mod fake_backend;
 
-pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
+#[cfg(test)]
+mod tests;
+
+pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
     fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;
@@ -20,39 +22,34 @@ pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
 }
 
 #[derive(Debug)]
-pub struct Backend<
-    SC: SmartContract,
-    Datum,
-    Redeemer: Clone + Eq,
-    Record: TxORecord<Datum, Redeemer>,
-> {
-    pub smart_contract: SC,
+pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
     pub txo_record: Record,
 }
 
-impl<SC: SmartContract<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer, Record>
-    Backend<SC, Datum, Redeemer, Record>
+impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
 where
     Datum: Clone,
     Redeemer: Clone + Eq,
     Record: TxORecord<Datum, Redeemer>,
 {
-    pub fn new(smart_contract: SC, txo_record: Record) -> Self {
+    pub fn new(txo_record: Record) -> Self {
         Backend {
-            smart_contract,
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
             txo_record,
         }
     }
 
-    pub fn hit_endpoint(&self, endpoint: SC::Endpoint) -> Result<()> {
-        let unbuilt_tx = SC::handle_endpoint(endpoint, self.txo_record.signer())?;
-        let tx = self.build(unbuilt_tx)?;
+    pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
+        let tx = self.build(u_tx)?;
         self.txo_record.issue(tx)?;
         Ok(())
+    }
+
+    pub fn signer(&self) -> &Address {
+        self.txo_record.signer()
     }
 
     // TODO: Remove allow

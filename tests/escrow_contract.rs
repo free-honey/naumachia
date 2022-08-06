@@ -2,10 +2,11 @@
 use naumachia::{
     address::{Address, ADA},
     backend::{
-        fake_backend::{FakeBackendsBuilder, FakeRecord},
+        fake_backend::{FakeRecord, TestBackendsBuilder},
         TxORecord,
     },
     error::Result,
+    logic::Logic,
     output::Output,
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
@@ -51,7 +52,7 @@ struct EscrowDatum {
     receiver: Address,
 }
 
-impl SmartContract for EscrowContract {
+impl Logic for EscrowContract {
     type Endpoint = Endpoint;
     type Datum = EscrowDatum;
     type Redeemer = ();
@@ -89,8 +90,8 @@ fn escrow__can_create_instance() {
     let me = Address::new("me");
     let alice = Address::new("alice");
     let start_amount = 100;
-    let mut backend = FakeBackendsBuilder::new(EscrowContract, me.clone())
-        .start_output(me.clone())
+    let mut backend = TestBackendsBuilder::new(&me)
+        .start_output(&me)
         .with_value(ADA, start_amount)
         .finish_output()
         .build();
@@ -101,11 +102,12 @@ fn escrow__can_create_instance() {
         receiver: alice.clone(),
     };
     let script = EscrowValidatorScript;
-    backend.hit_endpoint(call).unwrap();
+    let contract = SmartContract::new(&EscrowContract, &backend);
+    contract.hit_endpoint(call).unwrap();
 
     let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let expected = escrow_amount;
-    let actual = <FakeRecord<EscrowDatum> as TxORecord<EscrowDatum, ()>>::balance_at_address(
+    let actual = <FakeRecord<EscrowDatum, ()> as TxORecord<EscrowDatum, ()>>::balance_at_address(
         &backend.txo_record,
         &script.address(),
         &ADA,
@@ -113,41 +115,29 @@ fn escrow__can_create_instance() {
     assert_eq!(expected, actual);
 
     let expected = start_amount - escrow_amount;
-    let actual = <FakeRecord<EscrowDatum> as TxORecord<EscrowDatum, ()>>::balance_at_address(
-        &backend.txo_record,
-        &me,
-        &ADA,
-    );
+    let actual = backend.txo_record.balance_at_address(&me, &ADA);
     assert_eq!(expected, actual);
 
-    let instance = <FakeRecord<EscrowDatum> as TxORecord<EscrowDatum, ()>>::outputs_at_address(
-        &backend.txo_record,
-        &script.address(),
-    )
-    .pop()
-    .unwrap();
+    let instance = backend
+        .txo_record
+        .outputs_at_address(&script.address())
+        .pop()
+        .unwrap();
     // The creator tries to spend escrow but fails because not recipient
     let call = Endpoint::Claim { output: instance };
 
-    let attempt = backend.hit_endpoint(call.clone());
+    let contract = SmartContract::new(&EscrowContract, &backend);
+    let attempt = contract.hit_endpoint(call.clone());
     assert!(attempt.is_err());
 
     // The recipient tries to spend and succeeds
     backend.txo_record.signer = alice.clone();
-    backend.hit_endpoint(call).unwrap();
+    let contract = SmartContract::new(&EscrowContract, &backend);
+    contract.hit_endpoint(call).unwrap();
 
-    let alice_balance = <FakeRecord<EscrowDatum> as TxORecord<EscrowDatum, ()>>::balance_at_address(
-        &backend.txo_record,
-        &alice,
-        &ADA,
-    );
+    let alice_balance = backend.txo_record.balance_at_address(&alice, &ADA);
     assert_eq!(alice_balance, escrow_amount);
 
-    let script_balance =
-        <FakeRecord<EscrowDatum> as TxORecord<EscrowDatum, ()>>::balance_at_address(
-            &backend.txo_record,
-            &escrow_address,
-            &ADA,
-        );
+    let script_balance = backend.txo_record.balance_at_address(&escrow_address, &ADA);
     assert_eq!(script_balance, 0);
 }
