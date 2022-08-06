@@ -5,6 +5,7 @@ use crate::{
 pub mod error;
 
 pub mod address;
+pub mod logic;
 pub mod output;
 pub mod smart_contract;
 pub mod transaction;

@@ -1,17 +1,13 @@
 use crate::{
     backend::{can_spend_inputs, Backend, TxORecord},
     error::Result,
+    logic::Logic,
     output::Output,
-    smart_contract::SmartContract,
     Address, Policy, Transaction,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
-pub struct FakeBackendsBuilder<
-    SC: SmartContract<Datum = Datum, Redeemer = Redeemer>,
-    Datum,
-    Redeemer,
-> {
+pub struct FakeBackendsBuilder<SC: Logic<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer> {
     smart_contract: SC,
     signer: Address,
     outputs: Vec<(Address, Output<Datum>)>,
@@ -19,7 +15,7 @@ pub struct FakeBackendsBuilder<
 }
 
 impl<
-        SC: SmartContract<Datum = Datum, Redeemer = Redeemer> + Clone,
+        SC: Logic<Datum = Datum, Redeemer = Redeemer> + Clone,
         Datum: Clone + PartialEq + Debug,
         Redeemer: Clone + Eq + PartialEq + Debug + Hash,
     > FakeBackendsBuilder<SC, Datum, Redeemer>
@@ -114,7 +110,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
 }
 
 pub struct OutputBuilder<
-    SC: SmartContract<Datum = Datum, Redeemer = Redeemer>,
+    SC: Logic<Datum = Datum, Redeemer = Redeemer>,
     Datum: PartialEq + Debug,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash,
 > {
@@ -124,7 +120,7 @@ pub struct OutputBuilder<
 }
 
 impl<
-        SC: SmartContract<Datum = Datum, Redeemer = Redeemer> + Clone,
+        SC: Logic<Datum = Datum, Redeemer = Redeemer> + Clone,
         Datum: Clone + PartialEq + Debug,
         Redeemer: Clone + Eq + PartialEq + Debug + Hash,
     > OutputBuilder<SC, Datum, Redeemer>

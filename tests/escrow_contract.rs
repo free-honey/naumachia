@@ -6,6 +6,7 @@ use naumachia::{
         TxORecord,
     },
     error::Result,
+    logic::Logic,
     output::Output,
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
@@ -51,7 +52,7 @@ struct EscrowDatum {
     receiver: Address,
 }
 
-impl SmartContract for EscrowContract {
+impl Logic for EscrowContract {
     type Endpoint = Endpoint;
     type Datum = EscrowDatum;
     type Redeemer = ();

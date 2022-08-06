@@ -2,8 +2,8 @@ use naumachia::{
     address::{Address, ADA},
     backend::{fake_backend::FakeRecord, Backend, TxORecord},
     error::Result,
+    logic::Logic,
     output::Output,
-    smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
 };
 use std::{cell::RefCell, collections::HashMap, marker::PhantomData};
@@ -14,7 +14,7 @@ enum Endpoint {
     Transfer { amount: u64, recipient: Address },
 }
 
-impl SmartContract for TransferADASmartContract {
+impl Logic for TransferADASmartContract {
     type Endpoint = Endpoint;
     type Datum = ();
     type Redeemer = ();

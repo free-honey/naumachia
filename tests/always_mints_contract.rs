@@ -3,6 +3,7 @@ use naumachia::{
     address::Policy,
     backend::{fake_backend::FakeRecord, Backend, TxORecord},
     error::Result,
+    logic::Logic,
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
 };
@@ -18,7 +19,7 @@ enum Endpoint {
 
 const MINT_POLICY_ADDR: &str = "mint_policy";
 
-impl SmartContract for AlwaysMintsSmartContract {
+impl Logic for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
     type Datum = ();
     type Redeemer = ();

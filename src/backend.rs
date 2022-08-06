@@ -3,14 +3,17 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::P
 use crate::{
     address::{Address, Policy},
     error::Result,
+    logic::Logic,
     output::Output,
-    smart_contract::SmartContract,
     transaction::Action,
     validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
 
 pub mod fake_backend;
+
+#[cfg(test)]
+mod tests;
 
 pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
     fn signer(&self) -> &Address;
@@ -20,19 +23,14 @@ pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
 }
 
 #[derive(Debug)]
-pub struct Backend<
-    SC: SmartContract,
-    Datum,
-    Redeemer: Clone + Eq,
-    Record: TxORecord<Datum, Redeemer>,
-> {
+pub struct Backend<SC: Logic, Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
     pub smart_contract: SC,
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
     pub txo_record: Record,
 }
 
-impl<SC: SmartContract<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer, Record>
+impl<SC: Logic<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer, Record>
     Backend<SC, Datum, Redeemer, Record>
 where
     Datum: Clone,
@@ -53,6 +51,16 @@ where
         let tx = self.build(unbuilt_tx)?;
         self.txo_record.issue(tx)?;
         Ok(())
+    }
+
+    pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
+        let tx = self.build(u_tx)?;
+        self.txo_record.issue(tx)?;
+        Ok(())
+    }
+
+    pub fn signer(&self) -> &Address {
+        self.txo_record.signer()
     }
 
     // TODO: Remove allow
