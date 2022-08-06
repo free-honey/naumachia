@@ -6,8 +6,7 @@ use naumachia::{
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
 };
-use std::cell::RefCell;
-use std::marker::PhantomData;
+use std::{cell::RefCell, marker::PhantomData};
 
 struct AlwaysMintsSmartContract;
 

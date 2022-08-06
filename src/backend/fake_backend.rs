@@ -1,13 +1,11 @@
-use crate::backend::{can_spend_inputs, Backend, TxORecord};
-use crate::error::Result;
-use crate::output::Output;
-use crate::smart_contract::SmartContract;
-use crate::{Address, Policy, Transaction};
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::marker::PhantomData;
+use crate::{
+    backend::{can_spend_inputs, Backend, TxORecord},
+    error::Result,
+    output::Output,
+    smart_contract::SmartContract,
+    Address, Policy, Transaction,
+};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
 pub struct FakeBackendsBuilder<
     SC: SmartContract<Datum = Datum, Redeemer = Redeemer>,
