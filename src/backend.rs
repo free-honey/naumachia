@@ -1,4 +1,5 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
+use uuid::Uuid;
 
 use crate::{
     address::{Address, Policy},
@@ -99,8 +100,11 @@ where
                     for (policy, amount) in values.iter() {
                         add_to_map(&mut min_input_values, policy.clone(), *amount);
                     }
+                    let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                    let owner = address;
                     let output = Output::Validator {
-                        owner: address,
+                        id,
+                        owner,
                         values,
                         datum,
                     };
@@ -186,7 +190,8 @@ where
             .into_iter()
             .map(|(owner, val_vec)| {
                 let values = val_vec.into_iter().collect();
-                Output::wallet(owner, values)
+                let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                Output::new_wallet(id, owner, values)
             })
             .collect();
         Ok(outputs)

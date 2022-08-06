@@ -5,6 +5,7 @@ use crate::{
     Address, Policy, Transaction,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
+use uuid::Uuid;
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
@@ -82,7 +83,8 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             values,
         } = self;
         let address = owner.clone();
-        let output = Output::wallet(address, values);
+        let id = Uuid::new_v4().to_string();
+        let output = Output::new_wallet(id, address, values);
         inner.add_output(&owner, output);
         inner
     }
