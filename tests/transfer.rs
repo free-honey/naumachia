@@ -1,10 +1,10 @@
 use naumachia::backend::fake_backend::TestBackendsBuilder;
-use naumachia::smart_contract::SmartContract;
+use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
     address::{Address, ADA},
     backend::TxORecord,
     error::Result,
-    logic::Logic,
+    logic::SCLogic,
     transaction::UnBuiltTransaction,
 };
 
@@ -14,7 +14,7 @@ enum Endpoint {
     Transfer { amount: u64, recipient: Address },
 }
 
-impl Logic for TransferADASmartContract {
+impl SCLogic for TransferADASmartContract {
     type Endpoint = Endpoint;
     type Datum = ();
     type Redeemer = ();

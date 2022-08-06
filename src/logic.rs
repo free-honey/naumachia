@@ -1,7 +1,7 @@
 use crate::{error::Result, Address, UnBuiltTransaction};
 use std::hash::Hash;
 
-pub trait Logic {
+pub trait SCLogic {
     type Endpoint;
     type Datum: Clone;
     type Redeemer: Clone + PartialEq + Eq + Hash;

@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 
+
 [dev-dependencies]
+clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"

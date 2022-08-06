@@ -1,35 +1,57 @@
 use crate::backend::{Backend, TxORecord};
 use crate::error::Result;
-use crate::logic::Logic;
+use crate::logic::SCLogic;
 
-#[derive(Debug)]
-pub struct SmartContract<'a, SC, Record>
-where
-    SC: Logic,
-    Record: TxORecord<SC::Datum, SC::Redeemer>,
-{
-    pub smart_contract: &'a SC,
-    pub backend: &'a Backend<SC::Datum, SC::Redeemer, Record>,
+pub trait SmartContractTrait {
+    type Endpoint;
+    type Lookup;
+    type LookupResponse;
+    fn hit_endpoint(&self, endpoint: Self::Endpoint) -> Result<()>;
+    fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse>;
 }
 
-impl<'a, SC, Record> SmartContract<'a, SC, Record>
+#[derive(Debug)]
+pub struct SmartContract<'a, Logic, Record>
 where
-    SC: Logic,
-    Record: TxORecord<SC::Datum, SC::Redeemer>,
+    Logic: SCLogic,
+    Record: TxORecord<Logic::Datum, Logic::Redeemer>,
+{
+    pub smart_contract: &'a Logic,
+    pub backend: &'a Backend<Logic::Datum, Logic::Redeemer, Record>,
+}
+
+impl<'a, Logic, Record> SmartContract<'a, Logic, Record>
+where
+    Logic: SCLogic,
+    Record: TxORecord<Logic::Datum, Logic::Redeemer>,
 {
     pub fn new(
-        smart_contract: &'a SC,
-        backend: &'a Backend<SC::Datum, SC::Redeemer, Record>,
+        smart_contract: &'a Logic,
+        backend: &'a Backend<Logic::Datum, Logic::Redeemer, Record>,
     ) -> Self {
         SmartContract {
             smart_contract,
             backend,
         }
     }
+}
 
-    pub fn hit_endpoint(&self, endpoint: SC::Endpoint) -> Result<()> {
-        let unbuilt_tx = SC::handle_endpoint(endpoint, self.backend.signer())?;
+impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
+where
+    Logic: SCLogic,
+    Record: TxORecord<Logic::Datum, Logic::Redeemer>,
+{
+    type Endpoint = Logic::Endpoint;
+    type Lookup = ();
+    type LookupResponse = ();
+
+    fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
+        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.signer())?;
         self.backend.process(unbuilt_tx)?;
         Ok(())
+    }
+
+    fn lookup(&self, _lookup: Self::Lookup) -> Result<Self::LookupResponse> {
+        todo!()
     }
 }

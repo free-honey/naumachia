@@ -1,10 +1,11 @@
 use naumachia::backend::fake_backend::TestBackendsBuilder;
+use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
     address::Address,
     address::Policy,
     backend::{fake_backend::FakeRecord, TxORecord},
     error::Result,
-    logic::Logic,
+    logic::SCLogic,
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
 };
@@ -19,7 +20,7 @@ enum Endpoint {
 
 const MINT_POLICY_ADDR: &str = "mint_policy";
 
-impl Logic for AlwaysMintsSmartContract {
+impl SCLogic for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
     type Datum = ();
     type Redeemer = ();

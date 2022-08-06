@@ -72,6 +72,7 @@ proptest! {
         }
         backend.process(u_tx).unwrap();
 
+        // Check that only the expected ADA moved, and everything else stayed the same.
         let expected = their_bal_before + amount;
         let actual = backend.txo_record.balance_at_address(&recipient, &ADA);
         assert_eq!(expected, actual);

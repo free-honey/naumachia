@@ -1,14 +1,12 @@
-#![allow(non_snake_case)]
+use naumachia::backend::fake_backend::{FakeRecord, TestBackendsBuilder};
+use naumachia::backend::TxORecord;
+use naumachia::smart_contract::SmartContract;
 use naumachia::{
     address::{Address, ADA},
-    backend::{
-        fake_backend::{FakeRecord, TestBackendsBuilder},
-        TxORecord,
-    },
-    error::Result,
-    logic::Logic,
+    error::Result as NauResult,
+    logic::SCLogic,
     output::Output,
-    smart_contract::SmartContract,
+    smart_contract::SmartContractTrait,
     transaction::UnBuiltTransaction,
     validator::{TxContext, ValidatorCode},
 };
@@ -17,7 +15,7 @@ use std::collections::HashMap;
 pub struct EscrowValidatorScript;
 
 impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
-    fn execute(&self, datum: EscrowDatum, _redeemer: (), ctx: TxContext) -> Result<()> {
+    fn execute(&self, datum: EscrowDatum, _redeemer: (), ctx: TxContext) -> NauResult<()> {
         signer_is_recipient(&datum, &ctx)?;
         Ok(())
     }
@@ -27,7 +25,7 @@ impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
     }
 }
 
-fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> Result<()> {
+fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> NauResult<()> {
     if datum.receiver != ctx.signer {
         Err(format!(
             "Signer: {:?} doesn't match receiver: {:?}",
@@ -42,7 +40,7 @@ fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> Result<()> {
 struct EscrowContract;
 
 #[derive(Clone)]
-enum Endpoint {
+pub enum Endpoint {
     Escrow { amount: u64, receiver: Address },
     Claim { output: Output<EscrowDatum> },
 }
@@ -52,7 +50,7 @@ struct EscrowDatum {
     receiver: Address,
 }
 
-impl Logic for EscrowContract {
+impl SCLogic for EscrowContract {
     type Endpoint = Endpoint;
     type Datum = EscrowDatum;
     type Redeemer = ();
@@ -60,7 +58,7 @@ impl Logic for EscrowContract {
     fn handle_endpoint(
         endpoint: Self::Endpoint,
         _issuer: &Address,
-    ) -> Result<UnBuiltTransaction<EscrowDatum, ()>> {
+    ) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
         match endpoint {
             Endpoint::Escrow { amount, receiver } => escrow(amount, receiver),
             Endpoint::Claim { output } => claim(output),
@@ -68,7 +66,7 @@ impl Logic for EscrowContract {
     }
 }
 
-fn escrow(amount: u64, receiver: Address) -> Result<UnBuiltTransaction<EscrowDatum, ()>> {
+fn escrow(amount: u64, receiver: Address) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = EscrowValidatorScript;
     let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
@@ -78,8 +76,7 @@ fn escrow(amount: u64, receiver: Address) -> Result<UnBuiltTransaction<EscrowDat
     Ok(u_tx)
 }
 
-// TODO: Check if can claim first
-fn claim(output: Output<EscrowDatum>) -> Result<UnBuiltTransaction<EscrowDatum, ()>> {
+fn claim(output: Output<EscrowDatum>) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = Box::new(EscrowValidatorScript);
     let u_tx = UnBuiltTransaction::default().with_script_redeem(output, (), script);
     Ok(u_tx)
@@ -107,7 +104,7 @@ fn escrow__can_create_instance() {
 
     let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let expected = escrow_amount;
-    let actual = <FakeRecord<EscrowDatum, ()> as TxORecord<EscrowDatum, ()>>::balance_at_address(
+    let actual = <FakeRecord<EscrowDatum, ()> as naumachia::backend::TxORecord<EscrowDatum, ()>>::balance_at_address(
         &backend.txo_record,
         &script.address(),
         &ADA,

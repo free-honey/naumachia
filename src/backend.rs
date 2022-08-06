@@ -23,6 +23,7 @@ pub trait TxORecord<Datum, Redeemer> {
 
 #[derive(Debug)]
 pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
+    // TODO: Make fields private
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
     pub txo_record: Record,
