@@ -1,35 +1,29 @@
 use crate::{
     backend::{can_spend_inputs, Backend, TxORecord},
     error::Result,
-    logic::Logic,
     output::Output,
     Address, Policy, Transaction,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
-pub struct FakeBackendsBuilder<SC: Logic<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer> {
-    smart_contract: SC,
+pub struct FakeBackendsBuilder<Datum, Redeemer> {
     signer: Address,
     outputs: Vec<(Address, Output<Datum>)>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<
-        SC: Logic<Datum = Datum, Redeemer = Redeemer> + Clone,
-        Datum: Clone + PartialEq + Debug,
-        Redeemer: Clone + Eq + PartialEq + Debug + Hash,
-    > FakeBackendsBuilder<SC, Datum, Redeemer>
+impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+    FakeBackendsBuilder<Datum, Redeemer>
 {
-    pub fn new(smart_contract: SC, signer: Address) -> FakeBackendsBuilder<SC, Datum, Redeemer> {
+    pub fn new(signer: Address) -> FakeBackendsBuilder<Datum, Redeemer> {
         FakeBackendsBuilder {
-            smart_contract,
             signer,
             outputs: Vec::new(),
             _redeemer: PhantomData::default(),
         }
     }
 
-    pub fn start_output(self, owner: Address) -> OutputBuilder<SC, Datum, Redeemer> {
+    pub fn start_output(self, owner: Address) -> OutputBuilder<Datum, Redeemer> {
         OutputBuilder {
             inner: self,
             owner,
@@ -41,14 +35,12 @@ impl<
         self.outputs.push((address, output))
     }
 
-    pub fn build(&self) -> Backend<SC, Datum, Redeemer, FakeRecord<Datum>> {
-        let smart_contract = self.smart_contract.clone();
+    pub fn build(&self) -> Backend<Datum, Redeemer, FakeRecord<Datum>> {
         let txo_record = FakeRecord {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
         };
         Backend {
-            smart_contract,
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
             txo_record,
@@ -109,23 +101,17 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
     }
 }
 
-pub struct OutputBuilder<
-    SC: Logic<Datum = Datum, Redeemer = Redeemer>,
-    Datum: PartialEq + Debug,
-    Redeemer: Clone + Eq + PartialEq + Debug + Hash,
-> {
-    inner: FakeBackendsBuilder<SC, Datum, Redeemer>,
+pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+{
+    inner: FakeBackendsBuilder<Datum, Redeemer>,
     owner: Address,
     values: HashMap<Policy, u64>,
 }
 
-impl<
-        SC: Logic<Datum = Datum, Redeemer = Redeemer> + Clone,
-        Datum: Clone + PartialEq + Debug,
-        Redeemer: Clone + Eq + PartialEq + Debug + Hash,
-    > OutputBuilder<SC, Datum, Redeemer>
+impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+    OutputBuilder<Datum, Redeemer>
 {
-    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<SC, Datum, Redeemer> {
+    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum, Redeemer> {
         let mut new_total = amount;
         if let Some(total) = self.values.get(&policy) {
             new_total += total;
@@ -134,7 +120,7 @@ impl<
         self
     }
 
-    pub fn finish_output(self) -> FakeBackendsBuilder<SC, Datum, Redeemer> {
+    pub fn finish_output(self) -> FakeBackendsBuilder<Datum, Redeemer> {
         let OutputBuilder {
             mut inner,
             owner,

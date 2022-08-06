@@ -51,7 +51,6 @@ fn can_mint_from_always_true_minting_policy() {
         outputs: RefCell::new(vec![]),
     };
     let backend = Backend {
-        smart_contract: AlwaysMintsSmartContract,
         _datum: PhantomData::default(),
         _redeemer: PhantomData::default(),
         txo_record,
@@ -59,7 +58,8 @@ fn can_mint_from_always_true_minting_policy() {
     // Call mint endpoint
     let amount = 69;
     let call = Endpoint::Mint { amount };
-    backend.hit_endpoint(call).unwrap();
+    let contract = SmartContract::new(&AlwaysMintsSmartContract, &backend);
+    contract.hit_endpoint(call).unwrap();
 
     // Check my balance for minted tokens
     let expected = amount;

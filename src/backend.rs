@@ -3,7 +3,6 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::P
 use crate::{
     address::{Address, Policy},
     error::Result,
-    logic::Logic,
     output::Output,
     transaction::Action,
     validator::{TxContext, ValidatorCode},
@@ -23,34 +22,24 @@ pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
 }
 
 #[derive(Debug)]
-pub struct Backend<SC: Logic, Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
-    pub smart_contract: SC,
+pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
     pub txo_record: Record,
 }
 
-impl<SC: Logic<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer, Record>
-    Backend<SC, Datum, Redeemer, Record>
+impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
 where
     Datum: Clone,
     Redeemer: Clone + Eq,
     Record: TxORecord<Datum, Redeemer>,
 {
-    pub fn new(smart_contract: SC, txo_record: Record) -> Self {
+    pub fn new(txo_record: Record) -> Self {
         Backend {
-            smart_contract,
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
             txo_record,
         }
-    }
-
-    pub fn hit_endpoint(&self, endpoint: SC::Endpoint) -> Result<()> {
-        let unbuilt_tx = SC::handle_endpoint(endpoint, self.txo_record.signer())?;
-        let tx = self.build(unbuilt_tx)?;
-        self.txo_record.issue(tx)?;
-        Ok(())
     }
 
     pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {

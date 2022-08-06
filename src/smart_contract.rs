@@ -3,21 +3,24 @@ use crate::error::Result;
 use crate::logic::Logic;
 
 #[derive(Debug)]
-pub struct SmartContract<SC, Record>
+pub struct SmartContract<'a, SC, Record>
 where
     SC: Logic,
     Record: TxORecord<SC::Datum, SC::Redeemer>,
 {
-    pub smart_contract: SC,
-    pub backend: Backend<SC, SC::Datum, SC::Redeemer, Record>,
+    pub smart_contract: &'a SC,
+    pub backend: &'a Backend<SC::Datum, SC::Redeemer, Record>,
 }
 
-impl<SC, Record> SmartContract<SC, Record>
+impl<'a, SC, Record> SmartContract<'a, SC, Record>
 where
     SC: Logic,
     Record: TxORecord<SC::Datum, SC::Redeemer>,
 {
-    pub fn new(smart_contract: SC, backend: Backend<SC, SC::Datum, SC::Redeemer, Record>) -> Self {
+    pub fn new(
+        smart_contract: &'a SC,
+        backend: &'a Backend<SC::Datum, SC::Redeemer, Record>,
+    ) -> Self {
         SmartContract {
             smart_contract,
             backend,

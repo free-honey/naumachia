@@ -1,3 +1,4 @@
+use naumachia::smart_contract::SmartContract;
 use naumachia::{
     address::{Address, ADA},
     backend::{fake_backend::FakeRecord, Backend, TxORecord},
@@ -52,18 +53,19 @@ fn can_transfer_and_keep_remainder() {
         outputs: RefCell::new(vec![(me.clone(), input)]),
     };
     let backend = Backend {
-        smart_contract: TransferADASmartContract,
         _datum: PhantomData::default(),
         _redeemer: PhantomData::default(),
         txo_record,
     };
+
+    let contract = SmartContract::new(&TransferADASmartContract, &backend);
 
     let call = Endpoint::Transfer {
         amount,
         recipient: alice.clone(),
     };
 
-    backend.hit_endpoint(call).unwrap();
+    contract.hit_endpoint(call).unwrap();
 
     let alice_expected = amount;
     let alice_actual = <FakeRecord<()> as TxORecord<(), ()>>::balance_at_address(
