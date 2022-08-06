@@ -1,6 +1,8 @@
-use crate::backend::{Backend, TxORecord};
-use crate::error::Result;
-use crate::logic::SCLogic;
+use crate::{
+    backend::{Backend, TxORecord},
+    error::Result,
+    logic::SCLogic,
+};
 
 pub trait SmartContractTrait {
     type Endpoint;
