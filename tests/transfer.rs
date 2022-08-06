@@ -19,9 +19,9 @@ impl SCLogic for TransferADASmartContract {
     type Datum = ();
     type Redeemer = ();
 
-    fn handle_endpoint(
+    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
-        _issuer: &Address,
+        _txo_record: &Record,
     ) -> Result<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {

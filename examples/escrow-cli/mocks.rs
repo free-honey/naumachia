@@ -1,10 +1,10 @@
-use crate::{Endpoint, NauResult};
+use crate::{EscrowEndpoint, NauResult};
 use naumachia::smart_contract::SmartContractTrait;
 
 pub struct MockEscrowSmartContract;
 
 impl SmartContractTrait for MockEscrowSmartContract {
-    type Endpoint = Endpoint;
+    type Endpoint = EscrowEndpoint;
     type Lookup = ();
     type LookupResponse = ();
 

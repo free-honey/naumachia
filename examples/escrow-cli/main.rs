@@ -1,7 +1,7 @@
 use crate::handler::Handler;
 use crate::mocks::MockEscrowSmartContract;
 use clap::Parser;
-use escrow_contract::Endpoint;
+use escrow_contract::EscrowEndpoint;
 use naumachia::error::Result as NauResult;
 
 mod escrow_contract;

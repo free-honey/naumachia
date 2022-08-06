@@ -1,4 +1,4 @@
-use crate::Endpoint;
+use crate::EscrowEndpoint;
 use naumachia::address::Address;
 use naumachia::smart_contract::SmartContractTrait;
 
@@ -8,7 +8,7 @@ pub struct Handler<SC: SmartContractTrait> {
 
 impl<SC> Handler<SC>
 where
-    SC: SmartContractTrait<Endpoint = Endpoint>,
+    SC: SmartContractTrait<Endpoint = EscrowEndpoint>,
 {
     pub fn new(contract: SC) -> Self {
         Handler { contract }
@@ -16,7 +16,7 @@ where
 
     pub fn escrow(&self, amount: u64, rcvr: &str) -> Result<(), String> {
         let receiver = Address::new(rcvr);
-        let call = Endpoint::Escrow { amount, receiver };
+        let call = EscrowEndpoint::Escrow { amount, receiver };
         self.contract.hit_endpoint(call)?;
         println!();
         println!(

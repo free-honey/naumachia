@@ -76,6 +76,7 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
         self
     }
 
+    // TODO: This can prolly just take the Output ID
     pub fn with_script_redeem(
         mut self,
         output: Output<Datum>,

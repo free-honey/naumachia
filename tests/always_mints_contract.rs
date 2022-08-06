@@ -25,13 +25,13 @@ impl SCLogic for AlwaysMintsSmartContract {
     type Datum = ();
     type Redeemer = ();
 
-    fn handle_endpoint(
+    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
-        issuer: &Address,
+        txo_record: &Record,
     ) -> Result<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Mint { amount } => {
-                let recipient = issuer.clone();
+                let recipient = txo_record.signer().clone();
                 mint(amount, recipient, Some(Address::new(MINT_POLICY_ADDR)))
             }
         }

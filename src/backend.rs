@@ -50,6 +50,10 @@ where
         Ok(())
     }
 
+    pub fn txo_record(&self) -> &Record {
+        &self.txo_record
+    }
+
     pub fn signer(&self) -> &Address {
         self.txo_record.signer()
     }

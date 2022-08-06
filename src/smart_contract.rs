@@ -48,7 +48,7 @@ where
     type LookupResponse = ();
 
     fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
-        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.signer())?;
+        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.txo_record())?;
         self.backend.process(unbuilt_tx)?;
         Ok(())
     }

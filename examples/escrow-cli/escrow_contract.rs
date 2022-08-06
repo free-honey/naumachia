@@ -1,3 +1,4 @@
+use naumachia::backend::TxORecord;
 use naumachia::{
     address::{Address, ADA},
     error::Result as NauResult,
@@ -35,10 +36,9 @@ fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> NauResult<()> {
 #[derive(Clone)]
 struct EscrowContract;
 
-#[derive(Clone)]
-pub enum Endpoint {
+pub enum EscrowEndpoint {
     Escrow { amount: u64, receiver: Address },
-    Claim { output: Output<EscrowDatum> },
+    Claim { output_id: String },
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -47,17 +47,17 @@ pub struct EscrowDatum {
 }
 
 impl SCLogic for EscrowContract {
-    type Endpoint = Endpoint;
+    type Endpoint = EscrowEndpoint;
     type Datum = EscrowDatum;
     type Redeemer = ();
 
-    fn handle_endpoint(
+    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
-        _issuer: &Address,
+        txo_record: &Record,
     ) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
         match endpoint {
-            Endpoint::Escrow { amount, receiver } => escrow(amount, receiver),
-            Endpoint::Claim { output } => claim(output),
+            EscrowEndpoint::Escrow { amount, receiver } => escrow(amount, receiver),
+            EscrowEndpoint::Claim { output_id } => claim(&output_id, txo_record),
         }
     }
 }
@@ -72,10 +72,27 @@ fn escrow(amount: u64, receiver: Address) -> NauResult<UnBuiltTransaction<Escrow
     Ok(u_tx)
 }
 
-fn claim(output: Output<EscrowDatum>) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
+fn claim<Record: TxORecord<EscrowDatum, ()>>(
+    output_id: &str,
+    txo_record: &Record,
+) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = Box::new(EscrowValidatorScript);
+    let output = lookup_output(output_id, txo_record)?;
     let u_tx = UnBuiltTransaction::default().with_script_redeem(output, (), script);
     Ok(u_tx)
+}
+
+fn lookup_output<Record: TxORecord<EscrowDatum, ()>>(
+    id: &str,
+    txo_record: &Record,
+) -> NauResult<Output<EscrowDatum>> {
+    let script_address = EscrowValidatorScript.address();
+    let outputs = txo_record.outputs_at_address(&script_address);
+    outputs
+        .iter()
+        .find(|o| o.id() == id)
+        .cloned()
+        .ok_or(format!("Couldn't find output with id: {}", id))
 }
 
 #[cfg(test)]
@@ -98,7 +115,7 @@ mod tests {
             .build();
 
         let escrow_amount = 25;
-        let call = Endpoint::Escrow {
+        let call = EscrowEndpoint::Escrow {
             amount: escrow_amount,
             receiver: alice.clone(),
         };
@@ -123,7 +140,9 @@ mod tests {
             .pop()
             .unwrap();
         // The creator tries to spend escrow but fails because not recipient
-        let call = Endpoint::Claim { output: instance };
+        let call = EscrowEndpoint::Claim {
+            output_id: instance.id().to_string(),
+        };
 
         let contract = SmartContract::new(&EscrowContract, &backend);
         let attempt = contract.hit_endpoint(call.clone());
