@@ -14,7 +14,7 @@ pub mod fake_backend;
 #[cfg(test)]
 mod tests;
 
-pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
+pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
     fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;

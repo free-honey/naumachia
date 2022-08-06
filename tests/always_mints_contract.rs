@@ -1,13 +1,13 @@
+use naumachia::backend::fake_backend::TestBackendsBuilder;
 use naumachia::{
     address::Address,
     address::Policy,
-    backend::{fake_backend::FakeRecord, Backend, TxORecord},
+    backend::{fake_backend::FakeRecord, TxORecord},
     error::Result,
     logic::Logic,
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
 };
-use std::{cell::RefCell, marker::PhantomData};
 
 struct AlwaysMintsSmartContract;
 
@@ -46,15 +46,7 @@ fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransa
 fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
     let policy = Some(Address::new(MINT_POLICY_ADDR));
-    let txo_record: FakeRecord<()> = FakeRecord {
-        signer: me.clone(),
-        outputs: RefCell::new(vec![]),
-    };
-    let backend = Backend {
-        _datum: PhantomData::default(),
-        _redeemer: PhantomData::default(),
-        txo_record,
-    };
+    let backend = TestBackendsBuilder::new(&me).build();
     // Call mint endpoint
     let amount = 69;
     let call = Endpoint::Mint { amount };
@@ -63,7 +55,7 @@ fn can_mint_from_always_true_minting_policy() {
 
     // Check my balance for minted tokens
     let expected = amount;
-    let actual = <FakeRecord<()> as TxORecord<(), ()>>::balance_at_address(
+    let actual = <FakeRecord<(), ()> as TxORecord<(), ()>>::balance_at_address(
         &backend.txo_record,
         &me,
         &policy,

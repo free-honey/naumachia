@@ -6,39 +6,40 @@ use crate::{
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
-pub struct FakeBackendsBuilder<Datum, Redeemer> {
+pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
     outputs: Vec<(Address, Output<Datum>)>,
     _redeemer: PhantomData<Redeemer>,
 }
 
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    FakeBackendsBuilder<Datum, Redeemer>
+    TestBackendsBuilder<Datum, Redeemer>
 {
-    pub fn new(signer: Address) -> FakeBackendsBuilder<Datum, Redeemer> {
-        FakeBackendsBuilder {
-            signer,
+    pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
+        TestBackendsBuilder {
+            signer: signer.clone(),
             outputs: Vec::new(),
             _redeemer: PhantomData::default(),
         }
     }
 
-    pub fn start_output(self, owner: Address) -> OutputBuilder<Datum, Redeemer> {
+    pub fn start_output(self, owner: &Address) -> OutputBuilder<Datum, Redeemer> {
         OutputBuilder {
             inner: self,
-            owner,
+            owner: owner.clone(),
             values: HashMap::new(),
         }
     }
 
-    fn add_output(&mut self, address: Address, output: Output<Datum>) {
-        self.outputs.push((address, output))
+    fn add_output(&mut self, address: &Address, output: Output<Datum>) {
+        self.outputs.push((address.clone(), output))
     }
 
-    pub fn build(&self) -> Backend<Datum, Redeemer, FakeRecord<Datum>> {
+    pub fn build(&self) -> Backend<Datum, Redeemer, FakeRecord<Datum, Redeemer>> {
         let txo_record = FakeRecord {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
+            _redeemer: Default::default(),
         };
         Backend {
             _datum: PhantomData::default(),
@@ -48,13 +49,46 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
     }
 }
 
-pub struct FakeRecord<Datum> {
+pub struct FakeRecord<Datum, Redeemer> {
     pub signer: Address,
     pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+    _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
+}
+
+pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+{
+    inner: TestBackendsBuilder<Datum, Redeemer>,
+    owner: Address,
+    values: HashMap<Policy, u64>,
 }
 
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    TxORecord<Datum, Redeemer> for FakeRecord<Datum>
+    OutputBuilder<Datum, Redeemer>
+{
+    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum, Redeemer> {
+        let mut new_total = amount;
+        if let Some(total) = self.values.get(&policy) {
+            new_total += total;
+        }
+        self.values.insert(policy, new_total);
+        self
+    }
+
+    pub fn finish_output(self) -> TestBackendsBuilder<Datum, Redeemer> {
+        let OutputBuilder {
+            mut inner,
+            owner,
+            values,
+        } = self;
+        let address = owner.clone();
+        let output = Output::wallet(address, values);
+        inner.add_output(&owner, output);
+        inner
+    }
+}
+
+impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
+    TxORecord<Datum, Redeemer> for FakeRecord<Datum, Redeemer>
 {
     fn signer(&self) -> &Address {
         &self.signer
@@ -98,37 +132,5 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             my_outputs.push((tx_o.owner().clone(), tx_o.clone()))
         }
         Ok(())
-    }
-}
-
-pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-{
-    inner: FakeBackendsBuilder<Datum, Redeemer>,
-    owner: Address,
-    values: HashMap<Policy, u64>,
-}
-
-impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    OutputBuilder<Datum, Redeemer>
-{
-    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum, Redeemer> {
-        let mut new_total = amount;
-        if let Some(total) = self.values.get(&policy) {
-            new_total += total;
-        }
-        self.values.insert(policy, new_total);
-        self
-    }
-
-    pub fn finish_output(self) -> FakeBackendsBuilder<Datum, Redeemer> {
-        let OutputBuilder {
-            mut inner,
-            owner,
-            values,
-        } = self;
-        let address = owner.clone();
-        let output = Output::wallet(address, values);
-        inner.add_output(owner, output);
-        inner
     }
 }
