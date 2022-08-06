@@ -1,6 +1,4 @@
-use crate::address::Address;
-
-use crate::error::Result;
+use crate::{address::Address, error::Result};
 
 // TODO: Move
 #[derive(Clone)]

@@ -1,132 +1,58 @@
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::{cell::RefCell, collections::HashMap, fmt::Debug};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
-use crate::validator::{TxContext, ValidatorCode};
 use crate::{
     address::{Address, Policy},
     error::Result,
     output::Output,
-    smart_contract::{DataSource, TxBuilder, TxIssuer},
+    smart_contract::SmartContract,
     transaction::Action,
+    validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
 
-pub struct FakeBackendsBuilder<Datum, Redeemer> {
-    signer: Address,
-    outputs: Vec<(Address, Output<Datum>)>,
-    _redeemer: PhantomData<Redeemer>,
-}
+pub mod fake_backend;
 
-impl<Datum: Clone, Redeemer> FakeBackendsBuilder<Datum, Redeemer> {
-    pub fn new(signer: Address) -> FakeBackendsBuilder<Datum, Redeemer> {
-        FakeBackendsBuilder {
-            signer,
-            outputs: Vec::new(),
-            _redeemer: PhantomData::default(),
-        }
-    }
-
-    pub fn start_output(self, owner: Address) -> OutputBuilder<Datum, Redeemer> {
-        OutputBuilder {
-            inner: self,
-            owner,
-            values: HashMap::new(),
-        }
-    }
-
-    fn add_output(&mut self, address: Address, output: Output<Datum>) {
-        self.outputs.push((address, output))
-    }
-
-    pub fn build(&self) -> FakeBackends<Datum, Redeemer> {
-        FakeBackends {
-            signer: self.signer.clone(),
-            outputs: RefCell::new(self.outputs.clone()),
-            _redeemer: PhantomData::default(),
-        }
-    }
-}
-
-pub struct OutputBuilder<Datum, Redeemer> {
-    inner: FakeBackendsBuilder<Datum, Redeemer>,
-    owner: Address,
-    values: HashMap<Policy, u64>,
-}
-
-impl<Datum: Clone, Redeemer> OutputBuilder<Datum, Redeemer> {
-    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum, Redeemer> {
-        let mut new_total = amount;
-        if let Some(total) = self.values.get(&policy) {
-            new_total += total;
-        }
-        self.values.insert(policy, new_total);
-        self
-    }
-
-    pub fn finish_output(self) -> FakeBackendsBuilder<Datum, Redeemer> {
-        let OutputBuilder {
-            mut inner,
-            owner,
-            values,
-        } = self;
-        let address = owner.clone();
-        let output = Output::wallet(address, values);
-        inner.add_output(owner, output);
-        inner
-    }
+pub trait TxORecord<Datum, Redeemer: Clone + Eq> {
+    fn signer(&self) -> &Address;
+    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
+    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>; // TODO: Move to other trait
 }
 
 #[derive(Debug)]
-pub struct FakeBackends<Datum, Redeemer> {
-    pub signer: Address,
-    // TODO: Might make sense to make this swapable to
-    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+pub struct Backend<
+    SC: SmartContract,
+    Datum,
+    Redeemer: Clone + Eq,
+    Record: TxORecord<Datum, Redeemer>,
+> {
+    pub smart_contract: SC,
+    pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
+    pub txo_record: Record,
 }
 
-impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
-    pub fn new(signer: Address) -> Self {
-        FakeBackends {
-            signer,
-            outputs: RefCell::new(vec![]),
+impl<SC: SmartContract<Datum = Datum, Redeemer = Redeemer>, Datum, Redeemer, Record>
+    Backend<SC, Datum, Redeemer, Record>
+where
+    Datum: Clone,
+    Redeemer: Clone + Eq,
+    Record: TxORecord<Datum, Redeemer>,
+{
+    pub fn new(smart_contract: SC, txo_record: Record) -> Self {
+        Backend {
+            smart_contract,
+            _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
+            txo_record,
         }
     }
 
-    pub fn change_signer(&mut self, new_signer: Address) {
-        self.signer = new_signer;
-    }
-
-    pub fn with_output(&mut self, address: Address, output: Output<Datum>) {
-        self.outputs.borrow_mut().push((address, output));
-    }
-
-    pub(crate) fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
-        self.outputs
-            .borrow()
-            .clone()
-            .into_iter()
-            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-            .collect()
-    }
-
-    pub fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-        self.outputs
-            .borrow()
-            .iter()
-            .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
-            .fold(0, |acc, o| {
-                if let Some(val) = o.values().get(policy) {
-                    acc + val
-                } else {
-                    acc
-                }
-            }) // Sum up policy values
-    }
-
-    pub fn my_balance(&self, policy: &Policy) -> u64 {
-        self.balance_at_address(&self.signer, policy)
+    pub fn hit_endpoint(&self, endpoint: SC::Endpoint) -> Result<()> {
+        let unbuilt_tx = SC::handle_endpoint(endpoint, self.txo_record.signer())?;
+        let tx = self.build(unbuilt_tx)?;
+        self.txo_record.issue(tx)?;
+        Ok(())
     }
 
     // TODO: Remove allow
@@ -196,7 +122,7 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         }
         // inputs
         let (inputs, remainders) =
-            self.select_inputs_for_one(&self.signer, &min_input_values, script_inputs)?;
+            self.select_inputs_for_one(self.txo_record.signer(), &min_input_values, script_inputs)?;
 
         // outputs
         remainders.iter().for_each(|(amt, recp, policy)| {
@@ -222,7 +148,7 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
         script_inputs: Vec<Output<Datum>>,
     ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, Policy)>)> {
         let mut address_values = HashMap::new();
-        let mut all_available_outputs = self.outputs_at_address(address);
+        let mut all_available_outputs = self.txo_record.outputs_at_address(address);
         all_available_outputs.extend(script_inputs);
         all_available_outputs
             .clone()
@@ -267,6 +193,21 @@ impl<Datum: Clone, Redeemer> FakeBackends<Datum, Redeemer> {
             .collect();
         Ok(outputs)
     }
+
+    fn build(
+        &self,
+        unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
+    ) -> Result<Transaction<Datum, Redeemer>> {
+        let UnBuiltTransaction { actions } = unbuilt_tx;
+        let (inputs, outputs, redeemers, scripts) = self.handle_actions(actions)?;
+
+        Ok(Transaction {
+            inputs,
+            outputs,
+            redeemers,
+            scripts,
+        })
+    }
 }
 
 fn add_to_map(h_map: &mut HashMap<Policy, u64>, policy: Policy, amount: u64) {
@@ -303,55 +244,6 @@ fn add_amount_to_nested_map(
         let mut new_map = HashMap::new();
         new_map.insert(policy.clone(), amount);
         output_map.insert(owner.clone(), RefCell::new(new_map));
-    }
-}
-
-impl<Datum, Redeemer> DataSource for FakeBackends<Datum, Redeemer> {
-    fn me(&self) -> &Address {
-        &self.signer
-    }
-}
-
-impl<Datum: Clone, Redeemer: Clone + PartialEq + Eq + Hash> TxBuilder<Datum, Redeemer>
-    for FakeBackends<Datum, Redeemer>
-{
-    /// No Fees, MinAda, or Collateral
-    fn build(
-        &self,
-        unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
-    ) -> crate::Result<Transaction<Datum, Redeemer>> {
-        let UnBuiltTransaction { actions } = unbuilt_tx;
-        let (inputs, outputs, redeemers, scripts) = self.handle_actions(actions)?;
-
-        Ok(Transaction {
-            inputs,
-            outputs,
-            redeemers,
-            scripts,
-        })
-    }
-}
-
-impl<Datum, Redeemer> TxIssuer<Datum, Redeemer> for FakeBackends<Datum, Redeemer>
-where
-    Datum: Clone + PartialEq + Debug,
-    Redeemer: Clone + PartialEq + Eq + Hash,
-{
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
-        can_spend_inputs(&tx, self.signer.clone())?;
-        let mut my_outputs = self.outputs.borrow_mut();
-        for tx_i in tx.inputs() {
-            let index = my_outputs
-                .iter()
-                .position(|(_, x)| x == tx_i)
-                .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
-            my_outputs.remove(index);
-        }
-
-        for tx_o in tx.outputs() {
-            my_outputs.push((tx_o.owner().clone(), tx_o.clone()))
-        }
-        Ok(())
     }
 }
 

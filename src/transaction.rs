@@ -1,7 +1,7 @@
-use crate::validator::ValidatorCode;
 use crate::{
     address::{Address, Policy},
     output::Output,
+    validator::ValidatorCode,
 };
 use std::collections::HashMap;
 
