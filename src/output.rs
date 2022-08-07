@@ -1,11 +1,12 @@
 use crate::{Address, Policy};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // TODO: Find max size instead of u64. It might not actually matter since we'll never be able to
 //       select more than actually exists on chain. But maybe for minting?
 // TODO: We should genericize the id
 // TODO: We should genericize the owner
-#[derive(Clone, PartialEq, Debug, Eq)]
+#[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub enum Output<Datum> {
     Wallet {
         id: String,

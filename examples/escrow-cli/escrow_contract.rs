@@ -36,6 +36,8 @@ fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> NauResult<()> {
 #[derive(Clone)]
 struct EscrowContract;
 
+#[allow(dead_code)]
+#[derive(Clone)]
 pub enum EscrowEndpoint {
     Escrow { amount: u64, receiver: Address },
     Claim { output_id: String },
@@ -99,7 +101,7 @@ fn lookup_output<Record: TxORecord<EscrowDatum, ()>>(
 mod tests {
     #![allow(non_snake_case)]
     use super::*;
-    use naumachia::backend::fake_backend::TestBackendsBuilder;
+    use naumachia::backend::in_memory_record::TestBackendsBuilder;
     use naumachia::backend::TxORecord;
     use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 

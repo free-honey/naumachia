@@ -1,9 +1,9 @@
-use naumachia::backend::fake_backend::TestBackendsBuilder;
+use naumachia::backend::in_memory_record::TestBackendsBuilder;
 use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
     address::Address,
     address::Policy,
-    backend::{fake_backend::FakeRecord, TxORecord},
+    backend::{in_memory_record::InMemoryRecord, TxORecord},
     error::Result,
     logic::SCLogic,
     smart_contract::SmartContract,
@@ -56,7 +56,7 @@ fn can_mint_from_always_true_minting_policy() {
 
     // Check my balance for minted tokens
     let expected = amount;
-    let actual = <FakeRecord<(), ()> as TxORecord<(), ()>>::balance_at_address(
+    let actual = <InMemoryRecord<(), ()> as TxORecord<(), ()>>::balance_at_address(
         &backend.txo_record,
         &me,
         &policy,

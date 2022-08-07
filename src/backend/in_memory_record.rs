@@ -36,8 +36,8 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
         self.outputs.push((address.clone(), output))
     }
 
-    pub fn build(&self) -> Backend<Datum, Redeemer, FakeRecord<Datum, Redeemer>> {
-        let txo_record = FakeRecord {
+    pub fn build(&self) -> Backend<Datum, Redeemer, InMemoryRecord<Datum, Redeemer>> {
+        let txo_record = InMemoryRecord {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
             _redeemer: Default::default(),
@@ -48,13 +48,6 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             txo_record,
         }
     }
-}
-
-#[derive(Debug)]
-pub struct FakeRecord<Datum, Redeemer> {
-    pub signer: Address,
-    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
-    _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
 pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
@@ -90,8 +83,15 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
     }
 }
 
+#[derive(Debug)]
+pub struct InMemoryRecord<Datum, Redeemer> {
+    pub signer: Address,
+    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+    _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
+}
+
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    TxORecord<Datum, Redeemer> for FakeRecord<Datum, Redeemer>
+    TxORecord<Datum, Redeemer> for InMemoryRecord<Datum, Redeemer>
 {
     fn signer(&self) -> &Address {
         &self.signer

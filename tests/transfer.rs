@@ -1,4 +1,4 @@
-use naumachia::backend::fake_backend::TestBackendsBuilder;
+use naumachia::backend::in_memory_record::TestBackendsBuilder;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
     address::{Address, ADA},

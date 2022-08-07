@@ -10,14 +10,17 @@ use crate::{
     Transaction, UnBuiltTransaction,
 };
 
-pub mod fake_backend;
+pub mod in_memory_record;
+pub mod local_persisted_record;
 
 #[cfg(test)]
 mod tests;
 
+// TODO: These should all be fallible
 pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
+    // TODO: Can hardcode this
     fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>; // TODO: Move to other trait
 }
