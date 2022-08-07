@@ -1,12 +1,15 @@
+use crate::address::ADA;
 use crate::{backend::TxORecord, output::Output, Address, Policy, Transaction};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
+use uuid::Uuid;
 
 use crate::error::Result;
 
@@ -17,10 +20,23 @@ pub struct LocalPersistedRecord<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
+fn starting_output<Datum>(owner: &Address) -> Output<Datum> {
+    let id = Uuid::new_v4().to_string();
+    let mut values = HashMap::new();
+    values.insert(ADA, 10_000_000);
+    Output::Wallet {
+        id,
+        owner: owner.clone(),
+        values,
+    }
+}
+
 impl<Datum: Serialize, Redeemer> LocalPersistedRecord<Datum, Redeemer> {
     pub fn init(path: &Path, signer: Address) -> Result<Self> {
         if !path.exists() {
-            let data = Data::<Datum>::new(signer.clone());
+            let mut data = Data::<Datum>::new(signer.clone());
+            let output = starting_output(&signer);
+            data.add_output(output); // TODO: Parameterize
             let serialized = serde_json::to_string(&data).unwrap();
             let mut file = File::create(path).unwrap();
             file.write_all(&serialized.into_bytes()).unwrap();
@@ -40,13 +56,17 @@ impl<Datum: Serialize, Redeemer> LocalPersistedRecord<Datum, Redeemer> {
 #[derive(Serialize, Deserialize, Debug)]
 struct Data<Datum> {
     signer: Address,
-    outputs: Vec<(Address, Output<Datum>)>,
+    outputs: Vec<Output<Datum>>,
 }
 
 impl<Datum> Data<Datum> {
     pub fn new(signer: Address) -> Self {
         let outputs = Vec::new();
         Data { signer, outputs }
+    }
+
+    pub fn add_output(&mut self, output: Output<Datum>) {
+        self.outputs.push(output)
     }
 }
 
@@ -64,8 +84,7 @@ impl<Datum: DeserializeOwned, Redeemer> TxORecord<Datum, Redeemer>
         let data: Data<Datum> = serde_json::from_str(&contents).unwrap();
         data.outputs
             .into_iter()
-            .filter(|(a, o)| a == address)
-            .map(|(_, o)| o)
+            .filter(|o| o.owner() == address)
             .collect()
     }
 
