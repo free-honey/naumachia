@@ -1,8 +1,7 @@
 use crate::address::ADA;
-use crate::{backend::TxORecord, output::Output, Address, Policy, Transaction};
+use crate::{backend::TxORecord, output::Output, Address, Transaction};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
@@ -20,10 +19,10 @@ pub struct LocalPersistedRecord<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
-fn starting_output<Datum>(owner: &Address) -> Output<Datum> {
+fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     let id = Uuid::new_v4().to_string();
     let mut values = HashMap::new();
-    values.insert(ADA, 10_000_000);
+    values.insert(ADA, amount);
     Output::Wallet {
         id,
         owner: owner.clone(),
@@ -32,16 +31,17 @@ fn starting_output<Datum>(owner: &Address) -> Output<Datum> {
 }
 
 impl<Datum: Serialize, Redeemer> LocalPersistedRecord<Datum, Redeemer> {
-    pub fn init(path: &Path, signer: Address) -> Result<Self> {
+    // TODO: Create builder
+    pub fn init(path: &Path, signer: Address, starting_amount: u64) -> Result<Self> {
         if !path.exists() {
             let mut data = Data::<Datum>::new(signer.clone());
-            let output = starting_output(&signer);
+            let output = starting_output(&signer, starting_amount);
             data.add_output(output); // TODO: Parameterize
             let serialized = serde_json::to_string(&data).unwrap();
             let mut file = File::create(path).unwrap();
             file.write_all(&serialized.into_bytes()).unwrap();
         } else {
-            // maybe ensure it is valid data
+            // TODO: Ensure it is valid data
         }
         let record = LocalPersistedRecord {
             path: path.into(),
@@ -88,10 +88,6 @@ impl<Datum: DeserializeOwned, Redeemer> TxORecord<Datum, Redeemer>
             .collect()
     }
 
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-        todo!()
-    }
-
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> crate::error::Result<()> {
         todo!()
     }
@@ -108,8 +104,27 @@ mod tests {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
         let signer = Address::new("me :)");
-        let record = LocalPersistedRecord::<(), ()>::init(&path, signer.clone()).unwrap();
-        let outputs = record.outputs_at_address(&signer);
-        dbg!(outputs);
+        let starting_amount = 10_000_000;
+        let record =
+            LocalPersistedRecord::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+        let mut outputs = record.outputs_at_address(&signer);
+        assert_eq!(outputs.len(), 1);
+        let first_output = outputs.pop().unwrap();
+        let expected = starting_amount;
+        let actual = first_output.values().get(&ADA).unwrap();
+        assert_eq!(expected, *actual);
+    }
+
+    #[test]
+    fn balance_at_address() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("data");
+        let signer = Address::new("me :)");
+        let starting_amount = 10_000_000;
+        let record =
+            LocalPersistedRecord::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+        let expected = starting_amount;
+        let actual = record.balance_at_address(&signer, &ADA);
+        assert_eq!(expected, actual);
     }
 }

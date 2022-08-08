@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
+    // TODO: Remove owner
     outputs: Vec<(Address, Output<Datum>)>,
     _redeemer: PhantomData<Redeemer>,
 }
@@ -104,20 +105,6 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             .into_iter()
             .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
             .collect()
-    }
-
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-        self.outputs
-            .borrow()
-            .iter()
-            .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
-            .fold(0, |acc, o| {
-                if let Some(val) = o.values().get(policy) {
-                    acc + val
-                } else {
-                    acc
-                }
-            }) // Sum up policy values
     }
 
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {

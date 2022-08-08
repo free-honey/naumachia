@@ -20,8 +20,15 @@ mod tests;
 pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
-    // TODO: Can hardcode this
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;
+    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
+        self.outputs_at_address(address).iter().fold(0, |acc, o| {
+            if let Some(val) = o.values().get(policy) {
+                acc + val
+            } else {
+                acc
+            }
+        })
+    }
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>; // TODO: Move to other trait
 }
 
