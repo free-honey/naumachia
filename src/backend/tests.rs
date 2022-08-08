@@ -52,6 +52,8 @@ prop_compose! {
     }
 }
 
+// TODO: Cleanup. Since it's a prop test, prolly don't want to break it out into multiple tests,
+//   but it's really hard to read
 proptest! {
     #[test]
     fn prop_can_transfer_funds_if_enough_balance(

@@ -264,7 +264,10 @@ fn add_amount_to_nested_map(
     }
 }
 
-fn can_spend_inputs<Datum: Clone + PartialEq + Debug, Redeemer: Clone + PartialEq + Eq + Hash>(
+pub fn can_spend_inputs<
+    Datum: Clone + PartialEq + Debug,
+    Redeemer: Clone + PartialEq + Eq + Hash,
+>(
     tx: &Transaction<Datum, Redeemer>,
     signer: Address,
 ) -> Result<()> {
