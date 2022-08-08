@@ -22,6 +22,8 @@ const MINT_POLICY_ADDR: &str = "mint_policy";
 
 impl SCLogic for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
+    type Lookup = ();
+    type LookupResponse = ();
     type Datum = ();
     type Redeemer = ();
 
@@ -35,6 +37,13 @@ impl SCLogic for AlwaysMintsSmartContract {
                 mint(amount, recipient, Some(Address::new(MINT_POLICY_ADDR)))
             }
         }
+    }
+
+    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+        _endpoint: Self::Lookup,
+        _txo_record: &Record,
+    ) -> Result<Self::LookupResponse> {
+        Ok(())
     }
 }
 

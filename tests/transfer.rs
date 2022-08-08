@@ -16,6 +16,8 @@ enum Endpoint {
 
 impl SCLogic for TransferADASmartContract {
     type Endpoint = Endpoint;
+    type Lookup = ();
+    type LookupResponse = ();
     type Datum = ();
     type Redeemer = ();
 
@@ -29,6 +31,13 @@ impl SCLogic for TransferADASmartContract {
                 Ok(u_tx)
             }
         }
+    }
+
+    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+        _endpoint: Self::Lookup,
+        _txo_record: &Record,
+    ) -> Result<Self::LookupResponse> {
+        Ok(())
     }
 }
 

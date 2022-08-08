@@ -1,5 +1,7 @@
+use crate::escrow_contract::EscrowDatum;
 use crate::EscrowEndpoint;
 use naumachia::address::Address;
+use naumachia::output::Output;
 use naumachia::smart_contract::SmartContractTrait;
 
 pub struct Handler<SC: SmartContractTrait> {
@@ -8,7 +10,11 @@ pub struct Handler<SC: SmartContractTrait> {
 
 impl<SC> Handler<SC>
 where
-    SC: SmartContractTrait<Endpoint = EscrowEndpoint>,
+    SC: SmartContractTrait<
+        Endpoint = EscrowEndpoint,
+        Lookup = (),
+        LookupResponse = Vec<Output<EscrowDatum>>,
+    >,
 {
     pub fn new(contract: SC) -> Self {
         Handler { contract }
@@ -26,11 +32,28 @@ where
         Ok(())
     }
 
-    pub fn claim(&self, _output: &str) -> Result<(), String> {
-        let _call = todo!("Need to add some ID field to outputs");
-        // self.contract.hit_endpoint(_call)?;
-        // println!();
-        // println!("Successfully claimed output {}!", output);
-        // Ok(())
+    pub fn claim(&self, output_id: &str) -> Result<(), String> {
+        let call = EscrowEndpoint::Claim {
+            output_id: output_id.to_string(),
+        };
+        self.contract.hit_endpoint(call)?;
+        println!();
+        println!("Successfully claimed output {}!", output_id);
+        Ok(())
+    }
+
+    pub fn list(&self) -> Result<(), String> {
+        let outputs = self.contract.lookup(())?;
+        println!();
+        println!("Active contracts:");
+        for utxo in outputs {
+            println!(
+                "id: {:?}, owner: {:?}, values: {:?}",
+                utxo.id(),
+                utxo.owner(),
+                utxo.values()
+            );
+        }
+        Ok(())
     }
 }

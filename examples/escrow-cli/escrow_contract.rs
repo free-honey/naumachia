@@ -7,6 +7,7 @@ use naumachia::{
     transaction::UnBuiltTransaction,
     validator::{TxContext, ValidatorCode},
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub struct EscrowValidatorScript;
@@ -34,7 +35,7 @@ fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> NauResult<()> {
 }
 
 #[derive(Clone)]
-struct EscrowContract;
+pub struct EscrowContract;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -43,13 +44,15 @@ pub enum EscrowEndpoint {
     Claim { output_id: String },
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct EscrowDatum {
     receiver: Address,
 }
 
 impl SCLogic for EscrowContract {
     type Endpoint = EscrowEndpoint;
+    type Lookup = ();
+    type LookupResponse = Vec<Output<Self::Datum>>;
     type Datum = EscrowDatum;
     type Redeemer = ();
 
@@ -61,6 +64,14 @@ impl SCLogic for EscrowContract {
             EscrowEndpoint::Escrow { amount, receiver } => escrow(amount, receiver),
             EscrowEndpoint::Claim { output_id } => claim(&output_id, txo_record),
         }
+    }
+
+    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+        _endpoint: Self::Lookup,
+        txo_record: &Record,
+    ) -> NauResult<Self::LookupResponse> {
+        let outputs = txo_record.outputs_at_address(&EscrowValidatorScript.address());
+        Ok(outputs)
     }
 }
 

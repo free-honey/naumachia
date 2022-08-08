@@ -44,8 +44,8 @@ where
     Record: TxORecord<Logic::Datum, Logic::Redeemer>,
 {
     type Endpoint = Logic::Endpoint;
-    type Lookup = ();
-    type LookupResponse = ();
+    type Lookup = Logic::Lookup;
+    type LookupResponse = Logic::LookupResponse;
 
     fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
         let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.txo_record())?;
@@ -53,7 +53,7 @@ where
         Ok(())
     }
 
-    fn lookup(&self, _lookup: Self::Lookup) -> Result<Self::LookupResponse> {
-        todo!()
+    fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
+        Logic::lookup(lookup, self.backend.txo_record())
     }
 }
