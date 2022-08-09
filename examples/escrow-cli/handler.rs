@@ -48,9 +48,9 @@ where
         println!("Active contracts:");
         for utxo in outputs {
             println!(
-                "id: {:?}, owner: {:?}, values: {:?}",
+                "id: {:?}, recipient: {:?}, values: {:?}",
                 utxo.id(),
-                utxo.owner(),
+                utxo.datum().unwrap().receiver(),
                 utxo.values()
             );
         }

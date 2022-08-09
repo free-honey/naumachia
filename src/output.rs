@@ -51,4 +51,11 @@ impl<Datum> Output<Datum> {
             Output::Validator { values, .. } => values,
         }
     }
+
+    pub fn datum(&self) -> Option<&Datum> {
+        match self {
+            Output::Wallet { .. } => None,
+            Output::Validator { datum, .. } => Some(&datum),
+        }
+    }
 }

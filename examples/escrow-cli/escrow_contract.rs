@@ -49,6 +49,12 @@ pub struct EscrowDatum {
     receiver: Address,
 }
 
+impl EscrowDatum {
+    pub fn receiver(&self) -> &Address {
+        &self.receiver
+    }
+}
+
 impl SCLogic for EscrowContract {
     type Endpoint = EscrowEndpoint;
     type Lookup = ();
