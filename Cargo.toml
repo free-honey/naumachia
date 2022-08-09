@@ -1,7 +1,9 @@
 [package]
 name = "naumachia"
-version = "0.1.0"
+description = "PAB but Rusty"
+version = "0.0.1"
 edition = "2021"
+authors = ["Mitchell Turner"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
