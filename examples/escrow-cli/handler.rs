@@ -4,11 +4,11 @@ use naumachia::address::Address;
 use naumachia::output::Output;
 use naumachia::smart_contract::SmartContractTrait;
 
-pub struct Handler<SC: SmartContractTrait> {
+pub struct ActionHandler<SC: SmartContractTrait> {
     contract: SC,
 }
 
-impl<SC> Handler<SC>
+impl<SC> ActionHandler<SC>
 where
     SC: SmartContractTrait<
         Endpoint = EscrowEndpoint,
@@ -17,7 +17,7 @@ where
     >,
 {
     pub fn new(contract: SC) -> Self {
-        Handler { contract }
+        ActionHandler { contract }
     }
 
     pub fn escrow(&self, amount: u64, rcvr: &str) -> Result<(), String> {

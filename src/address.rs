@@ -11,6 +11,10 @@ impl Address {
     pub fn new(addr: &str) -> Self {
         Address(addr.to_string())
     }
+
+    pub fn to_str(&self) -> &str {
+        &self.0
+    }
 }
 
 pub type Policy = Option<Address>;

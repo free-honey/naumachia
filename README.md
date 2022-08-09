@@ -10,5 +10,5 @@ Included is a simple smart contract with a mocked backend that can be run from y
 
 Try out:
 ```
-cargo run --example escrow-cli --help
+cargo run --example escrow-cli
 ```
