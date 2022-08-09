@@ -2,3 +2,5 @@
 /Cargo.lock
 
 .idea
+.escrow_txo_record
+.escrow_cli_config

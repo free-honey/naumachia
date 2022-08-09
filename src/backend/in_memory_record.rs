@@ -5,9 +5,11 @@ use crate::{
     Address, Policy, Transaction,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
+use uuid::Uuid;
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
+    // TODO: Remove owner
     outputs: Vec<(Address, Output<Datum>)>,
     _redeemer: PhantomData<Redeemer>,
 }
@@ -35,8 +37,8 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
         self.outputs.push((address.clone(), output))
     }
 
-    pub fn build(&self) -> Backend<Datum, Redeemer, FakeRecord<Datum, Redeemer>> {
-        let txo_record = FakeRecord {
+    pub fn build(&self) -> Backend<Datum, Redeemer, InMemoryRecord<Datum, Redeemer>> {
+        let txo_record = InMemoryRecord {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
             _redeemer: Default::default(),
@@ -47,13 +49,6 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             txo_record,
         }
     }
-}
-
-#[derive(Debug)]
-pub struct FakeRecord<Datum, Redeemer> {
-    pub signer: Address,
-    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
-    _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
 pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
@@ -82,14 +77,22 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             values,
         } = self;
         let address = owner.clone();
-        let output = Output::wallet(address, values);
+        let id = Uuid::new_v4().to_string();
+        let output = Output::new_wallet(id, address, values);
         inner.add_output(&owner, output);
         inner
     }
 }
 
+#[derive(Debug)]
+pub struct InMemoryRecord<Datum, Redeemer> {
+    pub signer: Address,
+    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+    _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
+}
+
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    TxORecord<Datum, Redeemer> for FakeRecord<Datum, Redeemer>
+    TxORecord<Datum, Redeemer> for InMemoryRecord<Datum, Redeemer>
 {
     fn signer(&self) -> &Address {
         &self.signer
@@ -102,20 +105,6 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             .into_iter()
             .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
             .collect()
-    }
-
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-        self.outputs
-            .borrow()
-            .iter()
-            .filter_map(|(a, o)| if a == address { Some(o) } else { None }) // My outputs
-            .fold(0, |acc, o| {
-                if let Some(val) = o.values().get(policy) {
-                    acc + val
-                } else {
-                    acc
-                }
-            }) // Sum up policy values
     }
 
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {

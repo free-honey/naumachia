@@ -1,13 +1,21 @@
-use crate::{error::Result, Address, UnBuiltTransaction};
+use crate::backend::TxORecord;
+use crate::{error::Result, UnBuiltTransaction};
 use std::hash::Hash;
 
-pub trait Logic {
+pub trait SCLogic {
     type Endpoint;
+    type Lookup;
+    type LookupResponse;
     type Datum: Clone;
     type Redeemer: Clone + PartialEq + Eq + Hash;
 
-    fn handle_endpoint(
+    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
-        issuer: &Address,
+        txo_record: &Record,
     ) -> Result<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
+
+    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+        endpoint: Self::Lookup,
+        txo_record: &Record,
+    ) -> Result<Self::LookupResponse>;
 }

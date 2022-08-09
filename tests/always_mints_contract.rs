@@ -1,10 +1,11 @@
-use naumachia::backend::fake_backend::TestBackendsBuilder;
+use naumachia::backend::in_memory_record::TestBackendsBuilder;
+use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
     address::Address,
     address::Policy,
-    backend::{fake_backend::FakeRecord, TxORecord},
+    backend::{in_memory_record::InMemoryRecord, TxORecord},
     error::Result,
-    logic::Logic,
+    logic::SCLogic,
     smart_contract::SmartContract,
     transaction::UnBuiltTransaction,
 };
@@ -19,21 +20,30 @@ enum Endpoint {
 
 const MINT_POLICY_ADDR: &str = "mint_policy";
 
-impl Logic for AlwaysMintsSmartContract {
+impl SCLogic for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
+    type Lookup = ();
+    type LookupResponse = ();
     type Datum = ();
     type Redeemer = ();
 
-    fn handle_endpoint(
+    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
-        issuer: &Address,
+        txo_record: &Record,
     ) -> Result<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Mint { amount } => {
-                let recipient = issuer.clone();
+                let recipient = txo_record.signer().clone();
                 mint(amount, recipient, Some(Address::new(MINT_POLICY_ADDR)))
             }
         }
+    }
+
+    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+        _endpoint: Self::Lookup,
+        _txo_record: &Record,
+    ) -> Result<Self::LookupResponse> {
+        Ok(())
     }
 }
 
@@ -55,7 +65,7 @@ fn can_mint_from_always_true_minting_policy() {
 
     // Check my balance for minted tokens
     let expected = amount;
-    let actual = <FakeRecord<(), ()> as TxORecord<(), ()>>::balance_at_address(
+    let actual = <InMemoryRecord<(), ()> as TxORecord<(), ()>>::balance_at_address(
         &backend.txo_record,
         &me,
         &policy,

@@ -1,4 +1,5 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
+use uuid::Uuid;
 
 use crate::{
     address::{Address, Policy},
@@ -9,20 +10,31 @@ use crate::{
     Transaction, UnBuiltTransaction,
 };
 
-pub mod fake_backend;
+pub mod in_memory_record;
+pub mod local_persisted_record;
 
 #[cfg(test)]
 mod tests;
 
+// TODO: These should all be fallible
 pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64;
+    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
+        self.outputs_at_address(address).iter().fold(0, |acc, o| {
+            if let Some(val) = o.values().get(policy) {
+                acc + val
+            } else {
+                acc
+            }
+        })
+    }
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>; // TODO: Move to other trait
 }
 
 #[derive(Debug)]
 pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
+    // TODO: Make fields private
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
     pub txo_record: Record,
@@ -46,6 +58,10 @@ where
         let tx = self.build(u_tx)?;
         self.txo_record.issue(tx)?;
         Ok(())
+    }
+
+    pub fn txo_record(&self) -> &Record {
+        &self.txo_record
     }
 
     pub fn signer(&self) -> &Address {
@@ -98,8 +114,11 @@ where
                     for (policy, amount) in values.iter() {
                         add_to_map(&mut min_input_values, policy.clone(), *amount);
                     }
+                    let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                    let owner = address;
                     let output = Output::Validator {
-                        owner: address,
+                        id,
+                        owner,
                         values,
                         datum,
                     };
@@ -185,7 +204,8 @@ where
             .into_iter()
             .map(|(owner, val_vec)| {
                 let values = val_vec.into_iter().collect();
-                Output::wallet(owner, values)
+                let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                Output::new_wallet(id, owner, values)
             })
             .collect();
         Ok(outputs)
@@ -244,7 +264,10 @@ fn add_amount_to_nested_map(
     }
 }
 
-fn can_spend_inputs<Datum: Clone + PartialEq + Debug, Redeemer: Clone + PartialEq + Eq + Hash>(
+pub fn can_spend_inputs<
+    Datum: Clone + PartialEq + Debug,
+    Redeemer: Clone + PartialEq + Eq + Hash,
+>(
     tx: &Transaction<Datum, Redeemer>,
     signer: Address,
 ) -> Result<()> {

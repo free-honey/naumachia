@@ -20,6 +20,8 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Run escrow example tests
+      run: cargo test --verbose --example escrow-cli
     - name: Lint
       run: cargo fmt --all -- --check
     - name: Clippy

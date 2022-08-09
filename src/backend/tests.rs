@@ -1,6 +1,6 @@
 use super::*;
-use crate::backend::fake_backend::FakeRecord;
-use crate::{address::ADA, backend::fake_backend::TestBackendsBuilder};
+use crate::backend::in_memory_record::InMemoryRecord;
+use crate::{address::ADA, backend::in_memory_record::TestBackendsBuilder};
 use proptest::prelude::*;
 use proptest::test_runner::TestRng;
 
@@ -26,7 +26,7 @@ prop_compose! {
         mut rng in arb_rng(),
         their_utxo_count: u8,
         decoys in prop::collection::vec(arb_address().prop_filter("can't be alice or bob", |d| d != &Address::new("alice") && d != &Address::new("bob")), 0..10),
-    ) -> (Address, Address, u64, Backend<(),(), FakeRecord<(),()>>, Vec<Address>) {
+    ) -> (Address, Address, u64, Backend<(),(), InMemoryRecord<(),()>>, Vec<Address>) {
         let signer = Address::new("alice");
         let recipient = Address::new("bob");
         let mut total: u64 = 0;
@@ -52,6 +52,8 @@ prop_compose! {
     }
 }
 
+// TODO: Cleanup. Since it's a prop test, prolly don't want to break it out into multiple tests,
+//   but it's really hard to read
 proptest! {
     #[test]
     fn prop_can_transfer_funds_if_enough_balance(
@@ -72,6 +74,7 @@ proptest! {
         }
         backend.process(u_tx).unwrap();
 
+        // Check that only the expected ADA moved, and everything else stayed the same.
         let expected = their_bal_before + amount;
         let actual = backend.txo_record.balance_at_address(&recipient, &ADA);
         assert_eq!(expected, actual);

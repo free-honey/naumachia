@@ -1,16 +1,24 @@
 use crate::{Address, Policy};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // TODO: Find max size instead of u64. It might not actually matter since we'll never be able to
 //       select more than actually exists on chain. But maybe for minting?
-#[derive(Clone, PartialEq, Debug, Eq)]
+// TODO: We should genericize the id
+// TODO: We should genericize the owner
+#[serde_with::serde_as]
+#[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub enum Output<Datum> {
     Wallet {
+        id: String,
         owner: Address,
+        #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
         values: HashMap<Policy, u64>,
     },
     Validator {
+        id: String,
         owner: Address,
+        #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
         values: HashMap<Policy, u64>,
         datum: Datum,
     },
@@ -19,8 +27,15 @@ pub enum Output<Datum> {
 pub type Value = (Policy, u64);
 
 impl<Datum> Output<Datum> {
-    pub fn wallet(owner: Address, values: HashMap<Policy, u64>) -> Self {
-        Output::Wallet { owner, values }
+    pub fn new_wallet(id: String, owner: Address, values: HashMap<Policy, u64>) -> Self {
+        Output::Wallet { id, owner, values }
+    }
+
+    pub fn id(&self) -> &str {
+        match self {
+            Output::Wallet { id, .. } => id,
+            Output::Validator { id, .. } => id,
+        }
     }
 
     pub fn owner(&self) -> &Address {
@@ -34,6 +49,13 @@ impl<Datum> Output<Datum> {
         match self {
             Output::Wallet { values, .. } => values,
             Output::Validator { values, .. } => values,
+        }
+    }
+
+    pub fn datum(&self) -> Option<&Datum> {
+        match self {
+            Output::Wallet { .. } => None,
+            Output::Validator { datum, .. } => Some(datum),
         }
     }
 }
