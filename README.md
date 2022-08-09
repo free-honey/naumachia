@@ -5,6 +5,8 @@
 
 PAB but Rusty
 
+WIP implementation of the Plutus Application Backend. 
+
 ### Examples
 Included is a simple smart contract with a mocked backend that can be run from your terminal.
 
@@ -44,3 +46,8 @@ now check Bob's balance
 ```
 cargo run --example escrow-cli balance 
 ```
+
+### Contributions
+Open to PRs and general feedback. I'm gonna try and be pretty strict about testing and other clean code stuff. It's all with love.
+
+Feel free to start issues/discussions if there are things you feel are missing or whatever.
