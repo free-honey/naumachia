@@ -6,7 +6,7 @@
 PAB but Rusty
 
 ### Examples
-Included is a mock smart contract that can be run from your terminal.
+Included is a simple smart contract with a mocked backend that can be run from your terminal.
 
 Try out:
 ```
