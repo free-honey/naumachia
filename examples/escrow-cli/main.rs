@@ -1,6 +1,8 @@
 use crate::{escrow_contract::EscrowContract, handler::Handler};
 use clap::Parser;
 use escrow_contract::EscrowEndpoint;
+use naumachia::address::ADA;
+use naumachia::backend::TxORecord;
 use naumachia::{
     address::Address, backend::local_persisted_record::LocalPersistedRecord, backend::Backend,
     error::Result as NauResult, smart_contract::SmartContract,
@@ -27,6 +29,7 @@ enum ActionParams {
     Claim { id: String },
     List,
     Signer { signer: String },
+    Balance,
 }
 
 const CONFIG_PATH: &str = ".escrow_cli_config";
@@ -47,7 +50,7 @@ fn main() {
     };
     let signer = Address::new(&signer_str);
     let starting_amount = 10_000_000;
-    let txo_record = LocalPersistedRecord::init(&path, signer, starting_amount).unwrap();
+    let txo_record = LocalPersistedRecord::init(&path, signer.clone(), starting_amount).unwrap();
     let backend = Backend::new(txo_record);
     let contract = SmartContract::new(&logic, &backend);
 
@@ -62,6 +65,11 @@ fn main() {
             .list()
             .expect("unable to list active escrow contracts"),
         ActionParams::Signer { signer } => update_signer(signer).expect("unable to update signer"),
+        ActionParams::Balance => {
+            let balance = backend.txo_record.balance_at_address(&signer, &ADA);
+            println!();
+            println!("{}'s balance: {:?}", signer_str, balance);
+        }
     }
 }
 

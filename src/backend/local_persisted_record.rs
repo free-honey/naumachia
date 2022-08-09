@@ -60,7 +60,7 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedRecord<Datum, 
             let mut file = File::create(path).unwrap();
             file.write_all(&serialized.into_bytes()).unwrap();
         } else {
-            // TODO: Ensure it is valid data
+            // TODO: Ensure it is valid data?
         }
         let record = LocalPersistedRecord {
             path: path.into(),
