@@ -41,7 +41,7 @@ fn main() {
     let path = Path::new(".escrow_txo_record");
     let mut signer_str = "Alice".to_string();
     if let Some(config) = get_config() {
-        signer_str = config.signer.to_string()
+        signer_str = config.signer
     } else {
         let config = Config {
             signer: signer_str.clone(),
@@ -50,7 +50,7 @@ fn main() {
     };
     let signer = Address::new(&signer_str);
     let starting_amount = 10_000_000;
-    let txo_record = LocalPersistedRecord::init(&path, signer.clone(), starting_amount).unwrap();
+    let txo_record = LocalPersistedRecord::init(path, signer.clone(), starting_amount).unwrap();
     let backend = Backend::new(txo_record);
     let contract = SmartContract::new(&logic, &backend);
 

@@ -125,7 +125,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    #[allow(non_snake_case)]
+    #![allow(non_snake_case)]
     use super::*;
     use tempfile::TempDir;
 

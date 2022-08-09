@@ -33,8 +33,8 @@ impl<Datum> Output<Datum> {
 
     pub fn id(&self) -> &str {
         match self {
-            Output::Wallet { id, .. } => &id,
-            Output::Validator { id, .. } => &id,
+            Output::Wallet { id, .. } => id,
+            Output::Validator { id, .. } => id,
         }
     }
 
@@ -55,7 +55,7 @@ impl<Datum> Output<Datum> {
     pub fn datum(&self) -> Option<&Datum> {
         match self {
             Output::Wallet { .. } => None,
-            Output::Validator { datum, .. } => Some(&datum),
+            Output::Validator { datum, .. } => Some(datum),
         }
     }
 }
