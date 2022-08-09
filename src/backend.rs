@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData, error, ops::Add};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData, error};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -45,7 +45,7 @@ pub enum TxORecordError {
     #[error("Failed to retrieve script for {0:?}.")]
     FailedToRetrieveScriptFor(Address),
     #[error("Input {0:?} doesn't exist.")]
-    InputDoesNotExist(Box<dyn error::Error>),
+    InputDoesNotExist(String),
 }
 
 #[derive(Debug)]

@@ -1,6 +1,7 @@
 use crate::address::ADA;
 use crate::backend::can_spend_inputs;
-use crate::{backend::TxORecord, output::Output, Address, Transaction};
+use crate::{backend::{TxORecord, TxORecordError}, output::Output, Address, Transaction};
+use crate::error::Error;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -111,7 +112,7 @@ where
             let index = my_outputs
                 .iter()
                 .position(|x| x == tx_i)
-                .ok_or(format!("Input: {:?} doesn't exist", tx_i))?;
+                .ok_or(Error::TxORecord(TxORecordError::InputDoesNotExist(tx_i.id().to_string())))?;
             my_outputs.remove(index);
         }
 

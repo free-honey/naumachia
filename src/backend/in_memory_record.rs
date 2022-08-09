@@ -1,6 +1,6 @@
 use crate::{
-    backend::{can_spend_inputs, Backend, TxORecord},
-    error::Result,
+    backend::{can_spend_inputs, Backend, TxORecord, TxORecordError},
+    error::{Result, Error},
     output::Output,
     Address, Policy, Transaction,
 };
@@ -114,7 +114,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             let index = my_outputs
                 .iter()
                 .position(|(_, x)| x == tx_i)
-                .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
+                .ok_or(Error::TxORecord(TxORecordError::InputDoesNotExist(tx_i.id().to_string())))?;
             my_outputs.remove(index);
         }
 
