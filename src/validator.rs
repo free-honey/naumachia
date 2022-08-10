@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{address::Address, error::Result};
+use crate::address::Address;
 
 use std::error;
 
@@ -11,12 +11,14 @@ pub struct TxContext {
 }
 
 pub trait ValidatorCode<D, R> {
-    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> Result<()>;
+    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ValidatorCodeResult<()>;
     fn address(&self) -> Address;
 }
 
 #[derive(Debug, Error)]
 pub enum ValidatorCodeError {
     #[error("Failed to execute: {0:?}")]
-    FailedToExecute(Box<dyn error::Error>)
+    FailedToExecute(Box<dyn error::Error>),
 }
+
+pub type ValidatorCodeResult<T> = Result<T, ValidatorCodeError>;

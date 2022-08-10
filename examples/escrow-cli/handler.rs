@@ -1,6 +1,7 @@
 use crate::escrow_contract::EscrowDatum;
 use crate::EscrowEndpoint;
 use naumachia::address::Address;
+use naumachia::error::Result as NauResult;
 use naumachia::output::Output;
 use naumachia::smart_contract::SmartContractTrait;
 
@@ -20,7 +21,7 @@ where
         ActionHandler { contract }
     }
 
-    pub fn escrow(&self, amount: u64, rcvr: &str) -> Result<(), String> {
+    pub fn escrow(&self, amount: u64, rcvr: &str) -> NauResult<()> {
         let receiver = Address::new(rcvr);
         let call = EscrowEndpoint::Escrow { amount, receiver };
         self.contract.hit_endpoint(call)?;
@@ -32,7 +33,7 @@ where
         Ok(())
     }
 
-    pub fn claim(&self, output_id: &str) -> Result<(), String> {
+    pub fn claim(&self, output_id: &str) -> NauResult<()> {
         let call = EscrowEndpoint::Claim {
             output_id: output_id.to_string(),
         };
@@ -42,7 +43,7 @@ where
         Ok(())
     }
 
-    pub fn list(&self) -> Result<(), String> {
+    pub fn list(&self) -> NauResult<()> {
         let outputs = self.contract.lookup(())?;
         println!();
         println!("Active contracts:");

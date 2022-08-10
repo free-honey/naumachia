@@ -1,6 +1,7 @@
 use thiserror::Error;
 
-use crate::backend::TxORecordError;
+use crate::address::Policy;
+use crate::txorecord::TxORecordError;
 use crate::validator::ValidatorCodeError;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -11,4 +12,6 @@ pub enum Error {
     TxORecord(TxORecordError),
     #[error("ValidatorCode Error: {0}")]
     ValidatorCode(ValidatorCodeError),
+    #[error("Error: Insufficient amount of {0:?}.")]
+    InsufficientAmountOf(Policy),
 }

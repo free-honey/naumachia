@@ -1,5 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData, error};
-use thiserror::Error;
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
 use crate::{
@@ -8,6 +7,7 @@ use crate::{
     error::Result,
     output::Output,
     transaction::Action,
+    txorecord::{TxORecord, TxORecordError},
     validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
@@ -19,34 +19,6 @@ pub mod local_persisted_record;
 mod tests;
 
 // TODO: These should all be fallible
-pub trait TxORecord<Datum, Redeemer> {
-    fn signer(&self) -> &Address;
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-        self.outputs_at_address(address).iter().fold(0, |acc, o| {
-            if let Some(val) = o.values().get(policy) {
-                acc + val
-            } else {
-                acc
-            }
-        })
-    }
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>; // TODO: Move to other trait
-}
-
-#[derive(Debug, Error)]
-pub enum TxORecordError {
-    #[error("Insufficient amount of {0:?}.")]
-    InsufficientAmountOf(Policy),
-    #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
-    FailedToRetrieveOutputsAt(Address, Box<dyn error::Error>),
-    #[error("Failed to retrieve redeemer for {0:?}.")]
-    FailedToRetrieveRedeemersFor(Address),
-    #[error("Failed to retrieve script for {0:?}.")]
-    FailedToRetrieveScriptFor(Address),
-    #[error("Input {0:?} doesn't exist.")]
-    InputDoesNotExist(String),
-}
 
 #[derive(Debug)]
 pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
@@ -72,7 +44,7 @@ where
 
     pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx)?;
-        self.txo_record.issue(tx)?;
+        self.txo_record.issue(tx).map_err(|e| Error::TxORecord(e))?;
         Ok(())
     }
 
@@ -198,14 +170,10 @@ where
                     let remaining = available - amt;
                     remainders.push((remaining, address.clone(), policy.clone()));
                 } else {
-                    return Err(Error::TxORecord(TxORecordError::InsufficientAmountOf(
-                        policy.to_owned(),
-                    )));
+                    return Err(Error::InsufficientAmountOf(policy.to_owned()));
                 }
             } else {
-                return Err(Error::TxORecord(TxORecordError::InsufficientAmountOf(
-                    policy.to_owned(),
-                )));
+                return Err(Error::InsufficientAmountOf(policy.to_owned()));
             }
         }
         let other_remainders: Vec<_> = address_values
@@ -300,14 +268,12 @@ pub fn can_spend_inputs<
                     .scripts
                     .get(owner)
                     .ok_or(Error::TxORecord(TxORecordError::FailedToRetrieveScriptFor(owner.to_owned())))?;
-                    // .ok_or(!("Can't find script for address: {:?}", &owner))?;
-                let (_, redeemer) = tx
-                    .redeemers
-                    .iter()
-                    .find(|(utxo, _)| utxo == input)
-                    .ok_or(Error::TxORecord(TxORecordError::FailedToRetrieveRedeemersFor(owner.to_owned())))?;
+                // .ok_or(!("Can't find script for address: {:?}", &owner))?;
+                let (_, redeemer) = tx.redeemers.iter().find(|(utxo, _)| utxo == input).ok_or(
+                    Error::TxORecord(TxORecordError::FailedToRetrieveRedeemersFor(owner.to_owned()))
+                )?;
 
-                script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
+                script.execute(datum.clone(), redeemer.clone(), ctx.clone()).map_err(|e| Error::ValidatorCode(e))?;
             }
         }
     }

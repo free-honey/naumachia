@@ -1,4 +1,4 @@
-use crate::backend::TxORecord;
+use crate::txorecord::TxORecord;
 use crate::{error::Result, UnBuiltTransaction};
 use std::hash::Hash;
 
