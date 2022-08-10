@@ -268,7 +268,6 @@ pub fn can_spend_inputs<
                     .scripts
                     .get(owner)
                     .ok_or(Error::TxORecord(TxORecordError::FailedToRetrieveScriptFor(owner.to_owned())))?;
-                // .ok_or(!("Can't find script for address: {:?}", &owner))?;
                 let (_, redeemer) = tx.redeemers.iter().find(|(utxo, _)| utxo == input).ok_or(
                     Error::TxORecord(TxORecordError::FailedToRetrieveRedeemersFor(owner.to_owned()))
                 )?;
