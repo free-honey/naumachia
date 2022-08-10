@@ -3,7 +3,8 @@ use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
     address::Address,
     address::Policy,
-    backend::{in_memory_record::InMemoryRecord, TxORecord},
+    backend::{in_memory_record::InMemoryRecord},
+    txorecord::TxORecord,
     error::Result,
     logic::SCLogic,
     smart_contract::SmartContract,

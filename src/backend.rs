@@ -264,15 +264,20 @@ pub fn can_spend_inputs<
         match input {
             Output::Wallet { .. } => {} // TODO: Make sure not spending other's outputs
             Output::Validator { owner, datum, .. } => {
-                let script = tx
-                    .scripts
-                    .get(owner)
-                    .ok_or(Error::TxORecord(TxORecordError::FailedToRetrieveScriptFor(owner.to_owned())))?;
-                let (_, redeemer) = tx.redeemers.iter().find(|(utxo, _)| utxo == input).ok_or(
-                    Error::TxORecord(TxORecordError::FailedToRetrieveRedeemersFor(owner.to_owned()))
-                )?;
+                let script = tx.scripts.get(owner).ok_or(Error::TxORecord(
+                    TxORecordError::FailedToRetrieveScriptFor(owner.to_owned()),
+                ))?;
+                let (_, redeemer) =
+                    tx.redeemers
+                        .iter()
+                        .find(|(utxo, _)| utxo == input)
+                        .ok_or(Error::TxORecord(
+                            TxORecordError::FailedToRetrieveRedeemersFor(owner.to_owned()),
+                        ))?;
 
-                script.execute(datum.clone(), redeemer.clone(), ctx.clone()).map_err(|e| Error::ValidatorCode(e))?;
+                script
+                    .execute(datum.clone(), redeemer.clone(), ctx.clone())
+                    .map_err(|e| Error::ValidatorCode(e))?;
             }
         }
     }

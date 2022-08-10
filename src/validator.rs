@@ -2,8 +2,6 @@ use thiserror::Error;
 
 use crate::address::Address;
 
-use std::error;
-
 // TODO: Move
 #[derive(Clone)]
 pub struct TxContext {
@@ -18,7 +16,7 @@ pub trait ValidatorCode<D, R> {
 #[derive(Debug, Error)]
 pub enum ValidatorCodeError {
     #[error("Failed to execute: {0:?}")]
-    FailedToExecute(Box<dyn error::Error>),
+    FailedToExecute(String),
 }
 
 pub type ValidatorCodeResult<T> = Result<T, ValidatorCodeError>;

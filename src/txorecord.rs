@@ -3,11 +3,7 @@ use std::error;
 use thiserror::Error;
 
 use crate::{
-    address::Address,
-    output::Output,
-    transaction::Transaction,
-    Policy,
-    error::Error as NauError,
+    address::Address, error::Error as NauError, output::Output, transaction::Transaction, Policy,
 };
 
 pub trait TxORecord<Datum, Redeemer> {

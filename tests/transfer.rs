@@ -2,7 +2,7 @@ use naumachia::backend::in_memory_record::TestBackendsBuilder;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
     address::{Address, ADA},
-    backend::TxORecord,
+    txorecord::TxORecord,
     error::Result,
     logic::SCLogic,
     transaction::UnBuiltTransaction,

@@ -1,12 +1,12 @@
 // use naumachia::backend::TxORecord;
 use naumachia::txorecord::{TxORecord, TxORecordError};
+use naumachia::validator::{ValidatorCodeError, ValidatorCodeResult};
 use naumachia::{
     address::{Address, ADA},
     error::{Error as NauError, Result as NauResult},
     logic::SCLogic,
     output::Output,
     transaction::UnBuiltTransaction,
-    txorecord::TxORecordResult,
     validator::{TxContext, ValidatorCode},
 };
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,12 @@ use std::collections::HashMap;
 pub struct EscrowValidatorScript;
 
 impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
-    fn execute(&self, datum: EscrowDatum, _redeemer: (), ctx: TxContext) -> TxORecordResult<()> {
+    fn execute(
+        &self,
+        datum: EscrowDatum,
+        _redeemer: (),
+        ctx: TxContext,
+    ) -> ValidatorCodeResult<()> {
         signer_is_recipient(&datum, &ctx)?;
         Ok(())
     }
@@ -25,12 +30,12 @@ impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
     }
 }
 
-fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> TxORecordResult<()> {
+fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> ValidatorCodeResult<()> {
     if datum.receiver != ctx.signer {
-        Err(format!(
+        Err(ValidatorCodeError::FailedToExecute(format!(
             "Signer: {:?} doesn't match receiver: {:?}",
             ctx.signer, datum.receiver
-        ))
+        )))
     } else {
         Ok(())
     }
