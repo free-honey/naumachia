@@ -1,6 +1,10 @@
 use crate::txorecord::TxORecord;
 use crate::{error::Result, UnBuiltTransaction};
+
+use thiserror::Error;
+
 use std::hash::Hash;
+use std::error;
 
 pub trait SCLogic {
     type Endpoint;
@@ -12,10 +16,20 @@ pub trait SCLogic {
     fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> Result<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
+    ) -> SCLogicResult<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
 
     fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Lookup,
         txo_record: &Record,
-    ) -> Result<Self::LookupResponse>;
+    ) -> SCLogicResult<Self::LookupResponse>;
 }
+
+#[derive(Debug, Error)]
+pub enum SCLogicError {
+    #[error("Error handling endpoint: {0:?}")]
+    Endpoint(Box<dyn error::Error>),
+    #[error("Error doing lookup: {0:?}")]
+    Lookup(Box<dyn error::Error>),
+}
+
+pub type SCLogicResult<T> = Result<T, SCLogicError>;

@@ -3,6 +3,7 @@ use crate::{
     output::Output,
     validator::ValidatorCode,
 };
+
 use std::collections::HashMap;
 
 pub enum Action<Datum, Redeemer> {

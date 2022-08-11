@@ -1,16 +1,17 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
-use uuid::Uuid;
-
 use crate::{
     address::{Address, Policy},
     error::Error,
     error::Result,
     output::Output,
     transaction::Action,
-    txorecord::{TxORecord, TxORecordError},
+    txorecord::TxORecord,
     validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
+
+use uuid::Uuid;
+
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
 pub mod in_memory_record;
 pub mod local_persisted_record;
@@ -18,7 +19,6 @@ pub mod local_persisted_record;
 #[cfg(test)]
 mod tests;
 
-// TODO: These should all be fallible
 
 #[derive(Debug)]
 pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
@@ -264,16 +264,13 @@ pub fn can_spend_inputs<
         match input {
             Output::Wallet { .. } => {} // TODO: Make sure not spending other's outputs
             Output::Validator { owner, datum, .. } => {
-                let script = tx.scripts.get(owner).ok_or(Error::TxORecord(
-                    TxORecordError::FailedToRetrieveScriptFor(owner.to_owned()),
-                ))?;
+                let script = tx.scripts.get(owner)
+                    .ok_or(Error::FailedToRetrieveScriptFor(owner.to_owned()))?;
                 let (_, redeemer) =
                     tx.redeemers
                         .iter()
                         .find(|(utxo, _)| utxo == input)
-                        .ok_or(Error::TxORecord(
-                            TxORecordError::FailedToRetrieveRedeemersFor(owner.to_owned()),
-                        ))?;
+                        .ok_or(Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
 
                 script
                     .execute(datum.clone(), redeemer.clone(), ctx.clone())

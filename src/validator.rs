@@ -1,6 +1,6 @@
-use thiserror::Error;
-
 use crate::address::Address;
+
+use thiserror::Error;
 
 // TODO: Move
 #[derive(Clone)]

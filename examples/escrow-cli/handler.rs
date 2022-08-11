@@ -1,9 +1,12 @@
 use crate::escrow_contract::EscrowDatum;
 use crate::EscrowEndpoint;
-use naumachia::address::Address;
-use naumachia::error::Result as NauResult;
-use naumachia::output::Output;
-use naumachia::smart_contract::SmartContractTrait;
+
+use naumachia::{
+    address::Address,
+    error::Result as NauResult,
+    output::Output,
+    smart_contract::SmartContractTrait,
+};
 
 pub struct ActionHandler<SC: SmartContractTrait> {
     contract: SC,

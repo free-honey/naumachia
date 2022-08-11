@@ -1,15 +1,16 @@
-// use naumachia::backend::TxORecord;
-use naumachia::txorecord::{TxORecord, TxORecordError};
-use naumachia::validator::{ValidatorCodeError, ValidatorCodeResult};
 use naumachia::{
     address::{Address, ADA},
-    error::{Error as NauError, Result as NauResult},
     logic::SCLogic,
     output::Output,
     transaction::UnBuiltTransaction,
     validator::{TxContext, ValidatorCode},
+    txorecord::{TxORecord, TxORecordError},
+    validator::{ValidatorCodeError, ValidatorCodeResult},
+    logic::{SCLogicError, SCLogicResult},
 };
+
 use serde::{Deserialize, Serialize};
+
 use std::collections::HashMap;
 
 pub struct EscrowValidatorScript;
@@ -72,7 +73,7 @@ impl SCLogic for EscrowContract {
     fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
+    ) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
         match endpoint {
             EscrowEndpoint::Escrow { amount, receiver } => escrow(amount, receiver),
             EscrowEndpoint::Claim { output_id } => claim(&output_id, txo_record),
@@ -82,13 +83,13 @@ impl SCLogic for EscrowContract {
     fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         txo_record: &Record,
-    ) -> NauResult<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponse> {
         let outputs = txo_record.outputs_at_address(&EscrowValidatorScript.address());
         Ok(outputs)
     }
 }
 
-fn escrow(amount: u64, receiver: Address) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
+fn escrow(amount: u64, receiver: Address) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = EscrowValidatorScript;
     let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
@@ -101,7 +102,7 @@ fn escrow(amount: u64, receiver: Address) -> NauResult<UnBuiltTransaction<Escrow
 fn claim<Record: TxORecord<EscrowDatum, ()>>(
     output_id: &str,
     txo_record: &Record,
-) -> NauResult<UnBuiltTransaction<EscrowDatum, ()>> {
+) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = Box::new(EscrowValidatorScript);
     let output = lookup_output(output_id, txo_record)?;
     let u_tx = UnBuiltTransaction::default().with_script_redeem(output, (), script);
@@ -111,15 +112,15 @@ fn claim<Record: TxORecord<EscrowDatum, ()>>(
 fn lookup_output<Record: TxORecord<EscrowDatum, ()>>(
     id: &str,
     txo_record: &Record,
-) -> NauResult<Output<EscrowDatum>> {
+) -> SCLogicResult<Output<EscrowDatum>> {
     let script_address = EscrowValidatorScript.address();
     let outputs = txo_record.outputs_at_address(&script_address);
     outputs
         .iter()
         .find(|o| o.id() == id)
         .cloned()
-        .ok_or(NauError::TxORecord(
-            TxORecordError::FailedToRetrieveOutputWithId(id.to_string()),
+        .ok_or(SCLogicError::Lookup(
+            Box::new(TxORecordError::FailedToRetrieveOutputWithId(id.to_string()))
         ))
 }
 

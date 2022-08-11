@@ -1,10 +1,11 @@
-use std::error;
-
-use thiserror::Error;
-
 use crate::{
     address::Address, error::Error as NauError, output::Output, transaction::Transaction, Policy,
 };
+
+use thiserror::Error;
+
+use std::error;
+
 
 pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
@@ -27,10 +28,6 @@ pub enum TxORecordError {
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(String),
-    #[error("Failed to retrieve redeemer for {0:?}.")]
-    FailedToRetrieveRedeemersFor(Address),
-    #[error("Failed to retrieve script for {0:?}.")]
-    FailedToRetrieveScriptFor(Address),
     #[error("Failed to spend inputs: {0:?}.")]
     FailedToSpendInputs(Box<NauError>),
 }
