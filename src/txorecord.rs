@@ -28,7 +28,7 @@ pub enum TxORecordError {
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(String),
     #[error("Failed to spend inputs: {0:?}.")]
-    FailedToSpendInputs(#[from] Box<NauError>),
+    FailedToSpendInputs(Box<NauError>),
 }
 
 pub type TxORecordResult<T> = Result<T, TxORecordError>;
