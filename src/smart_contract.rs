@@ -1,16 +1,13 @@
-use crate::{
-    backend::Backend,
-    error::{Result as NauResult, Error as NauError},
-    logic::SCLogic,
-    txorecord::TxORecord,
-};
+use std::fmt::Debug;
+
+use crate::{backend::Backend, error::Result, logic::SCLogic, txorecord::TxORecord};
 
 pub trait SmartContractTrait {
     type Endpoint;
     type Lookup;
     type LookupResponse;
-    fn hit_endpoint(&self, endpoint: Self::Endpoint) -> NauResult<()>;
-    fn lookup(&self, lookup: Self::Lookup) -> NauResult<Self::LookupResponse>;
+    fn hit_endpoint(&self, endpoint: Self::Endpoint) -> Result<()>;
+    fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse>;
 }
 
 #[derive(Debug)]
@@ -41,22 +38,20 @@ where
 
 impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
 where
-    Logic: SCLogic,
+    Logic: SCLogic + Eq + Debug,
     Record: TxORecord<Logic::Datum, Logic::Redeemer>,
 {
     type Endpoint = Logic::Endpoint;
     type Lookup = Logic::Lookup;
     type LookupResponse = Logic::LookupResponse;
 
-    fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> NauResult<()> {
-        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.txo_record())
-            .map_err(|e| NauError::SCLogic(e))?;
+    fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
+        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.txo_record())?;
         self.backend.process(unbuilt_tx)?;
         Ok(())
     }
 
-    fn lookup(&self, lookup: Self::Lookup) -> NauResult<Self::LookupResponse> {
-        Logic::lookup(lookup, self.backend.txo_record())
-            .map_err(|e| NauError::SCLogic(e))
+    fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
+        Ok(Logic::lookup(lookup, self.backend.txo_record())?)
     }
 }

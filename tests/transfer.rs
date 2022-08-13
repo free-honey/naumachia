@@ -3,11 +3,12 @@ use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
     address::{Address, ADA},
-    txorecord::TxORecord,
     logic::SCLogic,
     transaction::UnBuiltTransaction,
+    txorecord::TxORecord,
 };
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct TransferADASmartContract;
 
 enum Endpoint {

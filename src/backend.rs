@@ -4,7 +4,7 @@ use crate::{
     error::Result,
     output::Output,
     transaction::Action,
-    txorecord::TxORecord,
+    txorecord::{TxORecord, TxORecordError},
     validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
@@ -19,7 +19,6 @@ pub mod local_persisted_record;
 #[cfg(test)]
 mod tests;
 
-
 #[derive(Debug)]
 pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
     // TODO: Make fields private
@@ -30,8 +29,8 @@ pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeeme
 
 impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
 where
-    Datum: Clone,
-    Redeemer: Clone + Eq,
+    Datum: Clone + Eq + Debug,
+    Redeemer: Clone + Eq + Hash,
     Record: TxORecord<Datum, Redeemer>,
 {
     pub fn new(txo_record: Record) -> Self {
@@ -44,7 +43,9 @@ where
 
     pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx)?;
-        self.txo_record.issue(tx).map_err(|e| Error::TxORecord(e))?;
+        can_spend_inputs(&tx, self.signer().clone())
+            .map_err(|e| TxORecordError::FailedToSpendInputs(Box::new(e)))?;
+        self.txo_record.issue(tx)?;
         Ok(())
     }
 
@@ -264,17 +265,17 @@ pub fn can_spend_inputs<
         match input {
             Output::Wallet { .. } => {} // TODO: Make sure not spending other's outputs
             Output::Validator { owner, datum, .. } => {
-                let script = tx.scripts.get(owner)
+                let script = tx
+                    .scripts
+                    .get(owner)
                     .ok_or(Error::FailedToRetrieveScriptFor(owner.to_owned()))?;
-                let (_, redeemer) =
-                    tx.redeemers
-                        .iter()
-                        .find(|(utxo, _)| utxo == input)
-                        .ok_or(Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
+                let (_, redeemer) = tx
+                    .redeemers
+                    .iter()
+                    .find(|(utxo, _)| utxo == input)
+                    .ok_or(Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
 
-                script
-                    .execute(datum.clone(), redeemer.clone(), ctx.clone())
-                    .map_err(|e| Error::ValidatorCode(e))?;
+                script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
             }
         }
     }

@@ -2,9 +2,7 @@ use crate::escrow_contract::EscrowDatum;
 use crate::EscrowEndpoint;
 
 use naumachia::{
-    address::Address,
-    error::Result as NauResult,
-    output::Output,
+    address::Address, error::Result as NauResult, output::Output,
     smart_contract::SmartContractTrait,
 };
 

@@ -3,14 +3,15 @@ use crate::{error::Result, UnBuiltTransaction};
 
 use thiserror::Error;
 
-use std::hash::Hash;
 use std::error;
+use std::fmt::Debug;
+use std::hash::Hash;
 
 pub trait SCLogic {
     type Endpoint;
     type Lookup;
     type LookupResponse;
-    type Datum: Clone;
+    type Datum: Clone + Eq + Debug;
     type Redeemer: Clone + PartialEq + Eq + Hash;
 
     fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(

@@ -6,7 +6,6 @@ use thiserror::Error;
 
 use std::error;
 
-
 pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
@@ -29,7 +28,7 @@ pub enum TxORecordError {
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(String),
     #[error("Failed to spend inputs: {0:?}.")]
-    FailedToSpendInputs(Box<NauError>),
+    FailedToSpendInputs(#[from] Box<NauError>),
 }
 
 pub type TxORecordResult<T> = Result<T, TxORecordError>;

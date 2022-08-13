@@ -1,15 +1,16 @@
 use naumachia::{
     address::{Address, ADA},
     logic::SCLogic,
+    logic::{SCLogicError, SCLogicResult},
     output::Output,
     transaction::UnBuiltTransaction,
+    txorecord::TxORecord,
     validator::{TxContext, ValidatorCode},
-    txorecord::{TxORecord, TxORecordError},
     validator::{ValidatorCodeError, ValidatorCodeResult},
-    logic::{SCLogicError, SCLogicResult},
 };
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use std::collections::HashMap;
 
@@ -42,7 +43,7 @@ fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> ValidatorCodeRes
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct EscrowContract;
 
 #[allow(dead_code)]
@@ -52,7 +53,7 @@ pub enum EscrowEndpoint {
     Claim { output_id: String },
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct EscrowDatum {
     receiver: Address,
 }
@@ -61,6 +62,12 @@ impl EscrowDatum {
     pub fn receiver(&self) -> &Address {
         &self.receiver
     }
+}
+
+#[derive(Debug, Error)]
+enum EscrowContractError {
+    #[error("Output with ID {0:?} not found.")]
+    OutputNotFound(String),
 }
 
 impl SCLogic for EscrowContract {
@@ -119,9 +126,9 @@ fn lookup_output<Record: TxORecord<EscrowDatum, ()>>(
         .iter()
         .find(|o| o.id() == id)
         .cloned()
-        .ok_or(SCLogicError::Lookup(
-            Box::new(TxORecordError::FailedToRetrieveOutputWithId(id.to_string()))
-        ))
+        .ok_or(SCLogicError::Lookup(Box::new(
+            EscrowContractError::OutputNotFound(id.to_string()),
+        )))
 }
 
 #[cfg(test)]

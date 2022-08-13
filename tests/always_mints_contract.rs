@@ -2,15 +2,11 @@ use naumachia::backend::in_memory_record::TestBackendsBuilder;
 use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
-    address::Address,
-    address::Policy,
-    backend::{in_memory_record::InMemoryRecord},
-    txorecord::TxORecord,
-    logic::SCLogic,
-    smart_contract::SmartContract,
-    transaction::UnBuiltTransaction,
+    address::Address, address::Policy, backend::in_memory_record::InMemoryRecord, logic::SCLogic,
+    smart_contract::SmartContract, transaction::UnBuiltTransaction, txorecord::TxORecord,
 };
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct AlwaysMintsSmartContract;
 
 enum Endpoint {
@@ -48,7 +44,11 @@ impl SCLogic for AlwaysMintsSmartContract {
     }
 }
 
-fn mint(amount: u64, recipient: Address, policy: Policy) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
+fn mint(
+    amount: u64,
+    recipient: Address,
+    policy: Policy,
+) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
     let utx = UnBuiltTransaction::default().with_mint(amount, recipient, policy);
     Ok(utx)
 }
