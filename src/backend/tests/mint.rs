@@ -38,3 +38,18 @@ fn mint__alice_can_mint() {
 
     assert_eq!(expected, actual);
 }
+
+#[test]
+fn mint__bob_cannot_mint() {
+    let signer = Address::new("bob");
+    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
+    let amount = 100;
+
+    let u_tx: UnBuiltTransaction<(), ()> =
+        UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
+
+    let actual_err = backend.process(u_tx).unwrap_err();
+    let expected_err = "Signer must be `alice`".to_string();
+
+    assert_eq!(expected_err, actual_err);
+}
