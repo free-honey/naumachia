@@ -6,12 +6,11 @@ struct AliceCanMintPolicy;
 
 impl MintingPolicy for AliceCanMintPolicy {
     fn execute(&self, ctx: TxContext) -> Result<()> {
-        todo!()
-        // if ctx.signer == Address::new("alice") {
-        //    Ok(())
-        // } else {
-        //     Err("Signer must be `alice`".to_string())
-        // }
+        if ctx.signer == Address::new("alice") {
+            Ok(())
+        } else {
+            Err("Signer must be `alice`".to_string())
+        }
     }
 
     fn address(&self) -> Address {

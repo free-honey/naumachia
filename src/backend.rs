@@ -44,7 +44,7 @@ where
         let tx = self.build(u_tx)?;
         can_spend_inputs(&tx, self.signer().clone())?;
         inputs_plus_minted_match_outputs(&tx)?;
-        can_mint_tokens(&tx)?;
+        can_mint_tokens(&tx, &self.txo_record.signer())?;
         self.txo_record.issue(tx)?;
         Ok(())
     }
@@ -78,8 +78,8 @@ where
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
 
         let mut redeemers = Vec::new();
-        let mut validators = HashMap::new();
-        let mut policies = HashMap::new();
+        let mut validator_scripts = HashMap::new();
+        let mut policy_scripts: HashMap<Address, Box<dyn MintingPolicy>> = HashMap::new();
         for action in actions {
             match action {
                 Action::Transfer {
@@ -105,6 +105,8 @@ where
                         &recipient,
                         &policy_id,
                     );
+                    add_to_map(&mut minting, policy_id.clone(), amount);
+                    policy_scripts.insert(policy.address(), policy);
                 }
                 Action::InitScript {
                     datum,
@@ -132,7 +134,7 @@ where
                     script_inputs.push(output.clone());
                     let script_address = script.address();
                     redeemers.push((output, redeemer));
-                    validators.insert(script_address, script);
+                    validator_scripts.insert(script_address, script);
                 }
             }
         }
@@ -149,7 +151,14 @@ where
         let mut outputs = self.create_outputs_for(out_vecs)?;
         outputs.extend(specific_outputs);
 
-        Ok((inputs, outputs, redeemers, validators, minting, policies))
+        Ok((
+            inputs,
+            outputs,
+            redeemers,
+            validator_scripts,
+            minting,
+            policy_scripts,
+        ))
     }
 
     // LOL Super Naive Solution, just select ALL inputs!
@@ -299,9 +308,28 @@ pub fn can_spend_inputs<
 pub fn inputs_plus_minted_match_outputs<Datum, Redeemer>(
     tx: &Transaction<Datum, Redeemer>,
 ) -> Result<()> {
-    todo!()
+    // todo!()
+    Ok(())
 }
 
-pub fn can_mint_tokens<Datum, Redeemer>(tx: &Transaction<Datum, Redeemer>) -> Result<()> {
-    todo!()
+pub fn can_mint_tokens<Datum, Redeemer>(
+    tx: &Transaction<Datum, Redeemer>,
+    signer: &Address,
+) -> Result<()> {
+    // TODO: This needs to check more than signer, but TDD plz
+    let ctx = TxContext {
+        signer: signer.clone(),
+    };
+    for (id, _) in tx.minting.iter() {
+        if let Some(address) = id {
+            if let Some(policy) = tx.policies.get(address) {
+                policy.execute(ctx.clone())?;
+            } else {
+                return Err("Policy script doesn't exist".to_string());
+            }
+        } else {
+            return Err("You can't mint ADA".to_string());
+        }
+    }
+    Ok(())
 }
