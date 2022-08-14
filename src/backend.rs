@@ -43,7 +43,7 @@ where
     pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx)?;
         can_spend_inputs(&tx, self.signer().clone())?;
-        can_mint_tokens(&tx, &self.txo_record.signer())?;
+        can_mint_tokens(&tx, self.txo_record.signer())?;
         self.txo_record.issue(tx)?;
         Ok(())
     }
