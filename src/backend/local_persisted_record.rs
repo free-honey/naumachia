@@ -1,6 +1,3 @@
-use crate::address::ADA;
-use crate::backend::can_spend_inputs;
-use crate::{backend::TxORecord, output::Output, Address, Transaction};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,7 +9,13 @@ use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
-use crate::error::Result;
+use crate::{
+    address::{Address, ADA},
+    error::Result,
+    output::Output,
+    transaction::Transaction,
+    txorecord::{TxORecord, TxORecordError, TxORecordResult},
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Data<Datum> {
@@ -104,14 +107,12 @@ where
             .collect()
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> crate::error::Result<()> {
-        can_spend_inputs(&tx, self.signer.clone())?;
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
-            let index = my_outputs
-                .iter()
-                .position(|x| x == tx_i)
-                .ok_or(format!("Input: {:?} doesn't exist", tx_i))?;
+            let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
+                TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+            })?;
             my_outputs.remove(index);
         }
 

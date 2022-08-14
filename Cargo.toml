@@ -11,6 +11,7 @@ authors = ["Mitchell Turner"]
 serde = { version = "1.0", features = ["derive"] }
 serde_with = {version = "2.0.0", features = ["json"]}
 serde_json = "1.0"
+thiserror = "1.0.24"
 
 [dependencies.uuid]
 version = "1.1.2"

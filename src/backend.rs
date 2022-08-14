@@ -1,36 +1,23 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
-use uuid::Uuid;
-
 use crate::{
     address::{Address, Policy},
+    error::Error,
     error::Result,
     output::Output,
     transaction::Action,
+    txorecord::TxORecord,
     validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
+
+use uuid::Uuid;
+
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 
 pub mod in_memory_record;
 pub mod local_persisted_record;
 
 #[cfg(test)]
 mod tests;
-
-// TODO: These should all be fallible
-pub trait TxORecord<Datum, Redeemer> {
-    fn signer(&self) -> &Address;
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
-        self.outputs_at_address(address).iter().fold(0, |acc, o| {
-            if let Some(val) = o.values().get(policy) {
-                acc + val
-            } else {
-                acc
-            }
-        })
-    }
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()>; // TODO: Move to other trait
-}
 
 #[derive(Debug)]
 pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
@@ -42,8 +29,8 @@ pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeeme
 
 impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
 where
-    Datum: Clone,
-    Redeemer: Clone + Eq,
+    Datum: Clone + Eq + Debug,
+    Redeemer: Clone + Eq + Hash,
     Record: TxORecord<Datum, Redeemer>,
 {
     pub fn new(txo_record: Record) -> Self {
@@ -56,6 +43,7 @@ where
 
     pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx)?;
+        can_spend_inputs(&tx, self.signer().clone())?;
         self.txo_record.issue(tx)?;
         Ok(())
     }
@@ -182,10 +170,10 @@ where
                     let remaining = available - amt;
                     remainders.push((remaining, address.clone(), policy.clone()));
                 } else {
-                    return Err(format!("Not enough {:?}", policy));
+                    return Err(Error::InsufficientAmountOf(policy.to_owned()));
                 }
             } else {
-                return Err(format!("Not enough {:?}", policy));
+                return Err(Error::InsufficientAmountOf(policy.to_owned()));
             }
         }
         let other_remainders: Vec<_> = address_values
@@ -279,12 +267,12 @@ pub fn can_spend_inputs<
                 let script = tx
                     .scripts
                     .get(owner)
-                    .ok_or(format!("Can't find script for address: {:?}", &owner))?;
+                    .ok_or_else(|| Error::FailedToRetrieveScriptFor(owner.to_owned()))?;
                 let (_, redeemer) = tx
                     .redeemers
                     .iter()
                     .find(|(utxo, _)| utxo == input)
-                    .ok_or(format!("Can't find redeemer for output: {:?}", &owner))?;
+                    .ok_or_else(|| Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
 
                 script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
             }

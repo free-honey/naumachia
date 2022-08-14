@@ -1,15 +1,12 @@
 use naumachia::backend::in_memory_record::TestBackendsBuilder;
+use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
-    address::Address,
-    address::Policy,
-    backend::{in_memory_record::InMemoryRecord, TxORecord},
-    error::Result,
-    logic::SCLogic,
-    smart_contract::SmartContract,
-    transaction::UnBuiltTransaction,
+    address::Address, address::Policy, backend::in_memory_record::InMemoryRecord, logic::SCLogic,
+    smart_contract::SmartContract, transaction::UnBuiltTransaction, txorecord::TxORecord,
 };
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct AlwaysMintsSmartContract;
 
 enum Endpoint {
@@ -30,7 +27,7 @@ impl SCLogic for AlwaysMintsSmartContract {
     fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> Result<UnBuiltTransaction<(), ()>> {
+    ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Mint { amount } => {
                 let recipient = txo_record.signer().clone();
@@ -42,12 +39,16 @@ impl SCLogic for AlwaysMintsSmartContract {
     fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         _txo_record: &Record,
-    ) -> Result<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponse> {
         Ok(())
     }
 }
 
-fn mint(amount: u64, recipient: Address, policy: Policy) -> Result<UnBuiltTransaction<(), ()>> {
+fn mint(
+    amount: u64,
+    recipient: Address,
+    policy: Policy,
+) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
     let utx = UnBuiltTransaction::default().with_mint(amount, recipient, policy);
     Ok(utx)
 }

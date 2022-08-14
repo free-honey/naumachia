@@ -9,6 +9,7 @@ pub mod logic;
 pub mod output;
 pub mod smart_contract;
 pub mod transaction;
+pub mod txorecord;
 pub mod validator;
 
 pub mod backend;

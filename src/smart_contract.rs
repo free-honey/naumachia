@@ -1,8 +1,6 @@
-use crate::{
-    backend::{Backend, TxORecord},
-    error::Result,
-    logic::SCLogic,
-};
+use std::fmt::Debug;
+
+use crate::{backend::Backend, error::Result, logic::SCLogic, txorecord::TxORecord};
 
 pub trait SmartContractTrait {
     type Endpoint;
@@ -40,7 +38,7 @@ where
 
 impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
 where
-    Logic: SCLogic,
+    Logic: SCLogic + Eq + Debug,
     Record: TxORecord<Logic::Datum, Logic::Redeemer>,
 {
     type Endpoint = Logic::Endpoint;
@@ -54,6 +52,6 @@ where
     }
 
     fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
-        Logic::lookup(lookup, self.backend.txo_record())
+        Ok(Logic::lookup(lookup, self.backend.txo_record())?)
     }
 }

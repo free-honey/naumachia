@@ -1,11 +1,12 @@
-use crate::{
-    backend::{can_spend_inputs, Backend, TxORecord},
-    error::Result,
-    output::Output,
-    Address, Policy, Transaction,
-};
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
+
+use crate::{
+    backend::Backend,
+    output::Output,
+    txorecord::{TxORecord, TxORecordError, TxORecordResult},
+    Address, Policy, Transaction,
+};
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
@@ -107,14 +108,15 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             .collect()
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> Result<()> {
-        can_spend_inputs(&tx, self.signer.clone())?;
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
         let mut my_outputs = self.outputs.borrow_mut();
         for tx_i in tx.inputs() {
             let index = my_outputs
                 .iter()
                 .position(|(_, x)| x == tx_i)
-                .ok_or(format!("Input: {:?} doesn't exist", &tx_i))?;
+                .ok_or_else(|| {
+                    TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+                })?;
             my_outputs.remove(index);
         }
 

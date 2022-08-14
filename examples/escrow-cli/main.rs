@@ -5,11 +5,12 @@ use crate::{
     escrow_contract::EscrowEndpoint,
     handler::ActionHandler,
 };
+
 use clap::Parser;
 use naumachia::{
     address::Address, address::ADA, backend::local_persisted_record::LocalPersistedRecord,
-    backend::Backend, backend::TxORecord, error::Result as NauResult,
-    smart_contract::SmartContract,
+    backend::Backend, error::Result as NauResult, smart_contract::SmartContract,
+    txorecord::TxORecord,
 };
 use std::path::Path;
 

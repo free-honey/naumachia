@@ -1,4 +1,6 @@
-use crate::{address::Address, error::Result};
+use crate::address::Address;
+
+use thiserror::Error;
 
 // TODO: Move
 #[derive(Clone)]
@@ -7,6 +9,14 @@ pub struct TxContext {
 }
 
 pub trait ValidatorCode<D, R> {
-    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> Result<()>;
+    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ValidatorCodeResult<()>;
     fn address(&self) -> Address;
 }
+
+#[derive(Debug, Error)]
+pub enum ValidatorCodeError {
+    #[error("Failed to execute: {0:?}")]
+    FailedToExecute(String),
+}
+
+pub type ValidatorCodeResult<T> = Result<T, ValidatorCodeError>;

@@ -1,13 +1,14 @@
 use naumachia::backend::in_memory_record::TestBackendsBuilder;
+use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
     address::{Address, ADA},
-    backend::TxORecord,
-    error::Result,
     logic::SCLogic,
     transaction::UnBuiltTransaction,
+    txorecord::TxORecord,
 };
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct TransferADASmartContract;
 
 enum Endpoint {
@@ -24,7 +25,7 @@ impl SCLogic for TransferADASmartContract {
     fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         _txo_record: &Record,
-    ) -> Result<UnBuiltTransaction<(), ()>> {
+    ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
                 let u_tx = UnBuiltTransaction::default().with_transfer(amount, recipient, ADA);
@@ -36,7 +37,7 @@ impl SCLogic for TransferADASmartContract {
     fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         _txo_record: &Record,
-    ) -> Result<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponse> {
         Ok(())
     }
 }
