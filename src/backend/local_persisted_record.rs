@@ -110,9 +110,9 @@ where
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
-            let index = my_outputs.iter().position(|x| x == tx_i).ok_or(
-                TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string()),
-            )?;
+            let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
+                TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+            })?;
             my_outputs.remove(index);
         }
 

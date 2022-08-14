@@ -111,9 +111,12 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
         let mut my_outputs = self.outputs.borrow_mut();
         for tx_i in tx.inputs() {
-            let index = my_outputs.iter().position(|(_, x)| x == tx_i).ok_or(
-                TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string()),
-            )?;
+            let index = my_outputs
+                .iter()
+                .position(|(_, x)| x == tx_i)
+                .ok_or_else(|| {
+                    TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+                })?;
             my_outputs.remove(index);
         }
 

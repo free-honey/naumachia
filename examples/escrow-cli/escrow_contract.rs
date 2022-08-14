@@ -126,9 +126,11 @@ fn lookup_output<Record: TxORecord<EscrowDatum, ()>>(
         .iter()
         .find(|o| o.id() == id)
         .cloned()
-        .ok_or(SCLogicError::Lookup(Box::new(
-            EscrowContractError::OutputNotFound(id.to_string()),
-        )))
+        .ok_or_else(|| {
+            SCLogicError::Lookup(Box::new(EscrowContractError::OutputNotFound(
+                id.to_string(),
+            )))
+        })
 }
 
 #[cfg(test)]
@@ -136,8 +138,8 @@ mod tests {
     #![allow(non_snake_case)]
     use super::*;
     use naumachia::backend::in_memory_record::TestBackendsBuilder;
-    use naumachia::backend::TxORecord;
     use naumachia::smart_contract::{SmartContract, SmartContractTrait};
+    use naumachia::txorecord::TxORecord;
 
     #[test]
     fn escrow__can_create_instance() {

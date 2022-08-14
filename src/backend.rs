@@ -267,12 +267,12 @@ pub fn can_spend_inputs<
                 let script = tx
                     .scripts
                     .get(owner)
-                    .ok_or(Error::FailedToRetrieveScriptFor(owner.to_owned()))?;
+                    .ok_or_else(|| Error::FailedToRetrieveScriptFor(owner.to_owned()))?;
                 let (_, redeemer) = tx
                     .redeemers
                     .iter()
                     .find(|(utxo, _)| utxo == input)
-                    .ok_or(Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
+                    .ok_or_else(|| Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
 
                 script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
             }
