@@ -10,7 +10,7 @@ pub enum Error {
     #[error("TxORecord Error: {0}")]
     TxORecord(#[from] TxORecordError),
     #[error("ValidatorCode Error: {0}")]
-    ValidatorCode(#[from] ScriptError),
+    Script(#[from] ScriptError),
     #[error("Smart Contract Logic Error: {0:?}")]
     SCLogic(#[from] SCLogicError),
     #[error("Error: Insufficient amount of {0:?}.")]

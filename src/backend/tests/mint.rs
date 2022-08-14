@@ -49,7 +49,7 @@ fn mint__bob_cannot_mint() {
         UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
 
     let actual_err = backend.process(u_tx).unwrap_err();
-    let expected_err = "Signer must be `alice`".to_string();
 
-    assert_eq!(expected_err, actual_err);
+    let matches = matches!(actual_err, Error::Script(ScriptError::FailedToExecute(_)),);
+    assert!(matches);
 }
