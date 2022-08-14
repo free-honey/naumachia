@@ -1,6 +1,4 @@
-use crate::{
-    address::Address, error::Error as NauError, output::Output, transaction::Transaction, Policy,
-};
+use crate::{address::Address, output::Output, transaction::Transaction, Policy};
 
 use thiserror::Error;
 
@@ -27,8 +25,8 @@ pub enum TxORecordError {
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(String),
-    #[error("Failed to spend inputs: {0:?}.")]
-    FailedToSpendInputs(Box<NauError>),
+    // #[error("Failed to spend inputs: {0:?}.")]
+    // FailedToSpendInputs(Box<NauError>),
 }
 
 pub type TxORecordResult<T> = Result<T, TxORecordError>;

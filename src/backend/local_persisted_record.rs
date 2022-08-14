@@ -11,7 +11,6 @@ use uuid::Uuid;
 
 use crate::{
     address::{Address, ADA},
-    backend::can_spend_inputs,
     error::Result,
     output::Output,
     transaction::Transaction,
@@ -109,8 +108,6 @@ where
     }
 
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
-        can_spend_inputs(&tx, self.signer.clone())
-            .map_err(|e| TxORecordError::FailedToSpendInputs(Box::new(e)))?;
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|x| x == tx_i).ok_or(

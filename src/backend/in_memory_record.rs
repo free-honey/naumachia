@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::P
 use uuid::Uuid;
 
 use crate::{
-    backend::{can_spend_inputs, Backend},
+    backend::Backend,
     output::Output,
     txorecord::{TxORecord, TxORecordError, TxORecordResult},
     Address, Policy, Transaction,
@@ -109,8 +109,6 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
     }
 
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
-        can_spend_inputs(&tx, self.signer.clone())
-            .map_err(|e| TxORecordError::FailedToSpendInputs(Box::new(e)))?;
         let mut my_outputs = self.outputs.borrow_mut();
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|(_, x)| x == tx_i).ok_or(

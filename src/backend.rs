@@ -4,7 +4,7 @@ use crate::{
     error::Result,
     output::Output,
     transaction::Action,
-    txorecord::{TxORecord, TxORecordError},
+    txorecord::TxORecord,
     validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
