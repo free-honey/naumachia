@@ -1,20 +1,12 @@
-use naumachia::backend::in_memory_record::TestBackendsBuilder;
-use naumachia::logic::SCLogicResult;
-use naumachia::scripts::{MintingPolicy, TxContext};
-use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
     address::Address,
-    address::Address,
-    address::Policy,
-    address::PolicyId,
     backend::in_memory_record::InMemoryRecord,
-    backend::{in_memory_record::InMemoryRecord, TxORecord},
-    error::Result,
+    backend::in_memory_record::TestBackendsBuilder,
     logic::SCLogic,
-    logic::SCLogic,
+    logic::SCLogicResult,
+    scripts::{MintingPolicy, ScriptResult, TxContext},
     smart_contract::SmartContract,
-    smart_contract::SmartContract,
-    transaction::UnBuiltTransaction,
+    smart_contract::SmartContractTrait,
     transaction::UnBuiltTransaction,
     txorecord::TxORecord,
 };
@@ -22,8 +14,8 @@ use naumachia::{
 struct AlwaysMintsPolicy;
 
 impl MintingPolicy for AlwaysMintsPolicy {
-    fn execute(&self, ctx: TxContext) -> Result<()> {
-        todo!()
+    fn execute(&self, _ctx: TxContext) -> ScriptResult<()> {
+        Ok(())
     }
 
     fn address(&self) -> Address {
@@ -71,7 +63,7 @@ impl SCLogic for AlwaysMintsSmartContract {
 
 fn mint(amount: u64, recipient: Address) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
     let policy = Box::new(AlwaysMintsPolicy);
-    let utx = UnBuiltTransaction::default().with_mint(amount, recipient, policy);
+    let utx = UnBuiltTransaction::default().with_mint(amount, &recipient, policy);
     Ok(utx)
 }
 

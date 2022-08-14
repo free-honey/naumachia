@@ -42,8 +42,7 @@ where
 
     pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx)?;
-        can_spend_inputs(&tx, self.signer().clone())?;
-        inputs_plus_minted_match_outputs(&tx)?;
+        can_mint_tokens(&tx, self.txo_record.signer())?;
         can_mint_tokens(&tx, &self.txo_record.signer())?;
         self.txo_record.issue(tx)?;
         Ok(())
@@ -305,18 +304,10 @@ pub fn can_spend_inputs<
     Ok(())
 }
 
-pub fn inputs_plus_minted_match_outputs<Datum, Redeemer>(
-    tx: &Transaction<Datum, Redeemer>,
-) -> Result<()> {
-    // todo!()
-    Ok(())
-}
-
 pub fn can_mint_tokens<Datum, Redeemer>(
     tx: &Transaction<Datum, Redeemer>,
     signer: &Address,
 ) -> Result<()> {
-    // TODO: This needs to check more than signer, but TDD plz
     let ctx = TxContext {
         signer: signer.clone(),
     };
@@ -325,10 +316,10 @@ pub fn can_mint_tokens<Datum, Redeemer>(
             if let Some(policy) = tx.policies.get(address) {
                 policy.execute(ctx.clone())?;
             } else {
-                return Err("Policy script doesn't exist".to_string());
+                return Err(Error::FailedToRetrieveScriptFor(address.clone()));
             }
         } else {
-            return Err("You can't mint ADA".to_string());
+            return Err(Error::ImpossibleToMintADA);
         }
     }
     Ok(())

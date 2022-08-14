@@ -1,5 +1,4 @@
 use crate::address::Address;
-use std::error;
 use thiserror::Error;
 
 // TODO: Move
@@ -21,7 +20,7 @@ pub trait MintingPolicy {
 #[derive(Debug, Error)]
 pub enum ScriptError {
     #[error("Failed to execute: {0:?}")]
-    FailedToExecute(Box<dyn error::Error>),
+    FailedToExecute(String),
 }
 
 pub type ScriptResult<T> = Result<T, ScriptError>;

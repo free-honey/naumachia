@@ -19,4 +19,6 @@ pub enum Error {
     FailedToRetrieveScriptFor(Address),
     #[error("Error: Failed to retrieve redeemer for {0:?}.")]
     FailedToRetrieveRedeemerFor(Address),
+    #[error("Unable to mint ADA/Lovelace")]
+    ImpossibleToMintADA,
 }

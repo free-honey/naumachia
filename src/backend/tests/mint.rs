@@ -1,15 +1,17 @@
 use super::*;
 use crate::backend::in_memory_record::TestBackendsBuilder;
-use crate::scripts::MintingPolicy;
+use crate::scripts::{MintingPolicy, ScriptError, ScriptResult};
 
 struct AliceCanMintPolicy;
 
 impl MintingPolicy for AliceCanMintPolicy {
-    fn execute(&self, ctx: TxContext) -> Result<()> {
+    fn execute(&self, ctx: TxContext) -> ScriptResult<()> {
         if ctx.signer == Address::new("alice") {
             Ok(())
         } else {
-            Err("Signer must be `alice`".to_string())
+            Err(ScriptError::FailedToExecute(
+                "Signer must be `alice`".to_string(),
+            ))
         }
     }
 
@@ -21,7 +23,7 @@ impl MintingPolicy for AliceCanMintPolicy {
 #[test]
 fn mint__alice_can_mint() {
     let signer = Address::new("alice");
-    let mut backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
+    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
 
     let u_tx: UnBuiltTransaction<(), ()> =

@@ -46,7 +46,7 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
         let action = Action::Transfer {
             amount,
             recipient,
-            policy_id: policy_id,
+            policy_id,
         };
         self.actions.push(action);
         self
