@@ -6,8 +6,7 @@
 [![Licence](https://img.shields.io/github/license/MitchTurner/naumachia)](https://github.com/MitchTurner/naumachia/blob/main/LICENSE) 
 [![Crates.io](https://img.shields.io/crates/v/naumachia)](https://crates.io/crates/naumachia)
 [![Rust Build](https://github.com/MitchTurner/naumachia/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/MitchTurner/naumachia/actions/workflows/rust.yml)
-  
-  <hr/>
+
 </div>
 
 ---
