@@ -1,4 +1,4 @@
-use crate::{address::Address, output::Output, transaction::Transaction, Policy};
+use crate::{address::Address, output::Output, transaction::Transaction, PolicyId};
 
 use thiserror::Error;
 
@@ -7,7 +7,7 @@ use std::error;
 pub trait TxORecord<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
-    fn balance_at_address(&self, address: &Address, policy: &Policy) -> u64 {
+    fn balance_at_address(&self, address: &Address, policy: &PolicyId) -> u64 {
         self.outputs_at_address(address).iter().fold(0, |acc, o| {
             if let Some(val) = o.values().get(policy) {
                 acc + val

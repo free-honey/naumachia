@@ -1,17 +1,16 @@
+use crate::scripts::MintingPolicy;
 use crate::{
-    address::{Address, Policy},
+    address::{Address, PolicyId},
     error::Error,
     error::Result,
     output::Output,
+    scripts::{TxContext, ValidatorCode},
     transaction::Action,
     txorecord::TxORecord,
-    validator::{TxContext, ValidatorCode},
     Transaction, UnBuiltTransaction,
 };
-
-use uuid::Uuid;
-
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
+use uuid::Uuid;
 
 pub mod in_memory_record;
 pub mod local_persisted_record;
@@ -44,6 +43,8 @@ where
     pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx)?;
         can_spend_inputs(&tx, self.signer().clone())?;
+        inputs_plus_minted_match_outputs(&tx)?;
+        can_mint_tokens(&tx)?;
         self.txo_record.issue(tx)?;
         Ok(())
     }
@@ -66,20 +67,25 @@ where
         Vec<Output<Datum>>,
         Vec<(Output<Datum>, Redeemer)>,
         HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
+        HashMap<PolicyId, u64>,
+        HashMap<Address, Box<dyn MintingPolicy>>,
     )> {
-        let mut min_input_values: HashMap<Policy, u64> = HashMap::new();
-        let mut min_output_values: HashMap<Address, RefCell<HashMap<Policy, u64>>> = HashMap::new();
+        let mut min_input_values: HashMap<PolicyId, u64> = HashMap::new();
+        let mut min_output_values: HashMap<Address, RefCell<HashMap<PolicyId, u64>>> =
+            HashMap::new();
+        let mut minting: HashMap<PolicyId, u64> = HashMap::new();
         let mut script_inputs: Vec<Output<Datum>> = Vec::new();
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
 
         let mut redeemers = Vec::new();
-        let mut scripts = HashMap::new();
+        let mut validators = HashMap::new();
+        let mut policies = HashMap::new();
         for action in actions {
             match action {
                 Action::Transfer {
                     amount,
                     recipient,
-                    policy,
+                    policy_id: policy,
                 } => {
                     // Input
                     add_to_map(&mut min_input_values, policy.clone(), amount);
@@ -92,7 +98,13 @@ where
                     recipient,
                     policy,
                 } => {
-                    add_amount_to_nested_map(&mut min_output_values, amount, &recipient, &policy);
+                    let policy_id = Some(policy.address());
+                    add_amount_to_nested_map(
+                        &mut min_output_values,
+                        amount,
+                        &recipient,
+                        &policy_id,
+                    );
                 }
                 Action::InitScript {
                     datum,
@@ -120,7 +132,7 @@ where
                     script_inputs.push(output.clone());
                     let script_address = script.address();
                     redeemers.push((output, redeemer));
-                    scripts.insert(script_address, script);
+                    validators.insert(script_address, script);
                 }
             }
         }
@@ -137,7 +149,7 @@ where
         let mut outputs = self.create_outputs_for(out_vecs)?;
         outputs.extend(specific_outputs);
 
-        Ok((inputs, outputs, redeemers, scripts))
+        Ok((inputs, outputs, redeemers, validators, minting, policies))
     }
 
     // LOL Super Naive Solution, just select ALL inputs!
@@ -148,9 +160,9 @@ where
     fn select_inputs_for_one(
         &self,
         address: &Address,
-        values: &HashMap<Policy, u64>,
+        values: &HashMap<PolicyId, u64>,
         script_inputs: Vec<Output<Datum>>,
-    ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, Policy)>)> {
+    ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, PolicyId)>)> {
         let mut address_values = HashMap::new();
         let mut all_available_outputs = self.txo_record.outputs_at_address(address);
         all_available_outputs.extend(script_inputs);
@@ -186,7 +198,7 @@ where
 
     fn create_outputs_for(
         &self,
-        values: Vec<(Address, Vec<(Policy, u64)>)>,
+        values: Vec<(Address, Vec<(PolicyId, u64)>)>,
     ) -> Result<Vec<Output<Datum>>> {
         let outputs = values
             .into_iter()
@@ -204,18 +216,21 @@ where
         unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
     ) -> Result<Transaction<Datum, Redeemer>> {
         let UnBuiltTransaction { actions } = unbuilt_tx;
-        let (inputs, outputs, redeemers, scripts) = self.handle_actions(actions)?;
+        let (inputs, outputs, redeemers, scripts, minting, policies) =
+            self.handle_actions(actions)?;
 
         Ok(Transaction {
             inputs,
             outputs,
             redeemers,
             scripts,
+            minting,
+            policies,
         })
     }
 }
 
-fn add_to_map(h_map: &mut HashMap<Policy, u64>, policy: Policy, amount: u64) {
+fn add_to_map(h_map: &mut HashMap<PolicyId, u64>, policy: PolicyId, amount: u64) {
     let mut new_total = amount;
     if let Some(total) = h_map.get(&policy) {
         new_total += total;
@@ -224,8 +239,8 @@ fn add_to_map(h_map: &mut HashMap<Policy, u64>, policy: Policy, amount: u64) {
 }
 
 fn nested_map_to_vecs(
-    nested_map: HashMap<Address, RefCell<HashMap<Policy, u64>>>,
-) -> Vec<(Address, Vec<(Policy, u64)>)> {
+    nested_map: HashMap<Address, RefCell<HashMap<PolicyId, u64>>>,
+) -> Vec<(Address, Vec<(PolicyId, u64)>)> {
     nested_map
         .into_iter()
         .map(|(addr, h_map)| (addr, h_map.into_inner().into_iter().collect()))
@@ -233,21 +248,21 @@ fn nested_map_to_vecs(
 }
 
 fn add_amount_to_nested_map(
-    output_map: &mut HashMap<Address, RefCell<HashMap<Policy, u64>>>,
+    output_map: &mut HashMap<Address, RefCell<HashMap<PolicyId, u64>>>,
     amount: u64,
     owner: &Address,
-    policy: &Policy,
+    policy_id: &PolicyId,
 ) {
     if let Some(h_map) = output_map.get(owner) {
         let mut inner = h_map.borrow_mut();
         let mut new_total = amount;
-        if let Some(total) = inner.get(policy) {
+        if let Some(total) = inner.get(policy_id) {
             new_total += total;
         }
-        inner.insert(policy.clone(), new_total);
+        inner.insert(policy_id.clone(), new_total);
     } else {
         let mut new_map = HashMap::new();
-        new_map.insert(policy.clone(), amount);
+        new_map.insert(policy_id.clone(), amount);
         output_map.insert(owner.clone(), RefCell::new(new_map));
     }
 }
@@ -279,4 +294,14 @@ pub fn can_spend_inputs<
         }
     }
     Ok(())
+}
+
+pub fn inputs_plus_minted_match_outputs<Datum, Redeemer>(
+    tx: &Transaction<Datum, Redeemer>,
+) -> Result<()> {
+    todo!()
+}
+
+pub fn can_mint_tokens<Datum, Redeemer>(tx: &Transaction<Datum, Redeemer>) -> Result<()> {
+    todo!()
 }

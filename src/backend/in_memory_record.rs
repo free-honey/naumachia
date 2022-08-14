@@ -5,7 +5,7 @@ use crate::{
     backend::Backend,
     output::Output,
     txorecord::{TxORecord, TxORecordError, TxORecordResult},
-    Address, Policy, Transaction,
+    Address, PolicyId, Transaction,
 };
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
@@ -56,13 +56,13 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
 {
     inner: TestBackendsBuilder<Datum, Redeemer>,
     owner: Address,
-    values: HashMap<Policy, u64>,
+    values: HashMap<PolicyId, u64>,
 }
 
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
     OutputBuilder<Datum, Redeemer>
 {
-    pub fn with_value(mut self, policy: Policy, amount: u64) -> OutputBuilder<Datum, Redeemer> {
+    pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
         let mut new_total = amount;
         if let Some(total) = self.values.get(&policy) {
             new_total += total;

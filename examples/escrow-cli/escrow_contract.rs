@@ -3,6 +3,7 @@ use naumachia::{
     logic::SCLogic,
     logic::{SCLogicError, SCLogicResult},
     output::Output,
+    scripts::{TxContext, ValidatorCode},
     transaction::UnBuiltTransaction,
     txorecord::TxORecord,
     validator::{TxContext, ValidatorCode},

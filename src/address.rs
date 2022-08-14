@@ -17,6 +17,7 @@ impl Address {
     }
 }
 
-pub type Policy = Option<Address>;
+// TODO: This should represent PolicyId as well as AssetName. Maybe a custom enum would be good
+pub type PolicyId = Option<Address>;
 
-pub const ADA: Policy = None;
+pub const ADA: PolicyId = None;
