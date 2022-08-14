@@ -1,5 +1,4 @@
-use crate::{Address, Policy};
-
+use crate::{Address, PolicyId};
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
@@ -15,21 +14,21 @@ pub enum Output<Datum> {
         id: String,
         owner: Address,
         #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
-        values: HashMap<Policy, u64>,
+        values: HashMap<PolicyId, u64>,
     },
     Validator {
         id: String,
         owner: Address,
         #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
-        values: HashMap<Policy, u64>,
+        values: HashMap<PolicyId, u64>,
         datum: Datum,
     },
 }
 
-pub type Value = (Policy, u64);
+pub type Value = (PolicyId, u64);
 
 impl<Datum> Output<Datum> {
-    pub fn new_wallet(id: String, owner: Address, values: HashMap<Policy, u64>) -> Self {
+    pub fn new_wallet(id: String, owner: Address, values: HashMap<PolicyId, u64>) -> Self {
         Output::Wallet { id, owner, values }
     }
 
@@ -47,7 +46,7 @@ impl<Datum> Output<Datum> {
         }
     }
 
-    pub fn values(&self) -> &HashMap<Policy, u64> {
+    pub fn values(&self) -> &HashMap<PolicyId, u64> {
         match self {
             Output::Wallet { values, .. } => values,
             Output::Validator { values, .. } => values,

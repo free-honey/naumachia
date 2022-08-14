@@ -3,26 +3,20 @@ use naumachia::{
     logic::SCLogic,
     logic::{SCLogicError, SCLogicResult},
     output::Output,
+    scripts::ScriptError,
+    scripts::ScriptResult,
+    scripts::{TxContext, ValidatorCode},
     transaction::UnBuiltTransaction,
     txorecord::TxORecord,
-    validator::{TxContext, ValidatorCode},
-    validator::{ValidatorCodeError, ValidatorCodeResult},
 };
-
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
-
 use std::collections::HashMap;
+use thiserror::Error;
 
 pub struct EscrowValidatorScript;
 
 impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
-    fn execute(
-        &self,
-        datum: EscrowDatum,
-        _redeemer: (),
-        ctx: TxContext,
-    ) -> ValidatorCodeResult<()> {
+    fn execute(&self, datum: EscrowDatum, _redeemer: (), ctx: TxContext) -> ScriptResult<()> {
         signer_is_recipient(&datum, &ctx)?;
         Ok(())
     }
@@ -32,9 +26,9 @@ impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
     }
 }
 
-fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> ValidatorCodeResult<()> {
+fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> ScriptResult<()> {
     if datum.receiver != ctx.signer {
-        Err(ValidatorCodeError::FailedToExecute(format!(
+        Err(ScriptError::FailedToExecute(format!(
             "Signer: {:?} doesn't match receiver: {:?}",
             ctx.signer, datum.receiver
         )))

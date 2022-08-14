@@ -1,7 +1,7 @@
 use crate::{
-    address::{Address, Policy},
+    address::{Address, PolicyId},
     output::Output,
-    validator::ValidatorCode,
+    scripts::{MintingPolicy, ValidatorCode},
 };
 
 use std::collections::HashMap;
@@ -10,16 +10,16 @@ pub enum Action<Datum, Redeemer> {
     Transfer {
         amount: u64,
         recipient: Address,
-        policy: Policy,
+        policy_id: PolicyId,
     },
     Mint {
         amount: u64,
         recipient: Address,
-        policy: Policy,
+        policy: Box<dyn MintingPolicy>,
     },
     InitScript {
         datum: Datum,
-        values: HashMap<Policy, u64>,
+        values: HashMap<PolicyId, u64>,
         address: Address,
     },
     RedeemScriptOutput {
@@ -42,20 +42,25 @@ impl<Datum, Redeemer> Default for UnBuiltTransaction<Datum, Redeemer> {
 }
 
 impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
-    pub fn with_transfer(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
+    pub fn with_transfer(mut self, amount: u64, recipient: Address, policy_id: PolicyId) -> Self {
         let action = Action::Transfer {
             amount,
             recipient,
-            policy,
+            policy_id,
         };
         self.actions.push(action);
         self
     }
 
-    pub fn with_mint(mut self, amount: u64, recipient: Address, policy: Policy) -> Self {
+    pub fn with_mint(
+        mut self,
+        amount: u64,
+        recipient: &Address,
+        policy: Box<dyn MintingPolicy>,
+    ) -> Self {
         let action = Action::Mint {
             amount,
-            recipient,
+            recipient: recipient.clone(),
             policy,
         };
         self.actions.push(action);
@@ -65,7 +70,7 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
     pub fn with_script_init(
         mut self,
         datum: Datum,
-        values: HashMap<Policy, u64>,
+        values: HashMap<PolicyId, u64>,
         address: Address,
     ) -> Self {
         let action = Action::InitScript {
@@ -99,6 +104,8 @@ pub struct Transaction<Datum, Redeemer> {
     pub outputs: Vec<Output<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
     pub scripts: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
+    pub minting: HashMap<PolicyId, u64>,
+    pub policies: HashMap<Address, Box<dyn MintingPolicy>>,
 }
 
 impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {

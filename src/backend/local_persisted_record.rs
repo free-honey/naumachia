@@ -181,6 +181,8 @@ mod tests {
             outputs: vec![new_output],
             redeemers: vec![],
             scripts: Default::default(),
+            minting: Default::default(),
+            policies: Default::default(),
         };
         record.issue(tx).unwrap();
         let expected = starting_amount;

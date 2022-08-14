@@ -1,5 +1,4 @@
 use crate::address::Address;
-
 use thiserror::Error;
 
 // TODO: Move
@@ -9,14 +8,19 @@ pub struct TxContext {
 }
 
 pub trait ValidatorCode<D, R> {
-    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ValidatorCodeResult<()>;
+    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
+    fn address(&self) -> Address;
+}
+
+pub trait MintingPolicy {
+    fn execute(&self, ctx: TxContext) -> ScriptResult<()>;
     fn address(&self) -> Address;
 }
 
 #[derive(Debug, Error)]
-pub enum ValidatorCodeError {
+pub enum ScriptError {
     #[error("Failed to execute: {0:?}")]
     FailedToExecute(String),
 }
 
-pub type ValidatorCodeResult<T> = Result<T, ValidatorCodeError>;
+pub type ScriptResult<T> = Result<T, ScriptError>;
