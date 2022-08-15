@@ -67,7 +67,11 @@ fn main() {
         ActionParams::List => handler
             .list()
             .expect("unable to list active escrow contracts"),
-        ActionParams::Signer { signer } => update_signer(signer).expect("unable to update signer"),
+        ActionParams::Signer { signer } => {
+            update_signer(&signer).expect("unable to update signer");
+            println!();
+            println!("Successfully updated signer to {:?}!", signer);
+        }
     }
 }
 
