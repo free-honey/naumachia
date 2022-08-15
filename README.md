@@ -13,13 +13,14 @@
 
 PAB but Rusty
 
-WIP implementation of the Plutus Application Backend. 
+Work in Progress
+
+Naumachia is a framework for writing Cardano Smart Contracts, especially the portion run off-chain.
+
+The goal is to get smart contracts running in minutes, allow designers to test at all levels of abstraction, and make deployment easy!
+
 Intended to be used as the off-chain backend for [Aiken](https://github.com/txpipe/aiken) 
 or any other on-chain script (UPLC) source :)
-
-The goal is to allow people to get smart contracts running in minutes, allow them to test at all levels of abstraction, 
-and easily inject the code into other rust projects. Imagine interacting with your smart contract using a CLI, and 
-then compiling the same code into WASM and injecting it into your Web dApp!
 
 ### Examples
 Included is a simple smart contract with a mocked backend that can be run from your terminal. An adaptor for a real
