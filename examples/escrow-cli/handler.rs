@@ -28,7 +28,7 @@ where
         self.contract.hit_endpoint(call)?;
         println!();
         println!(
-            "Successfully submitted escrow for {} ADA to {}!",
+            "Successfully submitted escrow for {} Lovelace to {}!",
             amount, rcvr
         );
         Ok(())

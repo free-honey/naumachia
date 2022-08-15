@@ -27,8 +27,10 @@ pub fn get_config() -> Option<Config> {
     }
 }
 
-pub fn update_signer(signer: String) -> Result<(), String> {
-    let config = Config { signer };
+pub fn update_signer(signer: &str) -> Result<(), String> {
+    let config = Config {
+        signer: signer.to_string(),
+    };
     write_config(&config)?;
     Ok(())
 }
