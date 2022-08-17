@@ -3,23 +3,20 @@ use crate::{
     address::{Address, PolicyId},
     error::Error,
     error::Result,
+    ledger_client::LedgerClient,
     output::Output,
     scripts::{TxContext, ValidatorCode},
     transaction::Action,
-    txorecord::TxORecord,
     Transaction, UnBuiltTransaction,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
-pub mod in_memory_record;
-pub mod local_persisted_record;
-
 #[cfg(test)]
 mod tests;
 
 #[derive(Debug)]
-pub struct Backend<Datum, Redeemer: Clone + Eq, Record: TxORecord<Datum, Redeemer>> {
+pub struct Backend<Datum, Redeemer: Clone + Eq, Record: LedgerClient<Datum, Redeemer>> {
     // TODO: Make fields private
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
@@ -30,7 +27,7 @@ impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
 where
     Datum: Clone + Eq + Debug,
     Redeemer: Clone + Eq + Hash,
-    Record: TxORecord<Datum, Redeemer>,
+    Record: LedgerClient<Datum, Redeemer>,
 {
     pub fn new(txo_record: Record) -> Self {
         Backend {

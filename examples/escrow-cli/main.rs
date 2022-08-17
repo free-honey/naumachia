@@ -1,16 +1,14 @@
 use crate::{
     config::{get_config, update_signer, write_config, Config},
-    escrow_contract::EscrowContract,
-    escrow_contract::EscrowDatum,
-    escrow_contract::EscrowEndpoint,
+    escrow_contract::{EscrowContract, EscrowDatum, EscrowEndpoint},
     handler::ActionHandler,
 };
 
 use clap::Parser;
 use naumachia::{
-    address::Address, address::ADA, backend::local_persisted_record::LocalPersistedRecord,
-    backend::Backend, error::Result as NauResult, smart_contract::SmartContract,
-    txorecord::TxORecord,
+    address::Address, address::ADA, backend::Backend, error::Result as NauResult,
+    ledger_client::local_persisted_ledger::LocalPersistedLedgerClient, ledger_client::LedgerClient,
+    smart_contract::SmartContract,
 };
 use std::path::Path;
 
@@ -75,7 +73,7 @@ fn main() {
     }
 }
 
-fn setup_record() -> LocalPersistedRecord<EscrowDatum, ()> {
+fn setup_record() -> LocalPersistedLedgerClient<EscrowDatum, ()> {
     let path = Path::new(".escrow_txo_record");
     let mut signer_str = "Alice".to_string();
     if let Some(config) = get_config() {
@@ -88,5 +86,5 @@ fn setup_record() -> LocalPersistedRecord<EscrowDatum, ()> {
     };
     let signer = Address::new(&signer_str);
     let starting_amount = 10_000_000;
-    LocalPersistedRecord::init(path, signer, starting_amount).unwrap()
+    LocalPersistedLedgerClient::init(path, signer, starting_amount).unwrap()
 }

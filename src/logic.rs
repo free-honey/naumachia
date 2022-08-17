@@ -1,4 +1,4 @@
-use crate::txorecord::TxORecord;
+use crate::ledger_client::LedgerClient;
 use crate::{error::Result, UnBuiltTransaction};
 
 use thiserror::Error;
@@ -14,12 +14,12 @@ pub trait SCLogic {
     type Datum: Clone + Eq + Debug;
     type Redeemer: Clone + PartialEq + Eq + Hash;
 
-    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
 
-    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Lookup,
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse>;

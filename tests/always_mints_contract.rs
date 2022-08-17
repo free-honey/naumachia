@@ -1,14 +1,13 @@
+use naumachia::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
 use naumachia::{
     address::Address,
-    backend::in_memory_record::InMemoryRecord,
-    backend::in_memory_record::TestBackendsBuilder,
+    ledger_client::LedgerClient,
     logic::SCLogic,
     logic::SCLogicResult,
     scripts::{MintingPolicy, ScriptResult, TxContext},
     smart_contract::SmartContract,
     smart_contract::SmartContractTrait,
     transaction::UnBuiltTransaction,
-    txorecord::TxORecord,
 };
 
 struct AlwaysMintsPolicy;
@@ -41,7 +40,7 @@ impl SCLogic for AlwaysMintsSmartContract {
     type Datum = ();
     type Redeemer = ();
 
-    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
@@ -53,7 +52,7 @@ impl SCLogic for AlwaysMintsSmartContract {
         }
     }
 
-    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         _txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
@@ -80,7 +79,7 @@ fn can_mint_from_always_true_minting_policy() {
 
     // Check my balance for minted tokens
     let expected = amount;
-    let actual = <InMemoryRecord<(), ()> as TxORecord<(), ()>>::balance_at_address(
+    let actual = <InMemoryLedgerClient<(), ()> as LedgerClient<(), ()>>::balance_at_address(
         &backend.txo_record,
         &me,
         &policy,

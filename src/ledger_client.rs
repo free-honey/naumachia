@@ -2,9 +2,12 @@ use crate::{address::Address, output::Output, transaction::Transaction, PolicyId
 
 use thiserror::Error;
 
+pub mod in_memory_ledger;
+pub mod local_persisted_ledger;
+
 use std::error;
 
-pub trait TxORecord<Datum, Redeemer> {
+pub trait LedgerClient<Datum, Redeemer> {
     fn signer(&self) -> &Address;
     fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
     fn balance_at_address(&self, address: &Address, policy: &PolicyId) -> u64 {
@@ -20,11 +23,11 @@ pub trait TxORecord<Datum, Redeemer> {
 }
 
 #[derive(Debug, Error)]
-pub enum TxORecordError {
+pub enum LedgerClientError {
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(String),
 }
 
-pub type TxORecordResult<T> = Result<T, TxORecordError>;
+pub type TxORecordResult<T> = Result<T, LedgerClientError>;

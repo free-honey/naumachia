@@ -1,5 +1,6 @@
 use naumachia::{
     address::{Address, ADA},
+    ledger_client::LedgerClient,
     logic::SCLogic,
     logic::{SCLogicError, SCLogicResult},
     output::Output,
@@ -7,7 +8,6 @@ use naumachia::{
     scripts::ScriptResult,
     scripts::{TxContext, ValidatorCode},
     transaction::UnBuiltTransaction,
-    txorecord::TxORecord,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -71,7 +71,7 @@ impl SCLogic for EscrowContract {
     type Datum = EscrowDatum;
     type Redeemer = ();
 
-    fn handle_endpoint<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
@@ -81,7 +81,7 @@ impl SCLogic for EscrowContract {
         }
     }
 
-    fn lookup<Record: TxORecord<Self::Datum, Self::Redeemer>>(
+    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
@@ -100,7 +100,7 @@ fn escrow(amount: u64, receiver: Address) -> SCLogicResult<UnBuiltTransaction<Es
     Ok(u_tx)
 }
 
-fn claim<Record: TxORecord<EscrowDatum, ()>>(
+fn claim<Record: LedgerClient<EscrowDatum, ()>>(
     output_id: &str,
     txo_record: &Record,
 ) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
@@ -110,7 +110,7 @@ fn claim<Record: TxORecord<EscrowDatum, ()>>(
     Ok(u_tx)
 }
 
-fn lookup_output<Record: TxORecord<EscrowDatum, ()>>(
+fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
     id: &str,
     txo_record: &Record,
 ) -> SCLogicResult<Output<EscrowDatum>> {
@@ -131,9 +131,9 @@ fn lookup_output<Record: TxORecord<EscrowDatum, ()>>(
 mod tests {
     #![allow(non_snake_case)]
     use super::*;
-    use naumachia::backend::in_memory_record::TestBackendsBuilder;
+    use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
+    use naumachia::ledger_client::LedgerClient;
     use naumachia::smart_contract::{SmartContract, SmartContractTrait};
-    use naumachia::txorecord::TxORecord;
 
     #[test]
     fn escrow__can_create_instance() {

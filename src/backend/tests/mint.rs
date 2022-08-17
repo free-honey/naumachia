@@ -1,5 +1,5 @@
 use super::*;
-use crate::backend::in_memory_record::TestBackendsBuilder;
+use crate::ledger_client::in_memory_ledger::TestBackendsBuilder;
 use crate::scripts::{MintingPolicy, ScriptError, ScriptResult};
 
 struct AliceCanMintPolicy;
