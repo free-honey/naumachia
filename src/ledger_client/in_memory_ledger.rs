@@ -3,8 +3,8 @@ use uuid::Uuid;
 
 use crate::{
     backend::Backend,
+    ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
     output::Output,
-    txorecord::{TxORecord, TxORecordError, TxORecordResult},
     Address, PolicyId, Transaction,
 };
 
@@ -38,8 +38,8 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
         self.outputs.push((address.clone(), output))
     }
 
-    pub fn build(&self) -> Backend<Datum, Redeemer, InMemoryRecord<Datum, Redeemer>> {
-        let txo_record = InMemoryRecord {
+    pub fn build(&self) -> Backend<Datum, Redeemer, InMemoryLedgerClient<Datum, Redeemer>> {
+        let txo_record = InMemoryLedgerClient {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
             _redeemer: Default::default(),
@@ -86,14 +86,14 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
 }
 
 #[derive(Debug)]
-pub struct InMemoryRecord<Datum, Redeemer> {
+pub struct InMemoryLedgerClient<Datum, Redeemer> {
     pub signer: Address,
     pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    TxORecord<Datum, Redeemer> for InMemoryRecord<Datum, Redeemer>
+    LedgerClient<Datum, Redeemer> for InMemoryLedgerClient<Datum, Redeemer>
 {
     fn signer(&self) -> &Address {
         &self.signer
@@ -115,7 +115,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
                 .iter()
                 .position(|(_, x)| x == tx_i)
                 .ok_or_else(|| {
-                    TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+                    LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
                 })?;
             my_outputs.remove(index);
         }

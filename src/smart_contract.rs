@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{backend::Backend, error::Result, logic::SCLogic, txorecord::TxORecord};
+use crate::{backend::Backend, error::Result, ledger_client::LedgerClient, logic::SCLogic};
 
 pub trait SmartContractTrait {
     type Endpoint;
@@ -14,7 +14,7 @@ pub trait SmartContractTrait {
 pub struct SmartContract<'a, Logic, Record>
 where
     Logic: SCLogic,
-    Record: TxORecord<Logic::Datum, Logic::Redeemer>,
+    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
 {
     pub smart_contract: &'a Logic,
     pub backend: &'a Backend<Logic::Datum, Logic::Redeemer, Record>,
@@ -23,7 +23,7 @@ where
 impl<'a, Logic, Record> SmartContract<'a, Logic, Record>
 where
     Logic: SCLogic,
-    Record: TxORecord<Logic::Datum, Logic::Redeemer>,
+    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
 {
     pub fn new(
         smart_contract: &'a Logic,
@@ -39,7 +39,7 @@ where
 impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
 where
     Logic: SCLogic + Eq + Debug,
-    Record: TxORecord<Logic::Datum, Logic::Redeemer>,
+    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
 {
     type Endpoint = Logic::Endpoint;
     type Lookup = Logic::Lookup;

@@ -1,14 +1,16 @@
 use thiserror::Error;
 
 use crate::scripts::ScriptError;
-use crate::{address::Address, address::PolicyId, logic::SCLogicError, txorecord::TxORecordError};
+use crate::{
+    address::Address, address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError,
+};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("TxORecord Error: {0}")]
-    TxORecord(#[from] TxORecordError),
+    TxORecord(#[from] LedgerClientError),
     #[error("ValidatorCode Error: {0}")]
     Script(#[from] ScriptError),
     #[error("Smart Contract Logic Error: {0:?}")]

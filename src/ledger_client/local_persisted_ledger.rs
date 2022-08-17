@@ -12,9 +12,9 @@ use uuid::Uuid;
 use crate::{
     address::{Address, ADA},
     error::Result,
+    ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
     output::Output,
     transaction::Transaction,
-    txorecord::{TxORecord, TxORecordError, TxORecordResult},
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -34,7 +34,7 @@ impl<Datum> Data<Datum> {
     }
 }
 
-pub struct LocalPersistedRecord<Datum, Redeemer> {
+pub struct LocalPersistedLedgerClient<Datum, Redeemer> {
     path: PathBuf,
     signer: Address,
     _datum: PhantomData<Datum>,
@@ -52,7 +52,7 @@ fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     }
 }
 
-impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedRecord<Datum, Redeemer> {
+impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<Datum, Redeemer> {
     // TODO: Create builder
     pub fn init(path: &Path, signer: Address, starting_amount: u64) -> Result<Self> {
         if !path.exists() {
@@ -65,7 +65,7 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedRecord<Datum, 
         } else {
             // TODO: Ensure it is valid data?
         }
-        let record = LocalPersistedRecord {
+        let record = LocalPersistedLedgerClient {
             path: path.into(),
             signer,
             _datum: Default::default(),
@@ -90,7 +90,7 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedRecord<Datum, 
     }
 }
 
-impl<Datum, Redeemer> TxORecord<Datum, Redeemer> for LocalPersistedRecord<Datum, Redeemer>
+impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for LocalPersistedLedgerClient<Datum, Redeemer>
 where
     Datum: Serialize + DeserializeOwned + Clone + PartialEq + Debug,
     Redeemer: Hash + Eq + Clone,
@@ -111,7 +111,7 @@ where
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
-                TxORecordError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+                LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
             })?;
             my_outputs.remove(index);
         }
@@ -137,7 +137,8 @@ mod tests {
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
         let record =
-            LocalPersistedRecord::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+            LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
+                .unwrap();
         let mut outputs = record.outputs_at_address(&signer);
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
@@ -153,7 +154,8 @@ mod tests {
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
         let record =
-            LocalPersistedRecord::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+            LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
+                .unwrap();
         let expected = starting_amount;
         let actual = record.balance_at_address(&signer, &ADA);
         assert_eq!(expected, actual);
@@ -166,7 +168,8 @@ mod tests {
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
         let record =
-            LocalPersistedRecord::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+            LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
+                .unwrap();
         // let mut outputs = record.outputs_at_address(&signer);
         let first_output = record.outputs_at_address(&signer).pop().unwrap();
         let id = Uuid::new_v4().to_string();

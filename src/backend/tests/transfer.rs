@@ -1,6 +1,6 @@
 use super::*;
-use crate::backend::in_memory_record::InMemoryRecord;
-use crate::{address::ADA, backend::in_memory_record::TestBackendsBuilder};
+use crate::address::ADA;
+use crate::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
 
 prop_compose! {
     fn arb_backend_with_enough()(
@@ -8,7 +8,7 @@ prop_compose! {
         mut rng in arb_rng(),
         their_utxo_count: u8,
         decoys in prop::collection::vec(arb_address().prop_filter("can't be alice or bob", |d| d != &Address::new("alice") && d != &Address::new("bob")), 0..10),
-    ) -> (Address, Address, u64, Backend<(),(), InMemoryRecord<(),()>>, Vec<Address>) {
+    ) -> (Address, Address, u64, Backend<(),(), InMemoryLedgerClient<(),()>>, Vec<Address>) {
         let signer = Address::new("alice");
         let recipient = Address::new("bob");
         let mut total: u64 = 0;
