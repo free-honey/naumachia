@@ -2,6 +2,7 @@ use crate::{address::Address, output::Output, transaction::Transaction, PolicyId
 
 use thiserror::Error;
 
+pub mod blockfrost_client;
 pub mod in_memory_ledger;
 pub mod local_persisted_ledger;
 
