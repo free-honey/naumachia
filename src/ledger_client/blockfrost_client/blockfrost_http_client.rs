@@ -1,4 +1,6 @@
-use crate::ledger_client::blockfrost_client::blockfrost_http_client::schemas::Genesis;
+use crate::ledger_client::blockfrost_client::blockfrost_http_client::schemas::{
+    AddressInfo, Genesis, UTxO,
+};
 use serde::de::DeserializeOwned;
 use thiserror::Error;
 use url::Url;
@@ -33,6 +35,21 @@ impl BlockfrostHttp {
     pub async fn genesis(&self) -> Result<Genesis> {
         let ext = "./genesis";
         self.get_endpoint(ext).await
+    }
+
+    pub async fn address_info(&self, address: &str) -> Result<AddressInfo> {
+        let ext = format!("./addresses/{}", address);
+        self.get_endpoint(&ext).await
+    }
+
+    pub async fn utxos(&self, address: &str) -> Result<Vec<UTxO>> {
+        let ext = format!("./addresses/{}/utxos", address);
+        self.get_endpoint(&ext).await
+    }
+
+    pub async fn datum(&self, datum_hash: &str) -> Result<serde_json::Value> {
+        let ext = format!("./scripts/datum/{}", datum_hash);
+        self.get_endpoint(&ext).await
     }
 
     async fn get_endpoint<T: DeserializeOwned>(&self, ext: &str) -> Result<T> {
@@ -77,7 +94,44 @@ mod tests {
     #[tokio::test]
     async fn genesis() -> Result<()> {
         let bf = get_test_bf_http_clent();
-        let res = bf.genesis().await.unwrap();
+        let _res = bf.genesis().await.unwrap();
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn utxos() -> Result<()> {
+        let bf = get_test_bf_http_clent();
+        // TODO: Find a good stable address to use
+        // let address = "addr_test1wrtlw9csk7vc9peauh9nzpg45zemvj3w9m532e93nwer24gjwycdl";
+        // let address = "addr_test1wrsexavz37208qda7mwwu4k7hcpg26cz0ce86f5e9kul3hqzlh22t";
+        let address = "addr_test1wp9m8xkpt2tmy7madqldspgzgug8f2p3pwhz589cq75685slenwf4";
+        let res = bf.utxos(&address).await.unwrap();
+        dbg!(&res);
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn datum() -> Result<()> {
+        let bf = get_test_bf_http_clent();
+        // TODO: Find a good stable address to use
+        // let datum_hash = "d1cede40100329bfd7edbb1245a4d24de23924f00341886dc5f5bf6d06c65629";
+        let datum_hash = "a9fbe52ace8f89e0ae64d88f879e159b97d51f27d8f932c9aa165e5ce5f0f28e";
+        let res = bf.datum(&datum_hash).await.unwrap();
+        println!("{}", serde_json::to_string_pretty(&res).unwrap());
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn address_info() -> Result<()> {
+        let bf = get_test_bf_http_clent();
+        // let address = "addr1q97dqz7g6nyg0y08np42aj8magcwdgr8ea6mysa7e9f6qg8hdg3rkwaqkqysqnwqsfl2spx4yreqywa6t5mgftv6x3fsmqn6vh";
+        // let address = "addr1qp7dqz7g6nyg0y08np42aj8magcwdgr8ea6mysa7e9f6qg8hdg3rkwaqkqysqnwqsfl2spx4yreqywa6t5mgftv6x3fs2k6a72";
+        let address = "addr_test1wrtlw9csk7vc9peauh9nzpg45zemvj3w9m532e93nwer24gjwycdl";
+        let res = bf.address_info(&address).await.unwrap();
+        dbg!(&res);
         Ok(())
     }
 }

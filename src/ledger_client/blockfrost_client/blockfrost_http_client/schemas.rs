@@ -13,3 +13,27 @@ pub struct Genesis {
     max_kes_evolutions: u32,
     security_param: u32,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct UTxO {
+    tx_hash: String,
+    output_index: u32,
+    amount: Vec<Value>,
+    block: String,
+    data_hash: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Value {
+    unit: String,
+    quantity: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AddressInfo {
+    address: String,
+    amount: Vec<Value>,
+    stake_address: Option<String>,
+    r#type: String,
+    script: bool,
+}
