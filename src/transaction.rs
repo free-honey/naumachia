@@ -4,6 +4,7 @@ use crate::{
     scripts::{MintingPolicy, ValidatorCode},
 };
 
+use crate::values::Values;
 use std::collections::HashMap;
 
 pub enum Action<Datum, Redeemer> {
@@ -103,8 +104,8 @@ pub struct Transaction<Datum, Redeemer> {
     pub inputs: Vec<Output<Datum>>,
     pub outputs: Vec<Output<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
-    pub scripts: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
-    pub minting: HashMap<PolicyId, u64>,
+    pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
+    pub minting: Values,
     pub policies: HashMap<Address, Box<dyn MintingPolicy>>,
 }
 

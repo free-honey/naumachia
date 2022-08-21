@@ -183,7 +183,7 @@ mod tests {
             inputs: vec![first_output],
             outputs: vec![new_output],
             redeemers: vec![],
-            scripts: Default::default(),
+            validators: Default::default(),
             minting: Default::default(),
             policies: Default::default(),
         };
