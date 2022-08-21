@@ -63,7 +63,7 @@ impl Values {
     }
 
     pub fn get(&self, policy: &PolicyId) -> Option<u64> {
-        self.values.get(&policy).map(|amt| *amt)
+        self.values.get(policy).copied()
     }
 }
 
