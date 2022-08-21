@@ -13,3 +13,4 @@ pub mod smart_contract;
 pub mod transaction;
 
 pub mod backend;
+pub mod values;

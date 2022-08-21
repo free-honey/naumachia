@@ -1,4 +1,5 @@
 use crate::scripts::MintingPolicy;
+use crate::values::Values;
 use crate::{
     address::{Address, PolicyId},
     error::Error,
@@ -9,8 +10,12 @@ use crate::{
     transaction::Action,
     Transaction, UnBuiltTransaction,
 };
+use std::borrow::Borrow;
+use std::cmp::min;
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
+
+pub mod selection;
 
 #[cfg(test)]
 mod tests;
@@ -66,9 +71,8 @@ where
         HashMap<PolicyId, u64>,
         HashMap<Address, Box<dyn MintingPolicy>>,
     )> {
-        let mut min_input_values: HashMap<PolicyId, u64> = HashMap::new();
-        let mut min_output_values: HashMap<Address, RefCell<HashMap<PolicyId, u64>>> =
-            HashMap::new();
+        let mut min_input_values = Values::default();
+        let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
         let mut minting: HashMap<PolicyId, u64> = HashMap::new();
         let mut script_inputs: Vec<Output<Datum>> = Vec::new();
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
@@ -84,7 +88,8 @@ where
                     policy_id: policy,
                 } => {
                     // Input
-                    add_to_map(&mut min_input_values, policy.clone(), amount);
+                    // add_to_map(&mut min_input_values, policy.clone(), amount);
+                    min_input_values.add_one_value(&policy, amount);
 
                     // Output
                     add_amount_to_nested_map(&mut min_output_values, amount, &recipient, &policy);
@@ -110,7 +115,8 @@ where
                     address,
                 } => {
                     for (policy, amount) in values.iter() {
-                        add_to_map(&mut min_input_values, policy.clone(), *amount);
+                        // add_to_map(&mut min_input_values, policy.clone(), *amount);
+                        min_input_values.add_one_value(&policy, *amount);
                     }
                     let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
                     let owner = address;
@@ -139,9 +145,21 @@ where
             self.select_inputs_for_one(self.txo_record.signer(), &min_input_values, script_inputs)?;
 
         // outputs
-        remainders.iter().for_each(|(amt, recp, policy)| {
-            add_amount_to_nested_map(&mut min_output_values, *amt, recp, policy)
-        });
+        // remainders.iter().for_each(|(amt, policy)| {
+        //     add_amount_to_nested_map(
+        //         &mut min_output_values,
+        //         *amt,
+        //         &self.txo_record.signer(),
+        //         policy,
+        //     )
+        // });
+
+        // TODO: Dedupe
+        let mut new_values = remainders;
+        if let Some(values) = min_output_values.get(&self.txo_record.signer()) {
+            new_values.add_values(&values.borrow());
+        }
+        min_output_values.insert(self.txo_record.signer().clone(), RefCell::new(new_values));
 
         let out_vecs = nested_map_to_vecs(min_output_values);
         let mut outputs = self.create_outputs_for(out_vecs)?;
@@ -165,40 +183,17 @@ where
     fn select_inputs_for_one(
         &self,
         address: &Address,
-        values: &HashMap<PolicyId, u64>,
+        // values: &HashMap<PolicyId, u64>,
+        spending_values: &Values,
         script_inputs: Vec<Output<Datum>>,
-    ) -> Result<(Vec<Output<Datum>>, Vec<(u64, Address, PolicyId)>)> {
-        let mut address_values = HashMap::new();
+    ) -> Result<(Vec<Output<Datum>>, Values)> {
         let mut all_available_outputs = self.txo_record.outputs_at_address(address);
         all_available_outputs.extend(script_inputs);
-        all_available_outputs
-            .clone()
-            .into_iter()
-            .flat_map(|o| o.values().clone().into_iter().collect::<Vec<_>>())
-            .for_each(|(policy, amount)| {
-                add_to_map(&mut address_values, policy, amount);
-            });
-        let mut remainders = Vec::new();
+        let address_values = Values::from_outputs(&all_available_outputs);
 
-        // TODO: REfactor :(
-        for (policy, amt) in values.iter() {
-            if let Some(available) = address_values.remove(policy) {
-                if amt <= &available {
-                    let remaining = available - amt;
-                    remainders.push((remaining, address.clone(), policy.clone()));
-                } else {
-                    return Err(Error::InsufficientAmountOf(policy.to_owned()));
-                }
-            } else {
-                return Err(Error::InsufficientAmountOf(policy.to_owned()));
-            }
-        }
-        let other_remainders: Vec<_> = address_values
-            .into_iter()
-            .map(|(policy, amt)| (amt, address.clone(), policy))
-            .collect();
-        remainders.extend(other_remainders);
-        Ok((all_available_outputs, remainders))
+        let spending_outputs = all_available_outputs;
+        let remainders = address_values.try_subtract(spending_values)?;
+        Ok((spending_outputs, remainders))
     }
 
     fn create_outputs_for(
@@ -223,7 +218,7 @@ where
         let UnBuiltTransaction { actions } = unbuilt_tx;
         let (inputs, outputs, redeemers, scripts, minting, policies) =
             self.handle_actions(actions)?;
-
+        // TODO: Calculate fees and then rebuild tx
         Ok(Transaction {
             inputs,
             outputs,
@@ -235,7 +230,7 @@ where
     }
 }
 
-fn add_to_map(h_map: &mut HashMap<PolicyId, u64>, policy: PolicyId, amount: u64) {
+pub fn add_to_map(h_map: &mut HashMap<PolicyId, u64>, policy: PolicyId, amount: u64) {
     let mut new_total = amount;
     if let Some(total) = h_map.get(&policy) {
         new_total += total;
@@ -244,31 +239,32 @@ fn add_to_map(h_map: &mut HashMap<PolicyId, u64>, policy: PolicyId, amount: u64)
 }
 
 fn nested_map_to_vecs(
-    nested_map: HashMap<Address, RefCell<HashMap<PolicyId, u64>>>,
+    nested_map: HashMap<Address, RefCell<Values>>,
 ) -> Vec<(Address, Vec<(PolicyId, u64)>)> {
     nested_map
         .into_iter()
-        .map(|(addr, h_map)| (addr, h_map.into_inner().into_iter().collect()))
+        .map(|(addr, values)| (addr, values.borrow().vec()))
         .collect()
 }
 
 fn add_amount_to_nested_map(
-    output_map: &mut HashMap<Address, RefCell<HashMap<PolicyId, u64>>>,
+    output_map: &mut HashMap<Address, RefCell<Values>>,
     amount: u64,
     owner: &Address,
     policy_id: &PolicyId,
 ) {
-    if let Some(h_map) = output_map.get(owner) {
-        let mut inner = h_map.borrow_mut();
-        let mut new_total = amount;
-        if let Some(total) = inner.get(policy_id) {
-            new_total += total;
-        }
-        inner.insert(policy_id.clone(), new_total);
+    if let Some(values) = output_map.get(owner) {
+        let mut inner = values.borrow_mut();
+        // let mut new_total = amount;
+        // if let Some(total) = inner.get(policy_id) {
+        //     new_total += total;
+        // }
+        // inner.insert(policy_id.clone(), new_total);
+        inner.add_one_value(policy_id, amount);
     } else {
-        let mut new_map = HashMap::new();
-        new_map.insert(policy_id.clone(), amount);
-        output_map.insert(owner.clone(), RefCell::new(new_map));
+        let mut new_values = Values::default();
+        new_values.add_one_value(&policy_id, amount);
+        output_map.insert(owner.clone(), RefCell::new(new_values));
     }
 }
 
