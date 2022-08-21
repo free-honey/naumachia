@@ -4,6 +4,7 @@ use crate::{
     scripts::{MintingPolicy, ValidatorCode},
 };
 
+use crate::values::Values;
 use std::collections::HashMap;
 
 pub enum Action<Datum, Redeemer> {
@@ -19,7 +20,7 @@ pub enum Action<Datum, Redeemer> {
     },
     InitScript {
         datum: Datum,
-        values: HashMap<PolicyId, u64>,
+        values: Values,
         address: Address,
     },
     RedeemScriptOutput {
@@ -67,12 +68,7 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
         self
     }
 
-    pub fn with_script_init(
-        mut self,
-        datum: Datum,
-        values: HashMap<PolicyId, u64>,
-        address: Address,
-    ) -> Self {
+    pub fn with_script_init(mut self, datum: Datum, values: Values, address: Address) -> Self {
         let action = Action::InitScript {
             datum,
             values,
@@ -103,8 +99,8 @@ pub struct Transaction<Datum, Redeemer> {
     pub inputs: Vec<Output<Datum>>,
     pub outputs: Vec<Output<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
-    pub scripts: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
-    pub minting: HashMap<PolicyId, u64>,
+    pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
+    pub minting: Values,
     pub policies: HashMap<Address, Box<dyn MintingPolicy>>,
 }
 

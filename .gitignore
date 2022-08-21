@@ -4,3 +4,4 @@
 .idea
 .escrow_txo_record
 .escrow_cli_config
+.blockfrost.toml

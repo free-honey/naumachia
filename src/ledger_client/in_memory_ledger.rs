@@ -1,6 +1,7 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{cell::RefCell, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
+use crate::values::Values;
 use crate::{
     backend::Backend,
     ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
@@ -30,7 +31,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
         OutputBuilder {
             inner: self,
             owner: owner.clone(),
-            values: HashMap::new(),
+            values: Values::default(),
         }
     }
 
@@ -56,7 +57,7 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
 {
     inner: TestBackendsBuilder<Datum, Redeemer>,
     owner: Address,
-    values: HashMap<PolicyId, u64>,
+    values: Values,
 }
 
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
@@ -67,7 +68,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
         if let Some(total) = self.values.get(&policy) {
             new_total += total;
         }
-        self.values.insert(policy, new_total);
+        self.values.add_one_value(&policy, new_total);
         self
     }
 

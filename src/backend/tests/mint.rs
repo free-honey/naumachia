@@ -1,6 +1,10 @@
 use super::*;
-use crate::ledger_client::in_memory_ledger::TestBackendsBuilder;
-use crate::scripts::{MintingPolicy, ScriptError, ScriptResult};
+use crate::{
+    error::Error,
+    ledger_client::in_memory_ledger::TestBackendsBuilder,
+    scripts::TxContext,
+    scripts::{MintingPolicy, ScriptError, ScriptResult},
+};
 
 struct AliceCanMintPolicy;
 
