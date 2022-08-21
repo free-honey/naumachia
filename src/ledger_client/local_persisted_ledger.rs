@@ -1,6 +1,5 @@
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
 use std::hash::Hash;
@@ -9,6 +8,7 @@ use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+use crate::values::Values;
 use crate::{
     address::{Address, ADA},
     error::Result,
@@ -43,8 +43,8 @@ pub struct LocalPersistedLedgerClient<Datum, Redeemer> {
 
 fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     let id = Uuid::new_v4().to_string();
-    let mut values = HashMap::new();
-    values.insert(ADA, amount);
+    let mut values = Values::default();
+    values.add_one_value(&ADA, amount);
     Output::Wallet {
         id,
         owner: owner.clone(),
@@ -144,7 +144,7 @@ mod tests {
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
         let actual = first_output.values().get(&ADA).unwrap();
-        assert_eq!(expected, *actual);
+        assert_eq!(expected, actual);
     }
 
     #[test]

@@ -8,9 +8,9 @@ use naumachia::{
     scripts::ScriptResult,
     scripts::{TxContext, ValidatorCode},
     transaction::UnBuiltTransaction,
+    values::Values,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use thiserror::Error;
 
 pub struct EscrowValidatorScript;
@@ -94,8 +94,8 @@ fn escrow(amount: u64, receiver: Address) -> SCLogicResult<UnBuiltTransaction<Es
     let script = EscrowValidatorScript;
     let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
-    let mut values = HashMap::new();
-    values.insert(ADA, amount);
+    let mut values = Values::default();
+    values.add_one_value(&ADA, amount);
     let u_tx = UnBuiltTransaction::default().with_script_init(datum, values, address);
     Ok(u_tx)
 }

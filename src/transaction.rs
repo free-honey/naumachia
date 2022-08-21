@@ -20,7 +20,7 @@ pub enum Action<Datum, Redeemer> {
     },
     InitScript {
         datum: Datum,
-        values: HashMap<PolicyId, u64>,
+        values: Values,
         address: Address,
     },
     RedeemScriptOutput {
@@ -68,12 +68,7 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
         self
     }
 
-    pub fn with_script_init(
-        mut self,
-        datum: Datum,
-        values: HashMap<PolicyId, u64>,
-        address: Address,
-    ) -> Self {
+    pub fn with_script_init(mut self, datum: Datum, values: Values, address: Address) -> Self {
         let action = Action::InitScript {
             datum,
             values,

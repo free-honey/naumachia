@@ -1,7 +1,7 @@
 use crate::{Address, PolicyId};
 use serde::{Deserialize, Serialize};
 
-use std::collections::HashMap;
+use crate::values::Values;
 
 // TODO: Find max size instead of u64. It might not actually matter since we'll never be able to
 //       select more than actually exists on chain. But maybe for minting?
@@ -13,14 +13,12 @@ pub enum Output<Datum> {
     Wallet {
         id: String,
         owner: Address,
-        #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
-        values: HashMap<PolicyId, u64>,
+        values: Values,
     },
     Validator {
         id: String,
         owner: Address,
-        #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
-        values: HashMap<PolicyId, u64>,
+        values: Values,
         datum: Datum,
     },
 }
@@ -28,7 +26,7 @@ pub enum Output<Datum> {
 pub type Value = (PolicyId, u64);
 
 impl<Datum> Output<Datum> {
-    pub fn new_wallet(id: String, owner: Address, values: HashMap<PolicyId, u64>) -> Self {
+    pub fn new_wallet(id: String, owner: Address, values: Values) -> Self {
         Output::Wallet { id, owner, values }
     }
 
@@ -46,7 +44,7 @@ impl<Datum> Output<Datum> {
         }
     }
 
-    pub fn values(&self) -> &HashMap<PolicyId, u64> {
+    pub fn values(&self) -> &Values {
         match self {
             Output::Wallet { values, .. } => values,
             Output::Validator { values, .. } => values,

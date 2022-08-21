@@ -106,7 +106,7 @@ where
                     values,
                     address,
                 } => {
-                    for (policy, amount) in values.iter() {
+                    for (policy, amount) in values.as_iter() {
                         min_input_values.add_one_value(policy, *amount);
                     }
                     let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
@@ -184,7 +184,12 @@ where
         let outputs = values
             .into_iter()
             .map(|(owner, val_vec)| {
-                let values = val_vec.into_iter().collect();
+                let values = val_vec
+                    .iter()
+                    .fold(Values::default(), |mut acc, (policy, amt)| {
+                        acc.add_one_value(policy, *amt);
+                        acc
+                    });
                 let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
                 Output::new_wallet(id, owner, values)
             })

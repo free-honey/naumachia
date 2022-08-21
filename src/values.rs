@@ -1,23 +1,24 @@
-use crate::error::{Error, Result};
-use crate::output::Output;
-use crate::PolicyId;
+use crate::{
+    error::{Error, Result},
+    output::Output,
+    PolicyId,
+};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Default, Clone)]
+#[serde_with::serde_as]
+#[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize, Default)]
 pub struct Values {
+    #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
     values: HashMap<PolicyId, u64>,
 }
 
 impl Values {
     pub fn from_outputs<D>(outputs: &[Output<D>]) -> Self {
-        let mut values = HashMap::new();
-        outputs
-            .iter()
-            .flat_map(|o| o.values().clone().into_iter().collect::<Vec<_>>())
-            .for_each(|(policy, amount)| {
-                add_to_map(&mut values, policy, amount);
-            });
-        Values { values }
+        outputs.iter().fold(Values::default(), |mut acc, output| {
+            acc.add_values(output.values());
+            acc
+        })
     }
 
     pub fn try_subtract(&self, other: &Values) -> Result<Values> {
@@ -48,7 +49,6 @@ impl Values {
     }
 
     pub fn add_values(&mut self, values: &Values) {
-        // TODO: make more efficient
         for (policy, amt) in values.as_iter() {
             self.add_one_value(policy, *amt)
         }
@@ -60,6 +60,10 @@ impl Values {
 
     pub fn vec(&self) -> Vec<(PolicyId, u64)> {
         self.values.clone().into_iter().collect()
+    }
+
+    pub fn get(&self, policy: &PolicyId) -> Option<u64> {
+        self.values.get(&policy).map(|amt| *amt)
     }
 }
 
