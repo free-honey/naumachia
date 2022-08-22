@@ -34,7 +34,7 @@ mod tests {
     use std::path::Path;
 
     // Must include a TOML file at your project root with the field:
-    //   project_id = <INSERT API KEY HERE>
+    //   phrase = <INSERT SECRET PHRASE HERE>
     const CONFIG_PATH: &str = ".blockfrost.toml";
 
     fn load_phrase_from_file(config_path: &str) -> String {
