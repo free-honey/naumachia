@@ -5,6 +5,8 @@ use std::marker::PhantomData;
 
 pub mod blockfrost_http_client;
 
+pub mod keys;
+
 pub struct BlockFrostLedgerClient<Datum, Redeemer> {
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
