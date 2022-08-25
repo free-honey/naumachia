@@ -10,11 +10,12 @@ use uuid::Uuid;
 
 use crate::values::Values;
 use crate::{
-    address::{Address, ADA},
+    address::Address,
     error::Result,
     ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
     output::Output,
     transaction::Transaction,
+    PolicyId,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,7 +45,7 @@ pub struct LocalPersistedLedgerClient<Datum, Redeemer> {
 fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     let id = Uuid::new_v4().to_string();
     let mut values = Values::default();
-    values.add_one_value(&ADA, amount);
+    values.add_one_value(&PolicyId::ADA, amount);
     Output::Wallet {
         id,
         owner: owner.clone(),
@@ -143,7 +144,7 @@ mod tests {
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
-        let actual = first_output.values().get(&ADA).unwrap();
+        let actual = first_output.values().get(&PolicyId::ADA).unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -157,7 +158,7 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&signer, &ADA);
+        let actual = record.balance_at_address(&signer, &PolicyId::ADA);
         assert_eq!(expected, actual);
     }
 
@@ -189,7 +190,7 @@ mod tests {
         };
         record.issue(tx).unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&owner, &ADA);
+        let actual = record.balance_at_address(&owner, &PolicyId::ADA);
         assert_eq!(expected, actual)
     }
 }

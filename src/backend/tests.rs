@@ -19,6 +19,14 @@ prop_compose! {
     }
 }
 
+prop_compose! {
+    fn arb_policy_id()(
+        id: String
+    ) -> PolicyId {
+        PolicyId::native_token(&id)
+    }
+}
+
 mod mint;
 mod transfer;
 

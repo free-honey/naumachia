@@ -19,8 +19,8 @@ impl MintingPolicy for AliceCanMintPolicy {
         }
     }
 
-    fn address(&self) -> Address {
-        Address::new("OnlyAliceCanMint")
+    fn id(&self) -> PolicyId {
+        PolicyId::native_token("OnlyAliceCanMint")
     }
 }
 
@@ -35,7 +35,7 @@ fn mint__alice_can_mint() {
 
     backend.process(u_tx).unwrap();
 
-    let policy_id = Some(AliceCanMintPolicy.address());
+    let policy_id = AliceCanMintPolicy.id();
 
     let expected = 100;
     let actual = backend.txo_record.balance_at_address(&signer, &policy_id);

@@ -17,7 +17,18 @@ impl Address {
     }
 }
 
-// TODO: This should represent PolicyId as well as AssetName. Maybe a custom enum would be good
-pub type PolicyId = Option<Address>;
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
+pub enum PolicyId {
+    ADA,
+    NativeToken(String),
+}
 
-pub const ADA: PolicyId = None;
+impl PolicyId {
+    pub fn ada() -> PolicyId {
+        PolicyId::ADA
+    }
+
+    pub fn native_token(id: &str) -> PolicyId {
+        PolicyId::NativeToken(id.to_string())
+    }
+}

@@ -72,7 +72,7 @@ where
 
         let mut redeemers = Vec::new();
         let mut validators = HashMap::new();
-        let mut policies: HashMap<Address, Box<dyn MintingPolicy>> = HashMap::new();
+        let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();
         for action in actions {
             match action {
                 Action::Transfer {
@@ -91,7 +91,7 @@ where
                     recipient,
                     policy,
                 } => {
-                    let policy_id = Some(policy.address());
+                    let policy_id = policy.id();
                     add_amount_to_nested_map(
                         &mut min_output_values,
                         amount,
@@ -99,7 +99,7 @@ where
                         &policy_id,
                     );
                     minting.add_one_value(&policy_id, amount);
-                    policies.insert(policy.address(), policy);
+                    policies.insert(policy.id(), policy);
                 }
                 Action::InitScript {
                     datum,

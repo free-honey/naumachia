@@ -1,5 +1,6 @@
+use naumachia::address::PolicyId;
 use naumachia::{
-    address::{Address, ADA},
+    address::Address,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::{SCLogicError, SCLogicResult},
@@ -95,7 +96,7 @@ fn escrow(amount: u64, receiver: Address) -> SCLogicResult<UnBuiltTransaction<Es
     let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
     let mut values = Values::default();
-    values.add_one_value(&ADA, amount);
+    values.add_one_value(&PolicyId::ADA, amount);
     let u_tx = UnBuiltTransaction::default().with_script_init(datum, values, address);
     Ok(u_tx)
 }
@@ -142,7 +143,7 @@ mod tests {
         let start_amount = 100;
         let mut backend = TestBackendsBuilder::new(&me)
             .start_output(&me)
-            .with_value(ADA, start_amount)
+            .with_value(PolicyId::ADA, start_amount)
             .finish_output()
             .build();
 
@@ -159,11 +160,11 @@ mod tests {
         let expected = escrow_amount;
         let actual = backend
             .txo_record
-            .balance_at_address(&script.address(), &ADA);
+            .balance_at_address(&script.address(), &PolicyId::ADA);
         assert_eq!(expected, actual);
 
         let expected = start_amount - escrow_amount;
-        let actual = backend.txo_record.balance_at_address(&me, &ADA);
+        let actual = backend.txo_record.balance_at_address(&me, &PolicyId::ADA);
         assert_eq!(expected, actual);
 
         let instance = backend
@@ -185,10 +186,14 @@ mod tests {
         let contract = SmartContract::new(&EscrowContract, &backend);
         contract.hit_endpoint(call).unwrap();
 
-        let alice_balance = backend.txo_record.balance_at_address(&alice, &ADA);
+        let alice_balance = backend
+            .txo_record
+            .balance_at_address(&alice, &PolicyId::ADA);
         assert_eq!(alice_balance, escrow_amount);
 
-        let script_balance = backend.txo_record.balance_at_address(&escrow_address, &ADA);
+        let script_balance = backend
+            .txo_record
+            .balance_at_address(&escrow_address, &PolicyId::ADA);
         assert_eq!(script_balance, 0);
     }
 }

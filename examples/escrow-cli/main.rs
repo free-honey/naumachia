@@ -5,8 +5,9 @@ use crate::{
 };
 
 use clap::Parser;
+use naumachia::address::PolicyId;
 use naumachia::{
-    address::Address, address::ADA, backend::Backend, error::Result as NauResult,
+    address::Address, backend::Backend, error::Result as NauResult,
     ledger_client::local_persisted_ledger::LocalPersistedLedgerClient, ledger_client::LedgerClient,
     smart_contract::SmartContract,
 };
@@ -54,7 +55,9 @@ fn main() {
 
     match args.action {
         ActionParams::Balance => {
-            let balance = backend.txo_record.balance_at_address(signer, &ADA);
+            let balance = backend
+                .txo_record
+                .balance_at_address(signer, &PolicyId::ADA);
             println!();
             println!("{}'s balance: {:?}", signer.to_str(), balance);
         }

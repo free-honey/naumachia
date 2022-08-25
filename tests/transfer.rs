@@ -1,11 +1,9 @@
+use naumachia::address::PolicyId;
 use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
 use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
-    address::{Address, ADA},
-    ledger_client::LedgerClient,
-    logic::SCLogic,
-    transaction::UnBuiltTransaction,
+    address::Address, ledger_client::LedgerClient, logic::SCLogic, transaction::UnBuiltTransaction,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -28,7 +26,8 @@ impl SCLogic for TransferADASmartContract {
     ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
-                let u_tx = UnBuiltTransaction::default().with_transfer(amount, recipient, ADA);
+                let u_tx =
+                    UnBuiltTransaction::default().with_transfer(amount, recipient, PolicyId::ADA);
                 Ok(u_tx)
             }
         }
@@ -48,14 +47,14 @@ fn can_transfer_and_keep_remainder() {
     let alice = Address::new("alice");
 
     let input_amount = 666;
-    let extra_policy = Some(Address::new("arcade token"));
+    let extra_policy = PolicyId::native_token("arcade token");
     let extra_amount = 50;
 
     let amount = 590;
 
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(ADA, input_amount)
+        .with_value(PolicyId::ADA, input_amount)
         .with_value(extra_policy.clone(), extra_amount)
         .finish_output()
         .build();
@@ -70,11 +69,13 @@ fn can_transfer_and_keep_remainder() {
     contract.hit_endpoint(call).unwrap();
 
     let alice_expected = amount;
-    let alice_actual = backend.txo_record.balance_at_address(&alice, &ADA);
+    let alice_actual = backend
+        .txo_record
+        .balance_at_address(&alice, &PolicyId::ADA);
     assert_eq!(alice_expected, alice_actual);
 
     let me_expected = input_amount - amount;
-    let me_actual = backend.txo_record.balance_at_address(&me, &ADA);
+    let me_actual = backend.txo_record.balance_at_address(&me, &PolicyId::ADA);
     assert_eq!(me_expected, me_actual);
 
     let expected_extra_amount = extra_amount;

@@ -1,4 +1,5 @@
 use crate::address::Address;
+use crate::PolicyId;
 use thiserror::Error;
 
 // TODO: Move
@@ -14,7 +15,7 @@ pub trait ValidatorCode<D, R> {
 
 pub trait MintingPolicy {
     fn execute(&self, ctx: TxContext) -> ScriptResult<()>;
-    fn address(&self) -> Address;
+    fn id(&self) -> PolicyId;
 }
 
 #[derive(Debug, Error)]

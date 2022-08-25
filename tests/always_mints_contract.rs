@@ -1,3 +1,4 @@
+use naumachia::address::PolicyId;
 use naumachia::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
 use naumachia::{
     address::Address,
@@ -17,8 +18,8 @@ impl MintingPolicy for AlwaysMintsPolicy {
         Ok(())
     }
 
-    fn address(&self) -> Address {
-        Address::new(MINT_POLICY_ADDR)
+    fn id(&self) -> PolicyId {
+        PolicyId::native_token(MINT_POLICY_ID)
     }
 }
 
@@ -31,7 +32,7 @@ enum Endpoint {
     },
 }
 
-const MINT_POLICY_ADDR: &str = "mint_policy";
+const MINT_POLICY_ID: &str = "mint_policy";
 
 impl SCLogic for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
@@ -69,7 +70,7 @@ fn mint(amount: u64, recipient: Address) -> SCLogicResult<UnBuiltTransaction<(),
 #[test]
 fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
-    let policy = Some(Address::new(MINT_POLICY_ADDR));
+    let policy = PolicyId::native_token(MINT_POLICY_ID);
     let backend = TestBackendsBuilder::new(&me).build();
     // Call mint endpoint
     let amount = 69;

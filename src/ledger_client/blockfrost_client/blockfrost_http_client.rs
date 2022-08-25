@@ -1,5 +1,5 @@
 use crate::ledger_client::blockfrost_client::blockfrost_http_client::schemas::{
-    AccountAssocAddrTotal, Address, AddressInfo, Genesis, UTxO,
+    Address, AddressInfo, Genesis, UTxO,
 };
 use serde::de::DeserializeOwned;
 use thiserror::Error;

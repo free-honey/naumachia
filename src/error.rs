@@ -1,9 +1,7 @@
 use thiserror::Error;
 
 use crate::scripts::ScriptError;
-use crate::{
-    address::Address, address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError,
-};
+use crate::{address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError, Address};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -17,6 +15,8 @@ pub enum Error {
     SCLogic(#[from] SCLogicError),
     #[error("Error: Insufficient amount of {0:?}.")]
     InsufficientAmountOf(PolicyId),
+    #[error("Error: Failed to retrieve policy for {0:?}.")]
+    FailedToRetrievePolicyFor(PolicyId),
     #[error("Error: Failed to retrieve script for {0:?}.")]
     FailedToRetrieveScriptFor(Address),
     #[error("Error: Failed to retrieve redeemer for {0:?}.")]

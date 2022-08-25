@@ -1,6 +1,6 @@
 use crate::escrow_contract::EscrowDatum;
 use crate::{EscrowEndpoint, NauResult};
-use naumachia::address::{Address, ADA};
+use naumachia::address::{Address, PolicyId};
 use naumachia::output::Output;
 use naumachia::smart_contract::SmartContractTrait;
 use naumachia::values::Values;
@@ -18,7 +18,7 @@ impl SmartContractTrait for MockEscrowSmartContract {
 
     fn lookup(&self, _lookup: Self::Lookup) -> NauResult<Self::LookupResponse> {
         let mut values = Values::default();
-        values.add_one_value(&ADA, 1234);
+        values.add_one_value(&PolicyId::ADA, 1234);
         let output = Output::Wallet {
             id: "lolz".to_string(),
             owner: Address::new("someone"),
