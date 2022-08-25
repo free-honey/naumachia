@@ -1,7 +1,7 @@
 use naumachia::address::PolicyId;
 use naumachia::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
 use naumachia::{
-    address::Address,
+    address::FakeAddress,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::SCLogicResult,
@@ -61,7 +61,7 @@ impl SCLogic for AlwaysMintsSmartContract {
     }
 }
 
-fn mint(amount: u64, recipient: Address) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
+fn mint(amount: u64, recipient: FakeAddress) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
     let policy = Box::new(AlwaysMintsPolicy);
     let utx = UnBuiltTransaction::default().with_mint(amount, &recipient, policy);
     Ok(utx)
@@ -69,7 +69,7 @@ fn mint(amount: u64, recipient: Address) -> SCLogicResult<UnBuiltTransaction<(),
 
 #[test]
 fn can_mint_from_always_true_minting_policy() {
-    let me = Address::new("me");
+    let me = FakeAddress::new("me");
     let policy = PolicyId::native_token(MINT_POLICY_ID);
     let backend = TestBackendsBuilder::new(&me).build();
     // Call mint endpoint
@@ -81,7 +81,7 @@ fn can_mint_from_always_true_minting_policy() {
     // Check my balance for minted tokens
     let expected = amount;
     let actual = <InMemoryLedgerClient<(), ()> as LedgerClient<(), ()>>::balance_at_address(
-        &backend.txo_record,
+        &backend.ledger_client,
         &me,
         &policy,
     );

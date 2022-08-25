@@ -1,5 +1,7 @@
 use std::fmt::Debug;
+use std::ops::Add;
 
+use crate::address::ValidAddress;
 use crate::{backend::Backend, error::Result, ledger_client::LedgerClient, logic::SCLogic};
 
 pub trait SmartContractTrait {
@@ -11,35 +13,33 @@ pub trait SmartContractTrait {
 }
 
 #[derive(Debug)]
-pub struct SmartContract<'a, Logic, Record>
+pub struct SmartContract<'a, Address, Logic, LC>
 where
-    Logic: SCLogic,
-    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
+    Logic: SCLogic<Address>,
+    LC: LedgerClient<Logic::Datum, Logic::Redeemer, Address = Address>,
 {
-    pub smart_contract: &'a Logic,
-    pub backend: &'a Backend<Logic::Datum, Logic::Redeemer, Record>,
+    pub logic: &'a Logic,
+    pub backend: &'a Backend<LC::Address, Logic::Datum, Logic::Redeemer, LC>,
 }
 
-impl<'a, Logic, Record> SmartContract<'a, Logic, Record>
+impl<'a, Address, Logic, LC> SmartContract<'a, Address, Logic, LC>
 where
-    Logic: SCLogic,
-    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
+    Logic: SCLogic<Address>,
+    LC: LedgerClient<Logic::Datum, Logic::Redeemer, Address = Address>,
 {
     pub fn new(
-        smart_contract: &'a Logic,
-        backend: &'a Backend<Logic::Datum, Logic::Redeemer, Record>,
+        logic: &'a Logic,
+        backend: &'a Backend<LC::Address, Logic::Datum, Logic::Redeemer, LC>,
     ) -> Self {
-        SmartContract {
-            smart_contract,
-            backend,
-        }
+        SmartContract { logic, backend }
     }
 }
 
-impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
+impl<'a, Address, Logic, LC> SmartContractTrait for SmartContract<'a, Address, Logic, LC>
 where
-    Logic: SCLogic + Eq + Debug,
-    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
+    Address: ValidAddress,
+    Logic: SCLogic<Address> + Eq + Debug,
+    LC: LedgerClient<Logic::Datum, Logic::Redeemer, Address = Address>,
 {
     type Endpoint = Logic::Endpoint;
     type Lookup = Logic::Lookup;

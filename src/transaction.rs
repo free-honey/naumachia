@@ -1,13 +1,14 @@
 use crate::{
-    address::{Address, PolicyId},
+    address::PolicyId,
     output::Output,
     scripts::{MintingPolicy, ValidatorCode},
 };
 
+use crate::address::ValidAddress;
 use crate::values::Values;
 use std::collections::HashMap;
 
-pub enum Action<Datum, Redeemer> {
+pub enum Action<Address, Datum, Redeemer> {
     Transfer {
         amount: u64,
         recipient: Address,
@@ -16,7 +17,7 @@ pub enum Action<Datum, Redeemer> {
     Mint {
         amount: u64,
         recipient: Address,
-        policy: Box<dyn MintingPolicy>,
+        policy: Box<dyn MintingPolicy<Address>>,
     },
     InitScript {
         datum: Datum,
@@ -24,17 +25,17 @@ pub enum Action<Datum, Redeemer> {
         address: Address,
     },
     RedeemScriptOutput {
-        output: Output<Datum>,
+        output: Output<Address, Datum>,
         redeemer: Redeemer,
-        script: Box<dyn ValidatorCode<Datum, Redeemer>>, // Is there a way to do this without `dyn`?
+        script: Box<dyn ValidatorCode<Address, Datum, Redeemer>>, // Is there a way to do this without `dyn`?
     },
 }
 
-pub struct UnBuiltTransaction<Datum, Redeemer> {
-    pub actions: Vec<Action<Datum, Redeemer>>,
+pub struct UnBuiltTransaction<Address, Datum, Redeemer> {
+    pub actions: Vec<Action<Address, Datum, Redeemer>>,
 }
 
-impl<Datum, Redeemer> Default for UnBuiltTransaction<Datum, Redeemer> {
+impl<Address, Datum, Redeemer> Default for UnBuiltTransaction<Address, Datum, Redeemer> {
     fn default() -> Self {
         UnBuiltTransaction {
             actions: Vec::new(),
@@ -42,11 +43,11 @@ impl<Datum, Redeemer> Default for UnBuiltTransaction<Datum, Redeemer> {
     }
 }
 
-impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
-    pub fn with_transfer(mut self, amount: u64, recipient: Address, policy_id: PolicyId) -> Self {
-        let action = Action::Transfer {
+impl<Address: ValidAddress, Datum, Redeemer> UnBuiltTransaction<Address, Datum, Redeemer> {
+    pub fn with_transfer(mut self, amount: u64, recipient: &Address, policy_id: PolicyId) -> Self {
+        let action: Action<Address, Datum, Redeemer> = Action::Transfer {
             amount,
-            recipient,
+            recipient: recipient.to_owned(),
             policy_id,
         };
         self.actions.push(action);
@@ -57,11 +58,11 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
         mut self,
         amount: u64,
         recipient: &Address,
-        policy: Box<dyn MintingPolicy>,
+        policy: Box<dyn MintingPolicy<Address>>,
     ) -> Self {
         let action = Action::Mint {
             amount,
-            recipient: recipient.clone(),
+            recipient: recipient.to_owned(),
             policy,
         };
         self.actions.push(action);
@@ -72,7 +73,7 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
         let action = Action::InitScript {
             datum,
             values,
-            address,
+            address: address.to_owned(),
         };
         self.actions.push(action);
         self
@@ -81,9 +82,9 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
     // TODO: This can prolly just take the Output ID
     pub fn with_script_redeem(
         mut self,
-        output: Output<Datum>,
+        output: Output<Address, Datum>,
         redeemer: Redeemer,
-        script: Box<dyn ValidatorCode<Datum, Redeemer>>,
+        script: Box<dyn ValidatorCode<Address, Datum, Redeemer>>,
     ) -> Self {
         let action = Action::RedeemScriptOutput {
             output,
@@ -95,21 +96,21 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
     }
 }
 
-pub struct Transaction<Datum, Redeemer> {
-    pub inputs: Vec<Output<Datum>>,
-    pub outputs: Vec<Output<Datum>>,
-    pub redeemers: Vec<(Output<Datum>, Redeemer)>,
-    pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
+pub struct Transaction<Address, Datum, Redeemer> {
+    pub inputs: Vec<Output<Address, Datum>>,
+    pub outputs: Vec<Output<Address, Datum>>,
+    pub redeemers: Vec<(Output<Address, Datum>, Redeemer)>,
+    pub validators: HashMap<Address, Box<dyn ValidatorCode<Address, Datum, Redeemer>>>,
     pub minting: Values,
-    pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
+    pub policies: HashMap<PolicyId, Box<dyn MintingPolicy<Address>>>,
 }
 
-impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {
-    pub fn outputs(&self) -> &Vec<Output<Datum>> {
+impl<Address, Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Address, Datum, Redeemer> {
+    pub fn outputs(&self) -> &Vec<Output<Address, Datum>> {
         &self.outputs
     }
 
-    pub fn inputs(&self) -> &Vec<Output<Datum>> {
+    pub fn inputs(&self) -> &Vec<Output<Address, Datum>> {
         &self.inputs
     }
 }

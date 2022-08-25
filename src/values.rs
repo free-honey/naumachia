@@ -14,7 +14,7 @@ pub struct Values {
 }
 
 impl Values {
-    pub fn from_outputs<D>(outputs: &[Output<D>]) -> Self {
+    pub fn from_outputs<A, D>(outputs: &[Output<A, D>]) -> Self {
         outputs.iter().fold(Values::default(), |mut acc, output| {
             acc.add_values(output.values());
             acc

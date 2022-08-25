@@ -1,6 +1,6 @@
 use crate::escrow_contract::EscrowDatum;
 use crate::{EscrowEndpoint, NauResult};
-use naumachia::address::{Address, PolicyId};
+use naumachia::address::{FakeAddress, PolicyId};
 use naumachia::output::Output;
 use naumachia::smart_contract::SmartContractTrait;
 use naumachia::values::Values;
@@ -21,7 +21,7 @@ impl SmartContractTrait for MockEscrowSmartContract {
         values.add_one_value(&PolicyId::ADA, 1234);
         let output = Output::Wallet {
             id: "lolz".to_string(),
-            owner: Address::new("someone"),
+            owner: FakeAddress::new("someone"),
             values,
         };
         let outputs = vec![output];

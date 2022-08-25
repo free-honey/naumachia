@@ -1,6 +1,6 @@
 use naumachia::address::PolicyId;
 use naumachia::{
-    address::Address,
+    address::FakeAddress,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::{SCLogicError, SCLogicResult},
@@ -22,8 +22,8 @@ impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
         Ok(())
     }
 
-    fn address(&self) -> Address {
-        Address::new("escrow validator")
+    fn address(&self) -> FakeAddress {
+        FakeAddress::new("escrow validator")
     }
 }
 
@@ -44,17 +44,17 @@ pub struct EscrowContract;
 #[allow(dead_code)]
 #[derive(Clone)]
 pub enum EscrowEndpoint {
-    Escrow { amount: u64, receiver: Address },
+    Escrow { amount: u64, receiver: FakeAddress },
     Claim { output_id: String },
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct EscrowDatum {
-    receiver: Address,
+    receiver: FakeAddress,
 }
 
 impl EscrowDatum {
-    pub fn receiver(&self) -> &Address {
+    pub fn receiver(&self) -> &FakeAddress {
         &self.receiver
     }
 }
@@ -91,7 +91,10 @@ impl SCLogic for EscrowContract {
     }
 }
 
-fn escrow(amount: u64, receiver: Address) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
+fn escrow(
+    amount: u64,
+    receiver: FakeAddress,
+) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = EscrowValidatorScript;
     let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
@@ -138,8 +141,8 @@ mod tests {
 
     #[test]
     fn escrow__can_create_instance() {
-        let me = Address::new("me");
-        let alice = Address::new("alice");
+        let me = FakeAddress::new("me");
+        let alice = FakeAddress::new("alice");
         let start_amount = 100;
         let mut backend = TestBackendsBuilder::new(&me)
             .start_output(&me)
@@ -159,16 +162,18 @@ mod tests {
         let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
         let expected = escrow_amount;
         let actual = backend
-            .txo_record
+            .ledger_client
             .balance_at_address(&script.address(), &PolicyId::ADA);
         assert_eq!(expected, actual);
 
         let expected = start_amount - escrow_amount;
-        let actual = backend.txo_record.balance_at_address(&me, &PolicyId::ADA);
+        let actual = backend
+            .ledger_client
+            .balance_at_address(&me, &PolicyId::ADA);
         assert_eq!(expected, actual);
 
         let instance = backend
-            .txo_record
+            .ledger_client
             .outputs_at_address(&script.address())
             .pop()
             .unwrap();
@@ -182,17 +187,17 @@ mod tests {
         assert!(attempt.is_err());
 
         // The recipient tries to spend and succeeds
-        backend.txo_record.signer = alice.clone();
+        backend.ledger_client.signer = alice.clone();
         let contract = SmartContract::new(&EscrowContract, &backend);
         contract.hit_endpoint(call).unwrap();
 
         let alice_balance = backend
-            .txo_record
+            .ledger_client
             .balance_at_address(&alice, &PolicyId::ADA);
         assert_eq!(alice_balance, escrow_amount);
 
         let script_balance = backend
-            .txo_record
+            .ledger_client
             .balance_at_address(&escrow_address, &PolicyId::ADA);
         assert_eq!(script_balance, 0);
     }

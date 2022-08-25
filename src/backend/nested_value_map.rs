@@ -1,9 +1,11 @@
+use crate::address::ValidAddress;
+use crate::ledger_client::fake_address::FakeAddress;
 use crate::values::Values;
-use crate::{Address, PolicyId};
+use crate::PolicyId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-pub(crate) fn nested_map_to_vecs(
+pub(crate) fn nested_map_to_vecs<Address: ValidAddress>(
     nested_map: HashMap<Address, RefCell<Values>>,
 ) -> Vec<(Address, Vec<(PolicyId, u64)>)> {
     nested_map
@@ -12,7 +14,7 @@ pub(crate) fn nested_map_to_vecs(
         .collect()
 }
 
-pub(crate) fn add_amount_to_nested_map(
+pub(crate) fn add_amount_to_nested_map<Address: ValidAddress>(
     output_map: &mut HashMap<Address, RefCell<Values>>,
     amount: u64,
     owner: &Address,

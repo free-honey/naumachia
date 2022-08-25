@@ -8,9 +8,9 @@ use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+use crate::ledger_client::fake_address::FakeAddress;
 use crate::values::Values;
 use crate::{
-    address::Address,
     error::Result,
     ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
     output::Output,
@@ -20,29 +20,29 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Data<Datum> {
-    signer: Address,
-    outputs: Vec<Output<Datum>>,
+    signer: FakeAddress,
+    outputs: Vec<Output<FakeAddress, Datum>>,
 }
 
 impl<Datum> Data<Datum> {
-    pub fn new(signer: Address) -> Self {
+    pub fn new(signer: FakeAddress) -> Self {
         let outputs = Vec::new();
         Data { signer, outputs }
     }
 
-    pub fn add_output(&mut self, output: Output<Datum>) {
+    pub fn add_output(&mut self, output: Output<FakeAddress, Datum>) {
         self.outputs.push(output)
     }
 }
 
 pub struct LocalPersistedLedgerClient<Datum, Redeemer> {
     path: PathBuf,
-    signer: Address,
+    signer: FakeAddress,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
+fn starting_output<Datum>(owner: &FakeAddress, amount: u64) -> Output<FakeAddress, Datum> {
     let id = Uuid::new_v4().to_string();
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
@@ -55,7 +55,7 @@ fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
 
 impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<Datum, Redeemer> {
     // TODO: Create builder
-    pub fn init(path: &Path, signer: Address, starting_amount: u64) -> Result<Self> {
+    pub fn init(path: &Path, signer: FakeAddress, starting_amount: u64) -> Result<Self> {
         if !path.exists() {
             let mut data = Data::<Datum>::new(signer.clone());
             let output = starting_output(&signer, starting_amount);
@@ -82,7 +82,7 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<D
         serde_json::from_str(&contents).unwrap()
     }
 
-    fn update_outputs(&self, new_outputs: Vec<Output<Datum>>) {
+    fn update_outputs(&self, new_outputs: Vec<Output<FakeAddress, Datum>>) {
         let mut data = self.get_data();
         data.outputs = new_outputs;
         let serialized = serde_json::to_string(&data).unwrap();
@@ -96,11 +96,13 @@ where
     Datum: Serialize + DeserializeOwned + Clone + PartialEq + Debug,
     Redeemer: Hash + Eq + Clone,
 {
-    fn signer(&self) -> &Address {
+    type Address = FakeAddress;
+
+    fn signer(&self) -> &FakeAddress {
         &self.signer
     }
 
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    fn outputs_at_address(&self, address: &FakeAddress) -> Vec<Output<FakeAddress, Datum>> {
         let data = self.get_data();
         data.outputs
             .into_iter()
@@ -108,7 +110,7 @@ where
             .collect()
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
+    fn issue(&self, tx: Transaction<FakeAddress, Datum, Redeemer>) -> TxORecordResult<()> {
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
@@ -135,7 +137,7 @@ mod tests {
     fn outputs_at_address() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
-        let signer = Address::new("alice");
+        let signer = FakeAddress::new("alice");
         let starting_amount = 10_000_000;
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
@@ -152,7 +154,7 @@ mod tests {
     fn balance_at_address() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
-        let signer = Address::new("alice");
+        let signer = FakeAddress::new("alice");
         let starting_amount = 10_000_000;
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
@@ -166,7 +168,7 @@ mod tests {
     fn issue() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
-        let signer = Address::new("alice");
+        let signer = FakeAddress::new("alice");
         let starting_amount = 10_000_000;
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
@@ -174,7 +176,7 @@ mod tests {
         // let mut outputs = record.outputs_at_address(&signer);
         let first_output = record.outputs_at_address(&signer).pop().unwrap();
         let id = Uuid::new_v4().to_string();
-        let owner = Address::new("bob");
+        let owner = FakeAddress::new("bob");
         let new_output = Output::Wallet {
             id,
             owner: owner.clone(),

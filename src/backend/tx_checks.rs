@@ -1,16 +1,18 @@
+use crate::address::ValidAddress;
 use crate::{
     error::{Error, Result},
     output::Output,
     scripts::TxContext,
-    Address, PolicyId, Transaction,
+    PolicyId, Transaction,
 };
 use std::{fmt::Debug, hash::Hash};
 
 pub fn can_spend_inputs<
+    Address: ValidAddress,
     Datum: Clone + PartialEq + Debug,
     Redeemer: Clone + PartialEq + Eq + Hash,
 >(
-    tx: &Transaction<Datum, Redeemer>,
+    tx: &Transaction<Address, Datum, Redeemer>,
     signer: Address,
 ) -> Result<()> {
     let ctx = TxContext { signer };
@@ -21,12 +23,12 @@ pub fn can_spend_inputs<
                 let script = tx
                     .validators
                     .get(owner)
-                    .ok_or_else(|| Error::FailedToRetrieveScriptFor(owner.to_owned()))?;
+                    .ok_or_else(|| Error::FailedToRetrieveScriptFor(owner.to_owned().into()))?;
                 let (_, redeemer) = tx
                     .redeemers
                     .iter()
                     .find(|(utxo, _)| utxo == input)
-                    .ok_or_else(|| Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
+                    .ok_or_else(|| Error::FailedToRetrieveRedeemerFor(owner.to_owned().into()))?;
 
                 script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
             }
@@ -35,8 +37,8 @@ pub fn can_spend_inputs<
     Ok(())
 }
 
-pub fn can_mint_tokens<Datum, Redeemer>(
-    tx: &Transaction<Datum, Redeemer>,
+pub fn can_mint_tokens<Address: ValidAddress, Datum, Redeemer>(
+    tx: &Transaction<Address, Datum, Redeemer>,
     signer: &Address,
 ) -> Result<()> {
     let ctx = TxContext {

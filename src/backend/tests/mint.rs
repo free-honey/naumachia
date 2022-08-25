@@ -10,7 +10,7 @@ struct AliceCanMintPolicy;
 
 impl MintingPolicy for AliceCanMintPolicy {
     fn execute(&self, ctx: TxContext) -> ScriptResult<()> {
-        if ctx.signer == Address::new("alice") {
+        if ctx.signer == FakeAddress::new("alice") {
             Ok(())
         } else {
             Err(ScriptError::FailedToExecute(
@@ -26,7 +26,7 @@ impl MintingPolicy for AliceCanMintPolicy {
 
 #[test]
 fn mint__alice_can_mint() {
-    let signer = Address::new("alice");
+    let signer = FakeAddress::new("alice");
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
 
@@ -38,14 +38,16 @@ fn mint__alice_can_mint() {
     let policy_id = AliceCanMintPolicy.id();
 
     let expected = 100;
-    let actual = backend.txo_record.balance_at_address(&signer, &policy_id);
+    let actual = backend
+        .ledger_client
+        .balance_at_address(&signer, &policy_id);
 
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn mint__bob_cannot_mint() {
-    let signer = Address::new("bob");
+    let signer = FakeAddress::new("bob");
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
 

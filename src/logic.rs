@@ -7,7 +7,7 @@ use std::error;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-pub trait SCLogic {
+pub trait SCLogic<Address> {
     type Endpoint;
     type Lookup;
     type LookupResponse;
@@ -17,7 +17,7 @@ pub trait SCLogic {
     fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> SCLogicResult<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
+    ) -> SCLogicResult<UnBuiltTransaction<Address, Self::Datum, Self::Redeemer>>;
 
     fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Lookup,

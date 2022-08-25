@@ -1,25 +1,26 @@
 use std::{cell::RefCell, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
+use crate::ledger_client::fake_address::FakeAddress;
 use crate::values::Values;
 use crate::{
     backend::Backend,
     ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
     output::Output,
-    Address, PolicyId, Transaction,
+    PolicyId, Transaction,
 };
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
-    signer: Address,
+    signer: FakeAddress,
     // TODO: Remove owner
-    outputs: Vec<(Address, Output<Datum>)>,
+    outputs: Vec<(FakeAddress, Output<FakeAddress, Datum>)>,
     _redeemer: PhantomData<Redeemer>,
 }
 
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
     TestBackendsBuilder<Datum, Redeemer>
 {
-    pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
+    pub fn new(signer: &FakeAddress) -> TestBackendsBuilder<Datum, Redeemer> {
         TestBackendsBuilder {
             signer: signer.clone(),
             outputs: Vec::new(),
@@ -27,7 +28,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
         }
     }
 
-    pub fn start_output(self, owner: &Address) -> OutputBuilder<Datum, Redeemer> {
+    pub fn start_output(self, owner: &FakeAddress) -> OutputBuilder<Datum, Redeemer> {
         OutputBuilder {
             inner: self,
             owner: owner.clone(),
@@ -35,20 +36,23 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
         }
     }
 
-    fn add_output(&mut self, address: &Address, output: Output<Datum>) {
+    fn add_output(&mut self, address: &FakeAddress, output: Output<FakeAddress, Datum>) {
         self.outputs.push((address.clone(), output))
     }
 
-    pub fn build(&self) -> Backend<Datum, Redeemer, InMemoryLedgerClient<Datum, Redeemer>> {
+    pub fn build(
+        &self,
+    ) -> Backend<FakeAddress, Datum, Redeemer, InMemoryLedgerClient<Datum, Redeemer>> {
         let txo_record = InMemoryLedgerClient {
             signer: self.signer.clone(),
             outputs: RefCell::new(self.outputs.clone()),
             _redeemer: Default::default(),
         };
         Backend {
+            _address: PhantomData::default(),
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
-            txo_record,
+            ledger_client: txo_record,
         }
     }
 }
@@ -56,7 +60,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
 pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
 {
     inner: TestBackendsBuilder<Datum, Redeemer>,
-    owner: Address,
+    owner: FakeAddress,
     values: Values,
 }
 
@@ -88,19 +92,21 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
 
 #[derive(Debug)]
 pub struct InMemoryLedgerClient<Datum, Redeemer> {
-    pub signer: Address,
-    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+    pub signer: FakeAddress,
+    pub outputs: RefCell<Vec<(FakeAddress, Output<FakeAddress, Datum>)>>,
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
 impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
     LedgerClient<Datum, Redeemer> for InMemoryLedgerClient<Datum, Redeemer>
 {
-    fn signer(&self) -> &Address {
+    type Address = FakeAddress;
+
+    fn signer(&self) -> &FakeAddress {
         &self.signer
     }
 
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    fn outputs_at_address(&self, address: &FakeAddress) -> Vec<Output<FakeAddress, Datum>> {
         self.outputs
             .borrow()
             .clone()
@@ -109,7 +115,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
             .collect()
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
+    fn issue(&self, tx: Transaction<FakeAddress, Datum, Redeemer>) -> TxORecordResult<()> {
         let mut my_outputs = self.outputs.borrow_mut();
         for tx_i in tx.inputs() {
             let index = my_outputs

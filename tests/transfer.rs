@@ -3,14 +3,15 @@ use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
 use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
-    address::Address, ledger_client::LedgerClient, logic::SCLogic, transaction::UnBuiltTransaction,
+    address::FakeAddress, ledger_client::LedgerClient, logic::SCLogic,
+    transaction::UnBuiltTransaction,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct TransferADASmartContract;
 
 enum Endpoint {
-    Transfer { amount: u64, recipient: Address },
+    Transfer { amount: u64, recipient: FakeAddress },
 }
 
 impl SCLogic for TransferADASmartContract {
@@ -43,8 +44,8 @@ impl SCLogic for TransferADASmartContract {
 
 #[test]
 fn can_transfer_and_keep_remainder() {
-    let me = Address::new("me");
-    let alice = Address::new("alice");
+    let me = FakeAddress::new("me");
+    let alice = FakeAddress::new("alice");
 
     let input_amount = 666;
     let extra_policy = PolicyId::native_token("arcade token");
@@ -70,15 +71,17 @@ fn can_transfer_and_keep_remainder() {
 
     let alice_expected = amount;
     let alice_actual = backend
-        .txo_record
+        .ledger_client
         .balance_at_address(&alice, &PolicyId::ADA);
     assert_eq!(alice_expected, alice_actual);
 
     let me_expected = input_amount - amount;
-    let me_actual = backend.txo_record.balance_at_address(&me, &PolicyId::ADA);
+    let me_actual = backend
+        .ledger_client
+        .balance_at_address(&me, &PolicyId::ADA);
     assert_eq!(me_expected, me_actual);
 
     let expected_extra_amount = extra_amount;
-    let actual_extra_amount = backend.txo_record.balance_at_address(&me, &extra_policy);
+    let actual_extra_amount = backend.ledger_client.balance_at_address(&me, &extra_policy);
     assert_eq!(expected_extra_amount, actual_extra_amount);
 }

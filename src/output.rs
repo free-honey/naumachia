@@ -1,4 +1,5 @@
-use crate::{Address, PolicyId};
+use crate::ledger_client::fake_address::FakeAddress;
+use crate::PolicyId;
 use serde::{Deserialize, Serialize};
 
 use crate::values::Values;
@@ -9,7 +10,7 @@ use crate::values::Values;
 // TODO: We should genericize the owner
 #[serde_with::serde_as]
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
-pub enum Output<Datum> {
+pub enum Output<Address, Datum> {
     Wallet {
         id: String,
         owner: Address,
@@ -25,7 +26,7 @@ pub enum Output<Datum> {
 
 pub type Value = (PolicyId, u64);
 
-impl<Datum> Output<Datum> {
+impl<Address, Datum> Output<Address, Datum> {
     pub fn new_wallet(id: String, owner: Address, values: Values) -> Self {
         Output::Wallet { id, owner, values }
     }

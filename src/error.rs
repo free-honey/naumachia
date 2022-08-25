@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::scripts::ScriptError;
-use crate::{address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError, Address};
+use crate::{address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -18,9 +18,9 @@ pub enum Error {
     #[error("Error: Failed to retrieve policy for {0:?}.")]
     FailedToRetrievePolicyFor(PolicyId),
     #[error("Error: Failed to retrieve script for {0:?}.")]
-    FailedToRetrieveScriptFor(Address),
+    FailedToRetrieveScriptFor(String),
     #[error("Error: Failed to retrieve redeemer for {0:?}.")]
-    FailedToRetrieveRedeemerFor(Address),
+    FailedToRetrieveRedeemerFor(String),
     #[error("Unable to mint ADA/Lovelace")]
     ImpossibleToMintADA,
 }

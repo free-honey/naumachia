@@ -1,20 +1,20 @@
-use crate::address::Address;
+use crate::ledger_client::fake_address::FakeAddress;
 use crate::PolicyId;
 use thiserror::Error;
 
 // TODO: Move
 #[derive(Clone)]
-pub struct TxContext {
+pub struct TxContext<Address> {
     pub signer: Address,
 }
 
-pub trait ValidatorCode<D, R> {
-    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
+pub trait ValidatorCode<Address, D, R> {
+    fn execute(&self, datum: D, redeemer: R, ctx: TxContext<Address>) -> ScriptResult<()>;
     fn address(&self) -> Address;
 }
 
-pub trait MintingPolicy {
-    fn execute(&self, ctx: TxContext) -> ScriptResult<()>;
+pub trait MintingPolicy<Address> {
+    fn execute(&self, ctx: TxContext<Address>) -> ScriptResult<()>;
     fn id(&self) -> PolicyId;
 }
 

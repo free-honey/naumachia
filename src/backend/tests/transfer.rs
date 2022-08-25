@@ -7,9 +7,9 @@ prop_compose! {
         mut rng in arb_rng(),
         their_utxo_count: u8,
         decoys in prop::collection::vec(arb_policy_id(), 0..10),
-    ) -> (Address, Address, u64, Backend<(),(), InMemoryLedgerClient<(),()>>, Vec<PolicyId>) {
-        let signer = Address::new("alice");
-        let recipient = Address::new("bob");
+    ) -> (FakeAddress, FakeAddress, u64, Backend<(),(), InMemoryLedgerClient<(),()>>, Vec<PolicyId>) {
+        let signer = FakeAddress::new("alice");
+        let recipient = FakeAddress::new("bob");
         let mut total: u64 = 0;
         let mut builder = TestBackendsBuilder::<(), ()>::new(&signer);
         while total < min_amount as u64 {

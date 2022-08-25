@@ -1,6 +1,8 @@
 use crate::ledger_client::{LedgerClient, TxORecordResult};
 use crate::output::Output;
-use crate::{Address, Transaction};
+use crate::Transaction;
+use serde::Deserialize;
+use serde::Serialize;
 use std::marker::PhantomData;
 
 pub mod blockfrost_http_client;
@@ -12,16 +14,35 @@ pub struct BlockFrostLedgerClient<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
+pub enum BFAddress {
+    Foo,
+}
+
+impl From<String> for BFAddress {
+    fn from(_: String) -> Self {
+        todo!()
+    }
+}
+
+impl From<BFAddress> for String {
+    fn from(_: BFAddress) -> Self {
+        todo!()
+    }
+}
+
 impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for BlockFrostLedgerClient<Datum, Redeemer> {
-    fn signer(&self) -> &Address {
+    type Address = BFAddress;
+
+    fn signer(&self) -> &BFAddress {
         todo!()
     }
 
-    fn outputs_at_address(&self, _address: &Address) -> Vec<Output<Datum>> {
+    fn outputs_at_address(&self, _address: &BFAddress) -> Vec<Output<Self::Address, Datum>> {
         todo!()
     }
 
-    fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
+    fn issue(&self, _tx: Transaction<Self::Address, Datum, Redeemer>) -> TxORecordResult<()> {
         todo!()
     }
 }

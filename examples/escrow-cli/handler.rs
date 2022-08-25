@@ -2,7 +2,7 @@ use crate::escrow_contract::EscrowDatum;
 use crate::EscrowEndpoint;
 
 use naumachia::{
-    address::Address, error::Result as NauResult, output::Output,
+    address::FakeAddress, error::Result as NauResult, output::Output,
     smart_contract::SmartContractTrait,
 };
 
@@ -23,7 +23,7 @@ where
     }
 
     pub fn escrow(&self, amount: u64, rcvr: &str) -> NauResult<()> {
-        let receiver = Address::new(rcvr);
+        let receiver = FakeAddress::new(rcvr);
         let call = EscrowEndpoint::Escrow { amount, receiver };
         self.contract.hit_endpoint(call)?;
         println!();

@@ -7,7 +7,7 @@ use crate::{
 use clap::Parser;
 use naumachia::address::PolicyId;
 use naumachia::{
-    address::Address, backend::Backend, error::Result as NauResult,
+    address::FakeAddress, backend::Backend, error::Result as NauResult,
     ledger_client::local_persisted_ledger::LocalPersistedLedgerClient, ledger_client::LedgerClient,
     smart_contract::SmartContract,
 };
@@ -56,7 +56,7 @@ fn main() {
     match args.action {
         ActionParams::Balance => {
             let balance = backend
-                .txo_record
+                .ledger_client
                 .balance_at_address(signer, &PolicyId::ADA);
             println!();
             println!("{}'s balance: {:?}", signer.to_str(), balance);
@@ -87,7 +87,7 @@ fn setup_record() -> LocalPersistedLedgerClient<EscrowDatum, ()> {
         };
         write_config(&config).expect("Could not write config file");
     };
-    let signer = Address::new(&signer_str);
+    let signer = FakeAddress::new(&signer_str);
     let starting_amount = 10_000_000;
     LocalPersistedLedgerClient::init(path, signer, starting_amount).unwrap()
 }

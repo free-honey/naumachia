@@ -14,8 +14,8 @@ prop_compose! {
 prop_compose! {
     fn arb_address()(
         addr: String
-    ) -> Address {
-        Address::new(&addr)
+    ) -> FakeAddress {
+        FakeAddress::new(&addr)
     }
 }
 
