@@ -37,3 +37,22 @@ pub struct AddressInfo {
     r#type: String,
     script: bool,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct Address {
+    address: String,
+}
+
+impl Address {
+    pub fn address(&self) -> &str {
+        &self.address
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AccountAssocAddrTotal {
+    stake_addr: String,
+    received_sum: Vec<Value>,
+    sent_sum: Vec<Value>,
+    tx_count: u32,
+}

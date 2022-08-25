@@ -1,11 +1,13 @@
 use cardano_multiplatform_lib;
 use cardano_multiplatform_lib::address::{BaseAddress, StakeCredential};
 use cardano_multiplatform_lib::crypto::Bip32PrivateKey;
+use std::fs;
+use std::path::Path;
 
 pub const TESTNET: u8 = 0;
 pub const MAINNET: u8 = 1;
 
-fn base_address_from_entropy(entropy: &[u8], network: u8) -> BaseAddress {
+pub fn base_address_from_entropy(entropy: &[u8], network: u8) -> BaseAddress {
     fn harden(index: u32) -> u32 {
         index | 0x80_00_00_00
     }
@@ -26,6 +28,13 @@ fn base_address_from_entropy(entropy: &[u8], network: u8) -> BaseAddress {
     BaseAddress::new(network, &pub_key_creds, &stake_key_creds)
 }
 
+pub fn load_phrase_from_file(config_path: &str) -> String {
+    let path = Path::new(config_path);
+    let text = fs::read_to_string(&path).unwrap();
+    let config: toml::Value = toml::from_str(&text).unwrap();
+    config["phrase"].as_str().unwrap().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -36,13 +45,6 @@ mod tests {
     // Must include a TOML file at your project root with the field:
     //   phrase = <INSERT SECRET PHRASE HERE>
     const CONFIG_PATH: &str = ".blockfrost.toml";
-
-    fn load_phrase_from_file(config_path: &str) -> String {
-        let path = Path::new(config_path);
-        let text = fs::read_to_string(&path).unwrap();
-        let config: toml::Value = toml::from_str(&text).unwrap();
-        config["phrase"].as_str().unwrap().to_string()
-    }
 
     #[ignore]
     #[test]

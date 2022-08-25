@@ -1,5 +1,5 @@
 use crate::ledger_client::blockfrost_client::blockfrost_http_client::schemas::{
-    AddressInfo, Genesis, UTxO,
+    AccountAssocAddrTotal, Address, AddressInfo, Genesis, UTxO,
 };
 use serde::de::DeserializeOwned;
 use thiserror::Error;
@@ -52,6 +52,21 @@ impl BlockfrostHttp {
         self.get_endpoint(&ext).await
     }
 
+    pub async fn assoc_addresses(&self, stake_address: &str) -> Result<Vec<Address>> {
+        let ext = format!("./accounts/{}/addresses", stake_address);
+        self.get_endpoint(&ext).await
+    }
+
+    pub async fn account_associated_addresses_total(
+        &self,
+        base_addr: &str,
+    ) -> Result<Vec<Address>> {
+        // pub async fn account_associated_addresses(&self, base_addr: &str) -> Result<AccountAssocAddr> {
+        let ext = format!("./accounts/{}/addresses/total", base_addr);
+        dbg!(&ext);
+        self.get_endpoint(&ext).await
+    }
+
     async fn get_endpoint<T: DeserializeOwned>(&self, ext: &str) -> Result<T> {
         let url = Url::parse(&self.parent_url)?.join(ext)?;
         let client = reqwest::Client::new();
@@ -61,15 +76,18 @@ impl BlockfrostHttp {
             .header("project_id", project_id)
             .send()
             .await?;
-        dbg!(&res);
+        // dbg!(&res);
         let res = res.json().await?;
         Ok(res)
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
+    use crate::ledger_client::blockfrost_client::keys::TESTNET;
+    use crate::ledger_client::blockfrost_client::tests::my_base_addr;
+    use cardano_multiplatform_lib::address::RewardAddress;
     use std::fs;
     use std::path::Path;
 
@@ -85,7 +103,7 @@ mod tests {
         config["project_id"].as_str().unwrap().to_string()
     }
 
-    fn get_test_bf_http_clent() -> BlockfrostHttp {
+    pub fn get_test_bf_http_clent() -> BlockfrostHttp {
         let key = load_key_from_file(CONFIG_PATH);
         BlockfrostHttp::new(TEST_URL, &key)
     }
@@ -130,8 +148,42 @@ mod tests {
         // let address = "addr1q97dqz7g6nyg0y08np42aj8magcwdgr8ea6mysa7e9f6qg8hdg3rkwaqkqysqnwqsfl2spx4yreqywa6t5mgftv6x3fsmqn6vh";
         // let address = "addr1qp7dqz7g6nyg0y08np42aj8magcwdgr8ea6mysa7e9f6qg8hdg3rkwaqkqysqnwqsfl2spx4yreqywa6t5mgftv6x3fs2k6a72";
         let address = "addr_test1wrtlw9csk7vc9peauh9nzpg45zemvj3w9m532e93nwer24gjwycdl";
+
         let res = bf.address_info(&address).await.unwrap();
         dbg!(&res);
         Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn account_associated_addresses() {
+        let bf = get_test_bf_http_clent();
+        let base_addr = my_base_addr();
+        let staking_cred = base_addr.stake_cred();
+
+        let reward_addr = RewardAddress::new(TESTNET, &staking_cred)
+            .to_address()
+            .to_bech32(None)
+            .unwrap();
+        let res = bf.assoc_addresses(&reward_addr).await.unwrap();
+        dbg!(&res);
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn account_associated_addresses_total() {
+        let bf = get_test_bf_http_clent();
+        let base_addr = my_base_addr();
+        let staking_cred = base_addr.stake_cred();
+
+        let reward_addr = RewardAddress::new(TESTNET, &staking_cred)
+            .to_address()
+            .to_bech32(None)
+            .unwrap();
+        let res = bf
+            .account_associated_addresses_total(&reward_addr)
+            .await
+            .unwrap();
+        dbg!(&res);
     }
 }
