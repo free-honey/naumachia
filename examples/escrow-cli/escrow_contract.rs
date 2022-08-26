@@ -1,6 +1,6 @@
-use naumachia::address::PolicyId;
+use naumachia::address::{PolicyId, ValidAddress};
+use naumachia::ledger_client::fake_address::FakeAddress;
 use naumachia::{
-    address::FakeAddress,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::{SCLogicError, SCLogicResult},
@@ -16,18 +16,28 @@ use thiserror::Error;
 
 pub struct EscrowValidatorScript;
 
-impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
-    fn execute(&self, datum: EscrowDatum, _redeemer: (), ctx: TxContext) -> ScriptResult<()> {
+impl<Address: ValidAddress> ValidatorCode<Address, EscrowDatum<Address>, ()>
+    for EscrowValidatorScript
+{
+    fn execute(
+        &self,
+        datum: EscrowDatum<Address>,
+        _redeemer: (),
+        ctx: TxContext<Address>,
+    ) -> ScriptResult<()> {
         signer_is_recipient(&datum, &ctx)?;
         Ok(())
     }
 
-    fn address(&self) -> FakeAddress {
-        FakeAddress::new("escrow validator")
+    fn address(&self) -> Address {
+        "escrow validator".to_string().into()
     }
 }
 
-fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> ScriptResult<()> {
+fn signer_is_recipient<Address: ValidAddress>(
+    datum: &EscrowDatum<Address>,
+    ctx: &TxContext<Address>,
+) -> ScriptResult<()> {
     if datum.receiver != ctx.signer {
         Err(ScriptError::FailedToExecute(format!(
             "Signer: {:?} doesn't match receiver: {:?}",
@@ -44,17 +54,17 @@ pub struct EscrowContract;
 #[allow(dead_code)]
 #[derive(Clone)]
 pub enum EscrowEndpoint {
-    Escrow { amount: u64, receiver: FakeAddress },
+    Escrow { amount: u64, receiver: String },
     Claim { output_id: String },
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
-pub struct EscrowDatum {
-    receiver: FakeAddress,
+pub struct EscrowDatum<Address> {
+    receiver: Address,
 }
 
-impl EscrowDatum {
-    pub fn receiver(&self) -> &FakeAddress {
+impl<Address> EscrowDatum<Address> {
+    pub fn receiver(&self) -> &Address {
         &self.receiver
     }
 }
@@ -65,24 +75,24 @@ enum EscrowContractError {
     OutputNotFound(String),
 }
 
-impl SCLogic for EscrowContract {
+impl<Address: ValidAddress> SCLogic<Address> for EscrowContract {
     type Endpoint = EscrowEndpoint;
     type Lookup = ();
-    type LookupResponse = Vec<Output<Self::Datum>>;
-    type Datum = EscrowDatum;
+    type LookupResponse = Vec<Output<Address, Self::Datum>>;
+    type Datum = EscrowDatum<Address>;
     type Redeemer = ();
 
-    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer, Address = Address>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
+    ) -> SCLogicResult<UnBuiltTransaction<Address, EscrowDatum<Address>, ()>> {
         match endpoint {
-            EscrowEndpoint::Escrow { amount, receiver } => escrow(amount, receiver),
+            EscrowEndpoint::Escrow { amount, receiver } => escrow(amount, receiver.into()),
             EscrowEndpoint::Claim { output_id } => claim(&output_id, txo_record),
         }
     }
 
-    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer, Address = Address>>(
         _endpoint: Self::Lookup,
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
@@ -91,12 +101,12 @@ impl SCLogic for EscrowContract {
     }
 }
 
-fn escrow(
+fn escrow<Address: ValidAddress>(
     amount: u64,
-    receiver: FakeAddress,
-) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
+    receiver: Address,
+) -> SCLogicResult<UnBuiltTransaction<Address, EscrowDatum<Address>, ()>> {
     let script = EscrowValidatorScript;
-    let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
+    let address = <dyn ValidatorCode<Address, EscrowDatum<Address>, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
@@ -104,20 +114,26 @@ fn escrow(
     Ok(u_tx)
 }
 
-fn claim<Record: LedgerClient<EscrowDatum, ()>>(
+fn claim<
+    Address: ValidAddress,
+    Record: LedgerClient<EscrowDatum<Address>, (), Address = Address>,
+>(
     output_id: &str,
     txo_record: &Record,
-) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
+) -> SCLogicResult<UnBuiltTransaction<Address, EscrowDatum<Address>, ()>> {
     let script = Box::new(EscrowValidatorScript);
     let output = lookup_output(output_id, txo_record)?;
     let u_tx = UnBuiltTransaction::default().with_script_redeem(output, (), script);
     Ok(u_tx)
 }
 
-fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
+fn lookup_output<
+    Address: ValidAddress,
+    Record: LedgerClient<EscrowDatum<Address>, (), Address = Address>,
+>(
     id: &str,
     txo_record: &Record,
-) -> SCLogicResult<Output<EscrowDatum>> {
+) -> SCLogicResult<Output<Address, EscrowDatum<Address>>> {
     let script_address = EscrowValidatorScript.address();
     let outputs = txo_record.outputs_at_address(&script_address);
     outputs
@@ -159,7 +175,8 @@ mod tests {
         let contract = SmartContract::new(&EscrowContract, &backend);
         contract.hit_endpoint(call).unwrap();
 
-        let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
+        let escrow_address =
+            <dyn ValidatorCode<FakeAddress, EscrowDatum<FakeAddress>, ()>>::address(&script);
         let expected = escrow_amount;
         let actual = backend
             .ledger_client

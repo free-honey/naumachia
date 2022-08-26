@@ -182,7 +182,7 @@ mod tests {
             owner: owner.clone(),
             values: first_output.values().clone(),
         };
-        let tx: Transaction<(), ()> = Transaction {
+        let tx: Transaction<FakeAddress, (), ()> = Transaction {
             inputs: vec![first_output],
             outputs: vec![new_output],
             redeemers: vec![],

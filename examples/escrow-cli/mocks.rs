@@ -1,6 +1,7 @@
 use crate::escrow_contract::EscrowDatum;
 use crate::{EscrowEndpoint, NauResult};
-use naumachia::address::{FakeAddress, PolicyId};
+use naumachia::address::PolicyId;
+use naumachia::ledger_client::fake_address::FakeAddress;
 use naumachia::output::Output;
 use naumachia::smart_contract::SmartContractTrait;
 use naumachia::values::Values;
@@ -10,7 +11,7 @@ pub struct MockEscrowSmartContract;
 impl SmartContractTrait for MockEscrowSmartContract {
     type Endpoint = EscrowEndpoint;
     type Lookup = ();
-    type LookupResponse = Vec<Output<EscrowDatum>>;
+    type LookupResponse = Vec<Output<FakeAddress, EscrowDatum<FakeAddress>>>;
 
     fn hit_endpoint(&self, _endpoint: Self::Endpoint) -> NauResult<()> {
         Ok(())

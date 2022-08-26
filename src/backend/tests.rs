@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use super::*;
+use crate::ledger_client::fake_address::FakeAddress;
 use proptest::prelude::*;
 use proptest::test_runner::TestRng;
 

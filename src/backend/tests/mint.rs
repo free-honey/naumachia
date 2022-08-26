@@ -8,9 +8,9 @@ use crate::{
 
 struct AliceCanMintPolicy;
 
-impl MintingPolicy for AliceCanMintPolicy {
-    fn execute(&self, ctx: TxContext) -> ScriptResult<()> {
-        if ctx.signer == FakeAddress::new("alice") {
+impl<Address: ValidAddress> MintingPolicy<Address> for AliceCanMintPolicy {
+    fn execute(&self, ctx: TxContext<Address>) -> ScriptResult<()> {
+        if ctx.signer == "alice".to_string().into() {
             Ok(())
         } else {
             Err(ScriptError::FailedToExecute(
@@ -30,12 +30,12 @@ fn mint__alice_can_mint() {
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
 
-    let u_tx: UnBuiltTransaction<(), ()> =
+    let u_tx: UnBuiltTransaction<FakeAddress, (), ()> =
         UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
 
     backend.process(u_tx).unwrap();
 
-    let policy_id = AliceCanMintPolicy.id();
+    let policy_id = <AliceCanMintPolicy as MintingPolicy<.id();
 
     let expected = 100;
     let actual = backend
@@ -51,7 +51,7 @@ fn mint__bob_cannot_mint() {
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
 
-    let u_tx: UnBuiltTransaction<(), ()> =
+    let u_tx: UnBuiltTransaction<FakeAddress, (), ()> =
         UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
 
     let actual_err = backend.process(u_tx).unwrap_err();

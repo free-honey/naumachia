@@ -1,21 +1,20 @@
 use crate::escrow_contract::EscrowDatum;
 use crate::EscrowEndpoint;
 
-use naumachia::{
-    address::FakeAddress, error::Result as NauResult, output::Output,
-    smart_contract::SmartContractTrait,
-};
+use naumachia::address::ValidAddress;
+use naumachia::ledger_client::fake_address::FakeAddress;
+use naumachia::{error::Result as NauResult, output::Output, smart_contract::SmartContractTrait};
 
 pub struct ActionHandler<SC: SmartContractTrait> {
     contract: SC,
 }
 
-impl<SC> ActionHandler<SC>
+impl<Address: ValidAddress, SC> ActionHandler<SC>
 where
     SC: SmartContractTrait<
         Endpoint = EscrowEndpoint,
         Lookup = (),
-        LookupResponse = Vec<Output<EscrowDatum>>,
+        LookupResponse = Vec<Output<FakeAddress, EscrowDatum<Address>>>,
     >,
 {
     pub fn new(contract: SC) -> Self {
@@ -24,7 +23,10 @@ where
 
     pub fn escrow(&self, amount: u64, rcvr: &str) -> NauResult<()> {
         let receiver = FakeAddress::new(rcvr);
-        let call = EscrowEndpoint::Escrow { amount, receiver };
+        let call = EscrowEndpoint::Escrow {
+            amount,
+            receiver: receiver.into(),
+        };
         self.contract.hit_endpoint(call)?;
         println!();
         println!(

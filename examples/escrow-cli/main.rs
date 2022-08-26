@@ -6,8 +6,9 @@ use crate::{
 
 use clap::Parser;
 use naumachia::address::PolicyId;
+use naumachia::ledger_client::fake_address::FakeAddress;
 use naumachia::{
-    address::FakeAddress, backend::Backend, error::Result as NauResult,
+    backend::Backend, error::Result as NauResult,
     ledger_client::local_persisted_ledger::LocalPersistedLedgerClient, ledger_client::LedgerClient,
     smart_contract::SmartContract,
 };
@@ -76,7 +77,7 @@ fn main() {
     }
 }
 
-fn setup_record() -> LocalPersistedLedgerClient<EscrowDatum, ()> {
+fn setup_record() -> LocalPersistedLedgerClient<EscrowDatum<FakeAddress>, ()> {
     let path = Path::new(".escrow_txo_record");
     let mut signer_str = "Alice".to_string();
     if let Some(config) = get_config() {

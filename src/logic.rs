@@ -14,12 +14,12 @@ pub trait SCLogic<Address> {
     type Datum: Clone + Eq + Debug;
     type Redeemer: Clone + PartialEq + Eq + Hash;
 
-    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer, Address = Address>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<Address, Self::Datum, Self::Redeemer>>;
 
-    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer, Address = Address>>(
         endpoint: Self::Lookup,
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse>;

@@ -1,7 +1,7 @@
-use naumachia::address::PolicyId;
+use naumachia::address::{PolicyId, ValidAddress};
+use naumachia::ledger_client::fake_address::FakeAddress;
 use naumachia::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
 use naumachia::{
-    address::FakeAddress,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::SCLogicResult,
@@ -13,8 +13,8 @@ use naumachia::{
 
 struct AlwaysMintsPolicy;
 
-impl MintingPolicy for AlwaysMintsPolicy {
-    fn execute(&self, _ctx: TxContext) -> ScriptResult<()> {
+impl<Address> MintingPolicy<Address> for AlwaysMintsPolicy {
+    fn execute(&self, _ctx: TxContext<Address>) -> ScriptResult<()> {
         Ok(())
     }
 
@@ -34,17 +34,17 @@ enum Endpoint {
 
 const MINT_POLICY_ID: &str = "mint_policy";
 
-impl SCLogic for AlwaysMintsSmartContract {
+impl<Address: ValidAddress> SCLogic<Address> for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
     type Lookup = ();
     type LookupResponse = ();
     type Datum = ();
     type Redeemer = ();
 
-    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer, Address = Address>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
+    ) -> SCLogicResult<UnBuiltTransaction<Address, (), ()>> {
         match endpoint {
             Endpoint::Mint { amount } => {
                 let recipient = txo_record.signer().clone();
@@ -61,7 +61,10 @@ impl SCLogic for AlwaysMintsSmartContract {
     }
 }
 
-fn mint(amount: u64, recipient: FakeAddress) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
+fn mint<Address: ValidAddress>(
+    amount: u64,
+    recipient: Address,
+) -> SCLogicResult<UnBuiltTransaction<Address, (), ()>> {
     let policy = Box::new(AlwaysMintsPolicy);
     let utx = UnBuiltTransaction::default().with_mint(amount, &recipient, policy);
     Ok(utx)

@@ -1,21 +1,19 @@
-use naumachia::address::PolicyId;
+use naumachia::address::{PolicyId, ValidAddress};
+use naumachia::ledger_client::fake_address::FakeAddress;
 use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
 use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
-use naumachia::{
-    address::FakeAddress, ledger_client::LedgerClient, logic::SCLogic,
-    transaction::UnBuiltTransaction,
-};
+use naumachia::{ledger_client::LedgerClient, logic::SCLogic, transaction::UnBuiltTransaction};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct TransferADASmartContract;
 
-enum Endpoint {
-    Transfer { amount: u64, recipient: FakeAddress },
+enum Endpoint<Address> {
+    Transfer { amount: u64, recipient: Address },
 }
 
-impl SCLogic for TransferADASmartContract {
-    type Endpoint = Endpoint;
+impl<Address: ValidAddress> SCLogic<Address> for TransferADASmartContract {
+    type Endpoint = Endpoint<Address>;
     type Lookup = ();
     type LookupResponse = ();
     type Datum = ();
@@ -24,11 +22,11 @@ impl SCLogic for TransferADASmartContract {
     fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         _txo_record: &Record,
-    ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
+    ) -> SCLogicResult<UnBuiltTransaction<Address, (), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
                 let u_tx =
-                    UnBuiltTransaction::default().with_transfer(amount, recipient, PolicyId::ADA);
+                    UnBuiltTransaction::default().with_transfer(amount, &recipient, PolicyId::ADA);
                 Ok(u_tx)
             }
         }
