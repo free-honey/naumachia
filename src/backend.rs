@@ -42,8 +42,8 @@ where
         }
     }
 
-    pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
-        let tx = self.build(u_tx)?;
+    pub async fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
+        let tx = self.build(u_tx).await?;
         can_spend_inputs(&tx, self.signer().clone())?;
         can_mint_tokens(&tx, self.txo_record.signer())?;
         self.txo_record.issue(tx)?;
@@ -60,7 +60,7 @@ where
 
     // TODO: Remove allow
     #[allow(clippy::type_complexity)]
-    fn handle_actions(
+    async fn handle_actions(
         &self,
         actions: Vec<Action<Datum, Redeemer>>,
     ) -> Result<Transaction<Datum, Redeemer>> {
@@ -132,8 +132,9 @@ where
             }
         }
         // inputs
-        let (inputs, remainders) =
-            self.select_inputs_for_one(self.txo_record.signer(), &min_input_values, script_inputs)?;
+        let (inputs, remainders) = self
+            .select_inputs_for_one(self.txo_record.signer(), &min_input_values, script_inputs)
+            .await?;
 
         // TODO: Dedupe
         let mut new_values = remainders;
@@ -162,13 +163,13 @@ where
     //       but this is _good_enough_ for tests.
     // TODO: Remove allow
     #[allow(clippy::type_complexity)]
-    fn select_inputs_for_one(
+    async fn select_inputs_for_one(
         &self,
         address: &Address,
         spending_values: &Values,
         script_inputs: Vec<Output<Datum>>,
     ) -> Result<(Vec<Output<Datum>>, Values)> {
-        let mut all_available_outputs = self.txo_record.outputs_at_address(address);
+        let mut all_available_outputs = self.txo_record.outputs_at_address(address).await;
         all_available_outputs.extend(script_inputs);
         let address_values = Values::from_outputs(&all_available_outputs);
 
@@ -197,12 +198,12 @@ where
         Ok(outputs)
     }
 
-    fn build(
+    async fn build(
         &self,
         unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
     ) -> Result<Transaction<Datum, Redeemer>> {
         let UnBuiltTransaction { actions } = unbuilt_tx;
-        self.handle_actions(actions)
+        self.handle_actions(actions).await
         // TODO: Calculate fees and then rebuild tx
     }
 }

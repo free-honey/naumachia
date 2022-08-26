@@ -1,5 +1,7 @@
 #![allow(unused)]
+use crate::output::Output;
 use serde::Deserialize;
+
 #[derive(Deserialize, Debug)]
 pub struct Genesis {
     active_slots_coefficient: f32,

@@ -1,5 +1,6 @@
 use super::*;
 use crate::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
+use tokio::runtime::Runtime;
 
 prop_compose! {
     fn arb_backend_with_enough()(
@@ -43,34 +44,71 @@ proptest! {
     fn prop_can_transfer_funds_if_enough_balance(
         (signer, recipient, amount, backend, decoys) in arb_backend_with_enough(),
     ) {
-        let u_tx = UnBuiltTransaction::default().with_transfer(amount, recipient.clone(), PolicyId::ADA);
+        let rt = Runtime::new().unwrap();
 
-        let my_bal_before = backend.txo_record.balance_at_address(&signer, &PolicyId::ADA);
-        let their_bal_before = backend.txo_record.balance_at_address(&recipient, &PolicyId::ADA);
-        let mut my_before_decoys = HashMap::new();
-        let mut their_before_decoys = HashMap::new();
-        for policy_id in &decoys {
-            let my_bal_before = backend.txo_record.balance_at_address(&signer, &policy_id);
-            my_before_decoys.insert(policy_id.clone(), my_bal_before);
-            let their_bal_before = backend.txo_record.balance_at_address(&recipient, &policy_id);
-            their_before_decoys.insert(policy_id.clone(), their_bal_before);
-        }
-        backend.process(u_tx).unwrap();
+        rt.block_on(inner_test(signer, recipient, amount, backend, decoys))
+    }
+}
 
-        // Check that only the expected ADA moved, and everything else stayed the same.
-        let expected = their_bal_before + amount;
-        let actual = backend.txo_record.balance_at_address(&recipient, &PolicyId::ADA);
-        assert_eq!(expected, actual);
-        let expected = my_bal_before - amount;
-        let actual = backend.txo_record.balance_at_address(&signer, &PolicyId::ADA);
-        assert_eq!(expected, actual);
-        for policy_id in &decoys {
-            let my_bal_after = backend.txo_record.balance_at_address(&signer, &policy_id);
-            let my_bal_before = my_before_decoys.get(&policy_id).unwrap();
-            assert_eq!(my_bal_before, &my_bal_after);
-            let their_bal_after = backend.txo_record.balance_at_address(&recipient, &policy_id);
-            let their_bal_before = their_before_decoys.get(&policy_id).unwrap();
-            assert_eq!(their_bal_before, &their_bal_after);
-        }
+async fn inner_test(
+    signer: Address,
+    recipient: Address,
+    amount: u64,
+    backend: Backend<(), (), InMemoryLedgerClient<(), ()>>,
+    decoys: Vec<PolicyId>,
+) {
+    let u_tx =
+        UnBuiltTransaction::default().with_transfer(amount, recipient.clone(), PolicyId::ADA);
+
+    let my_bal_before = backend
+        .txo_record
+        .balance_at_address(&signer, &PolicyId::ADA)
+        .await;
+    let their_bal_before = backend
+        .txo_record
+        .balance_at_address(&recipient, &PolicyId::ADA)
+        .await;
+    let mut my_before_decoys = HashMap::new();
+    let mut their_before_decoys = HashMap::new();
+    for policy_id in &decoys {
+        let my_bal_before = backend
+            .txo_record
+            .balance_at_address(&signer, &policy_id)
+            .await;
+        my_before_decoys.insert(policy_id.clone(), my_bal_before);
+        let their_bal_before = backend
+            .txo_record
+            .balance_at_address(&recipient, &policy_id)
+            .await;
+        their_before_decoys.insert(policy_id.clone(), their_bal_before);
+    }
+    backend.process(u_tx).await.unwrap();
+
+    // Check that only the expected ADA moved, and everything else stayed the same.
+    let expected = their_bal_before + amount;
+    let actual = backend
+        .txo_record
+        .balance_at_address(&recipient, &PolicyId::ADA)
+        .await;
+    assert_eq!(expected, actual);
+    let expected = my_bal_before - amount;
+    let actual = backend
+        .txo_record
+        .balance_at_address(&signer, &PolicyId::ADA)
+        .await;
+    assert_eq!(expected, actual);
+    for policy_id in &decoys {
+        let my_bal_after = backend
+            .txo_record
+            .balance_at_address(&signer, &policy_id)
+            .await;
+        let my_bal_before = my_before_decoys.get(&policy_id).unwrap();
+        assert_eq!(my_bal_before, &my_bal_after);
+        let their_bal_after = backend
+            .txo_record
+            .balance_at_address(&recipient, &policy_id)
+            .await;
+        let their_bal_before = their_before_decoys.get(&policy_id).unwrap();
+        assert_eq!(their_bal_before, &their_bal_after);
     }
 }

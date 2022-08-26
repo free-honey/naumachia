@@ -1,11 +1,13 @@
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-use std::fs::File;
-use std::hash::Hash;
-use std::io::{Read, Write};
-use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
+use async_trait::async_trait;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::{
+    fmt::Debug,
+    fs::File,
+    hash::Hash,
+    io::{Read, Write},
+    marker::PhantomData,
+    path::{Path, PathBuf},
+};
 use uuid::Uuid;
 
 use crate::values::Values;
@@ -91,16 +93,17 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<D
     }
 }
 
+#[async_trait]
 impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for LocalPersistedLedgerClient<Datum, Redeemer>
 where
-    Datum: Serialize + DeserializeOwned + Clone + PartialEq + Debug,
-    Redeemer: Hash + Eq + Clone,
+    Datum: Serialize + DeserializeOwned + Clone + PartialEq + Debug + Send + Sync,
+    Redeemer: Hash + Eq + Clone + Send + Sync,
 {
     fn signer(&self) -> &Address {
         &self.signer
     }
 
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
         let data = self.get_data();
         data.outputs
             .into_iter()
@@ -131,8 +134,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    #[test]
-    fn outputs_at_address() {
+    #[tokio::test]
+    async fn outputs_at_address() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
@@ -140,7 +143,7 @@ mod tests {
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
-        let mut outputs = record.outputs_at_address(&signer);
+        let mut outputs = record.outputs_at_address(&signer).await;
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
@@ -148,8 +151,8 @@ mod tests {
         assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn balance_at_address() {
+    #[tokio::test]
+    async fn balance_at_address() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
@@ -158,12 +161,12 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&signer, &PolicyId::ADA);
+        let actual = record.balance_at_address(&signer, &PolicyId::ADA).await;
         assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn issue() {
+    #[tokio::test]
+    async fn issue() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
@@ -172,7 +175,7 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         // let mut outputs = record.outputs_at_address(&signer);
-        let first_output = record.outputs_at_address(&signer).pop().unwrap();
+        let first_output = record.outputs_at_address(&signer).await.pop().unwrap();
         let id = Uuid::new_v4().to_string();
         let owner = Address::new("bob");
         let new_output = Output::Wallet {
@@ -190,7 +193,7 @@ mod tests {
         };
         record.issue(tx).unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&owner, &PolicyId::ADA);
+        let actual = record.balance_at_address(&owner, &PolicyId::ADA).await;
         assert_eq!(expected, actual)
     }
 }

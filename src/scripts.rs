@@ -8,12 +8,12 @@ pub struct TxContext {
     pub signer: Address,
 }
 
-pub trait ValidatorCode<D, R> {
+pub trait ValidatorCode<D, R>: Send + Sync {
     fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
     fn address(&self) -> Address;
 }
 
-pub trait MintingPolicy {
+pub trait MintingPolicy: Send + Sync {
     fn execute(&self, ctx: TxContext) -> ScriptResult<()>;
     fn id(&self) -> PolicyId;
 }

@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use std::{cell::RefCell, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
@@ -8,6 +9,7 @@ use crate::{
     output::Output,
     Address, PolicyId, Transaction,
 };
+use async_trait::async_trait;
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
@@ -16,8 +18,10 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    TestBackendsBuilder<Datum, Redeemer>
+impl<
+        Datum: Clone + PartialEq + Debug + Send + Sync,
+        Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
+    > TestBackendsBuilder<Datum, Redeemer>
 {
     pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
         TestBackendsBuilder {
@@ -42,7 +46,7 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
     pub fn build(&self) -> Backend<Datum, Redeemer, InMemoryLedgerClient<Datum, Redeemer>> {
         let txo_record = InMemoryLedgerClient {
             signer: self.signer.clone(),
-            outputs: RefCell::new(self.outputs.clone()),
+            outputs: Arc::new(Mutex::new(self.outputs.clone())),
             _redeemer: Default::default(),
         };
         Backend {
@@ -60,8 +64,10 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
     values: Values,
 }
 
-impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    OutputBuilder<Datum, Redeemer>
+impl<Datum, Redeemer> OutputBuilder<Datum, Redeemer>
+where
+    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
         let mut new_total = amount;
@@ -89,28 +95,32 @@ impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug 
 #[derive(Debug)]
 pub struct InMemoryLedgerClient<Datum, Redeemer> {
     pub signer: Address,
-    pub outputs: RefCell<Vec<(Address, Output<Datum>)>>,
+    pub outputs: Arc<Mutex<Vec<(Address, Output<Datum>)>>>,
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
-impl<Datum: Clone + PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-    LedgerClient<Datum, Redeemer> for InMemoryLedgerClient<Datum, Redeemer>
+#[async_trait]
+impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for InMemoryLedgerClient<Datum, Redeemer>
+where
+    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     fn signer(&self) -> &Address {
         &self.signer
     }
 
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
         self.outputs
-            .borrow()
-            .clone()
-            .into_iter()
+            .lock()
+            .unwrap() // TODO: Unwrap
+            .iter()
+            .cloned()
             .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
             .collect()
     }
 
     fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
-        let mut my_outputs = self.outputs.borrow_mut();
+        let mut my_outputs = self.outputs.lock().unwrap(); // TODO: Unwrap
         for tx_i in tx.inputs() {
             let index = my_outputs
                 .iter()

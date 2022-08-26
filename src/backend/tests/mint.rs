@@ -24,8 +24,8 @@ impl MintingPolicy for AliceCanMintPolicy {
     }
 }
 
-#[test]
-fn mint__alice_can_mint() {
+#[tokio::test]
+async fn mint__alice_can_mint() {
     let signer = Address::new("alice");
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
@@ -33,18 +33,21 @@ fn mint__alice_can_mint() {
     let u_tx: UnBuiltTransaction<(), ()> =
         UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
 
-    backend.process(u_tx).unwrap();
+    backend.process(u_tx).await.unwrap();
 
     let policy_id = AliceCanMintPolicy.id();
 
     let expected = 100;
-    let actual = backend.txo_record.balance_at_address(&signer, &policy_id);
+    let actual = backend
+        .txo_record
+        .balance_at_address(&signer, &policy_id)
+        .await;
 
     assert_eq!(expected, actual);
 }
 
-#[test]
-fn mint__bob_cannot_mint() {
+#[tokio::test]
+async fn mint__bob_cannot_mint() {
     let signer = Address::new("bob");
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
@@ -52,7 +55,7 @@ fn mint__bob_cannot_mint() {
     let u_tx: UnBuiltTransaction<(), ()> =
         UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
 
-    let actual_err = backend.process(u_tx).unwrap_err();
+    let actual_err = backend.process(u_tx).await.unwrap_err();
 
     let matches = matches!(actual_err, Error::Script(ScriptError::FailedToExecute(_)),);
     assert!(matches);

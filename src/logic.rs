@@ -7,12 +7,12 @@ use std::error;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-pub trait SCLogic {
-    type Endpoint;
-    type Lookup;
-    type LookupResponse;
-    type Datum: Clone + Eq + Debug;
-    type Redeemer: Clone + PartialEq + Eq + Hash;
+pub trait SCLogic: Send + Sync {
+    type Endpoint: Send + Sync;
+    type Lookup: Send + Sync;
+    type LookupResponse: Send + Sync;
+    type Datum: Clone + Eq + Debug + Send + Sync;
+    type Redeemer: Clone + PartialEq + Eq + Hash + Send + Sync;
 
     fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
