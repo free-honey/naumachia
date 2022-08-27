@@ -42,6 +42,8 @@ pub enum LedgerClientError {
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error + Send>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(OutputId),
+    #[error("Failed to issue transaction: {0:?}")]
+    TransactionIssuance(Box<dyn error::Error + Send>),
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;
