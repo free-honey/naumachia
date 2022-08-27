@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use naumachia::address::PolicyId;
 use naumachia::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
+use naumachia::logic::SCLogicError;
 use naumachia::{
     address::Address,
     ledger_client::LedgerClient,
@@ -49,7 +50,11 @@ impl SCLogic for AlwaysMintsSmartContract {
     ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
         match endpoint {
             Endpoint::Mint { amount } => {
-                let recipient = txo_record.signer().clone();
+                let recipient = txo_record
+                    .signer()
+                    .await
+                    .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+                    .clone();
                 mint(amount, recipient)
             }
         }
@@ -87,6 +92,7 @@ async fn can_mint_from_always_true_minting_policy() {
         &me,
         &policy,
     )
-    .await;
+    .await
+    .unwrap();
     assert_eq!(expected, actual)
 }

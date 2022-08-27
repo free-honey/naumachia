@@ -2,8 +2,8 @@ use crate::ledger_client::blockfrost_client::blockfrost_http_client::schemas::{
     Address, AddressInfo, Genesis, UTxO,
 };
 use serde::de::DeserializeOwned;
-use std::fs;
 use std::path::Path;
+use std::{fs, io};
 use thiserror::Error;
 use url::Url;
 
@@ -14,16 +14,22 @@ const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
 //   project_id = <INSERT API KEY HERE>
 const CONFIG_PATH: &str = ".blockfrost.toml";
 
-fn load_key_from_file(key_path: &str) -> String {
+fn load_key_from_file(key_path: &str) -> Result<String> {
     let path = Path::new(key_path);
-    let text = fs::read_to_string(&path).unwrap();
-    let config: toml::Value = toml::from_str(&text).unwrap();
-    config["project_id"].as_str().unwrap().to_string()
+    let text = fs::read_to_string(&path).map_err(Error::FileRead)?;
+    let config: toml::Value = toml::from_str(&text).map_err(Error::Toml)?;
+    let field = "project_id";
+    let project_id = config[field]
+        .as_str()
+        .ok_or_else(|| Error::Config(field.to_string()))?
+        .to_string();
+    Ok(project_id)
 }
 
-pub fn get_test_bf_http_clent() -> BlockfrostHttp {
-    let key = load_key_from_file(CONFIG_PATH);
-    BlockfrostHttp::new(TEST_URL, &key)
+pub fn get_test_bf_http_clent() -> Result<BlockfrostHttp> {
+    let key = load_key_from_file(CONFIG_PATH)?;
+    let bf = BlockfrostHttp::new(TEST_URL, &key);
+    Ok(bf)
 }
 
 pub struct BlockfrostHttp {
@@ -39,6 +45,12 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     #[error("url Error: {0}")]
     Url(#[from] url::ParseError),
+    #[error("Config field not found: {0:?}")]
+    Config(String),
+    #[error("Error while reading file: {0:?}")]
+    FileRead(io::Error),
+    #[error("Error while parsing Toml: {0:?}")]
+    Toml(toml::de::Error),
 }
 
 impl BlockfrostHttp {
@@ -111,7 +123,7 @@ pub mod tests {
     #[ignore]
     #[tokio::test]
     async fn genesis() -> Result<()> {
-        let bf = get_test_bf_http_clent();
+        let bf = get_test_bf_http_clent().unwrap();
         let _res = bf.genesis().await.unwrap();
         Ok(())
     }
@@ -119,7 +131,7 @@ pub mod tests {
     #[ignore]
     #[tokio::test]
     async fn utxos() -> Result<()> {
-        let bf = get_test_bf_http_clent();
+        let bf = get_test_bf_http_clent().unwrap();
         // TODO: Find a good stable address to use
         // let address = "addr_test1wrtlw9csk7vc9peauh9nzpg45zemvj3w9m532e93nwer24gjwycdl";
         // let address = "addr_test1wrsexavz37208qda7mwwu4k7hcpg26cz0ce86f5e9kul3hqzlh22t";
@@ -132,7 +144,7 @@ pub mod tests {
     #[ignore]
     #[tokio::test]
     async fn datum() -> Result<()> {
-        let bf = get_test_bf_http_clent();
+        let bf = get_test_bf_http_clent().unwrap();
         // TODO: Find a good stable address to use
         // let datum_hash = "d1cede40100329bfd7edbb1245a4d24de23924f00341886dc5f5bf6d06c65629";
         let datum_hash = "a9fbe52ace8f89e0ae64d88f879e159b97d51f27d8f932c9aa165e5ce5f0f28e";
@@ -144,7 +156,7 @@ pub mod tests {
     #[ignore]
     #[tokio::test]
     async fn address_info() -> Result<()> {
-        let bf = get_test_bf_http_clent();
+        let bf = get_test_bf_http_clent().unwrap();
         // let address = "addr1q97dqz7g6nyg0y08np42aj8magcwdgr8ea6mysa7e9f6qg8hdg3rkwaqkqysqnwqsfl2spx4yreqywa6t5mgftv6x3fsmqn6vh";
         // let address = "addr1qp7dqz7g6nyg0y08np42aj8magcwdgr8ea6mysa7e9f6qg8hdg3rkwaqkqysqnwqsfl2spx4yreqywa6t5mgftv6x3fs2k6a72";
         let address = "addr_test1wrtlw9csk7vc9peauh9nzpg45zemvj3w9m532e93nwer24gjwycdl";
@@ -157,7 +169,7 @@ pub mod tests {
     #[ignore]
     #[tokio::test]
     async fn account_associated_addresses() {
-        let bf = get_test_bf_http_clent();
+        let bf = get_test_bf_http_clent().unwrap();
         let base_addr = my_base_addr();
         let staking_cred = base_addr.stake_cred();
 
@@ -172,7 +184,7 @@ pub mod tests {
     #[ignore]
     #[tokio::test]
     async fn account_associated_addresses_total() {
-        let bf = get_test_bf_http_clent();
+        let bf = get_test_bf_http_clent().unwrap();
         let base_addr = my_base_addr();
         let staking_cred = base_addr.stake_cred();
 

@@ -63,23 +63,27 @@ async fn inner_test(
     let my_bal_before = backend
         .txo_record
         .balance_at_address(&signer, &PolicyId::ADA)
-        .await;
+        .await
+        .unwrap();
     let their_bal_before = backend
         .txo_record
         .balance_at_address(&recipient, &PolicyId::ADA)
-        .await;
+        .await
+        .unwrap();
     let mut my_before_decoys = HashMap::new();
     let mut their_before_decoys = HashMap::new();
     for policy_id in &decoys {
         let my_bal_before = backend
             .txo_record
             .balance_at_address(&signer, policy_id)
-            .await;
+            .await
+            .unwrap();
         my_before_decoys.insert(policy_id.clone(), my_bal_before);
         let their_bal_before = backend
             .txo_record
             .balance_at_address(&recipient, policy_id)
-            .await;
+            .await
+            .unwrap();
         their_before_decoys.insert(policy_id.clone(), their_bal_before);
     }
     backend.process(u_tx).await.unwrap();
@@ -89,25 +93,29 @@ async fn inner_test(
     let actual = backend
         .txo_record
         .balance_at_address(&recipient, &PolicyId::ADA)
-        .await;
+        .await
+        .unwrap();
     assert_eq!(expected, actual);
     let expected = my_bal_before - amount;
     let actual = backend
         .txo_record
         .balance_at_address(&signer, &PolicyId::ADA)
-        .await;
+        .await
+        .unwrap();
     assert_eq!(expected, actual);
     for policy_id in &decoys {
         let my_bal_after = backend
             .txo_record
             .balance_at_address(&signer, policy_id)
-            .await;
+            .await
+            .unwrap();
         let my_bal_before = my_before_decoys.get(policy_id).unwrap();
         assert_eq!(my_bal_before, &my_bal_after);
         let their_bal_after = backend
             .txo_record
             .balance_at_address(&recipient, policy_id)
-            .await;
+            .await
+            .unwrap();
         let their_bal_before = their_before_decoys.get(policy_id).unwrap();
         assert_eq!(their_bal_before, &their_bal_after);
     }

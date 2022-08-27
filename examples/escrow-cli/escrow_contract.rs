@@ -91,7 +91,8 @@ impl SCLogic for EscrowContract {
     ) -> SCLogicResult<Self::LookupResponse> {
         let outputs = txo_record
             .outputs_at_address(&EscrowValidatorScript.address())
-            .await;
+            .await
+            .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
         Ok(outputs)
     }
 }
@@ -121,7 +122,10 @@ async fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
     txo_record: &Record,
 ) -> SCLogicResult<Output<EscrowDatum>> {
     let script_address = EscrowValidatorScript.address();
-    let outputs = txo_record.outputs_at_address(&script_address).await;
+    let outputs = txo_record
+        .outputs_at_address(&script_address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
     outputs
         .iter()
         .find(|o| o.id() == id)
@@ -165,20 +169,23 @@ mod tests {
         let actual = backend
             .txo_record
             .balance_at_address(&script.address(), &PolicyId::ADA)
-            .await;
+            .await
+            .unwrap();
         assert_eq!(expected, actual);
 
         let expected = start_amount - escrow_amount;
         let actual = backend
             .txo_record
             .balance_at_address(&me, &PolicyId::ADA)
-            .await;
+            .await
+            .unwrap();
         assert_eq!(expected, actual);
 
         let instance = backend
             .txo_record
             .outputs_at_address(&script.address())
             .await
+            .unwrap()
             .pop()
             .unwrap();
         // The creator tries to spend escrow but fails because not recipient
@@ -198,13 +205,15 @@ mod tests {
         let alice_balance = backend
             .txo_record
             .balance_at_address(&alice, &PolicyId::ADA)
-            .await;
+            .await
+            .unwrap();
         assert_eq!(alice_balance, escrow_amount);
 
         let script_balance = backend
             .txo_record
             .balance_at_address(&escrow_address, &PolicyId::ADA)
-            .await;
+            .await
+            .unwrap();
         assert_eq!(script_balance, 0);
     }
 }

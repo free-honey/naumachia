@@ -1,6 +1,7 @@
 use crate::ledger_client::blockfrost_client::blockfrost_http_client::get_test_bf_http_clent;
+use crate::ledger_client::LedgerClientError;
 use crate::{
-    ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, TxORecordResult},
+    ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, LedgerClientResult},
     output::Output,
     Address, Transaction,
 };
@@ -8,6 +9,7 @@ use async_trait::async_trait;
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
 use futures::{future::join_all, FutureExt};
 use std::marker::PhantomData;
+use thiserror::Error;
 
 pub mod blockfrost_http_client;
 
@@ -24,30 +26,69 @@ impl<D: Default, R: Default> BlockFrostLedgerClient<D, R> {
         BlockFrostLedgerClient::default()
     }
 }
+#[derive(Debug, Error)]
+enum BFLCError {
+    #[error("CML JsError: {0:?}")]
+    JsError(String),
+    #[error("Not a valid BaseAddress")]
+    InvalidBaseAddr,
+}
+
+fn output_cml_err(
+    address: &Address,
+) -> impl Fn(cardano_multiplatform_lib::error::JsError) -> LedgerClientError + '_ {
+    move |e| {
+        LedgerClientError::FailedToRetrieveOutputsAt(
+            address.to_owned(),
+            Box::new(BFLCError::JsError(format!("{:?}", e))),
+        )
+    }
+}
+
+fn output_http_err(
+    address: &Address,
+) -> impl Fn(blockfrost_http_client::Error) -> LedgerClientError + '_ {
+    move |e| LedgerClientError::FailedToRetrieveOutputsAt(address.to_owned(), Box::new(e))
+}
+
+fn invalid_base_addr(address: &Address) -> LedgerClientError {
+    LedgerClientError::FailedToRetrieveOutputsAt(
+        address.to_owned(),
+        Box::new(BFLCError::InvalidBaseAddr),
+    )
+}
 
 #[async_trait]
 impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
     for BlockFrostLedgerClient<Datum, Redeemer>
 {
-    fn signer(&self) -> &Address {
+    async fn signer(&self) -> LedgerClientResult<&Address> {
         todo!()
     }
 
-    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    async fn outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
         match address {
             Address::Base(addr_string) => {
-                let address = CMLAddress::from_bech32(addr_string).unwrap(); // TODO: unwrap
-                let base_addr = BaseAddress::from_address(&address).unwrap(); // TODO: unwrap
+                let cml_address =
+                    CMLAddress::from_bech32(addr_string).map_err(output_cml_err(address))?;
+                let base_addr = BaseAddress::from_address(&cml_address)
+                    .ok_or_else(|| invalid_base_addr(address))?;
                 let staking_cred = base_addr.stake_cred();
 
                 let reward_addr = RewardAddress::new(TESTNET, &staking_cred)
                     .to_address()
                     .to_bech32(None)
-                    .unwrap(); // TODO: unwrap
+                    .map_err(output_cml_err(address))?;
 
-                let bf = get_test_bf_http_clent();
+                let bf = get_test_bf_http_clent().map_err(output_http_err(address))?;
 
-                let addresses = bf.assoc_addresses(&reward_addr).await.unwrap(); // TODO: unwrap
+                let addresses = bf
+                    .assoc_addresses(&reward_addr)
+                    .await
+                    .map_err(output_http_err(address))?;
 
                 let nested_utxos_futs: Vec<_> = addresses
                     .iter()
@@ -62,7 +103,7 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                 let mut outputs_for_all_addresses = Vec::new();
 
                 for (addr, utxos_res) in nested_utxos {
-                    let utxos = utxos_res.unwrap(); // TODO: unwrap
+                    let utxos = utxos_res.map_err(output_http_err(address))?;
                     let nau_addr = addr.into();
                     let nau_outputs: Vec<_> = utxos
                         .iter()
@@ -70,13 +111,13 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                         .collect();
                     outputs_for_all_addresses.extend(nau_outputs);
                 }
-                outputs_for_all_addresses
+                Ok(outputs_for_all_addresses)
             }
             Address::Raw(_) => unimplemented!("Doesn't make sense here"),
         }
     }
 
-    fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
+    fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         todo!()
     }
 }
@@ -110,7 +151,7 @@ mod tests {
 
         let bf = BlockFrostLedgerClient::<(), ()>::new();
 
-        let my_utxos = bf.outputs_at_address(&my_addr).await;
+        let my_utxos = bf.outputs_at_address(&my_addr).await.unwrap();
 
         dbg!(my_utxos);
     }

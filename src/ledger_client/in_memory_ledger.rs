@@ -2,14 +2,16 @@ use std::sync::{Arc, Mutex};
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
+use crate::ledger_client::LedgerClientError::TransactionIssuance;
 use crate::values::Values;
 use crate::{
     backend::Backend,
-    ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
+    ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
     Address, PolicyId, Transaction,
 };
 use async_trait::async_trait;
+use thiserror::Error;
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
@@ -95,6 +97,12 @@ where
 
 type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
 
+#[derive(Debug, Error)]
+enum InMemoryLCError {
+    #[error("Mutex lock error: {0:?}")]
+    Mutex(String),
+}
+
 #[derive(Debug)]
 pub struct InMemoryLedgerClient<Datum, Redeemer> {
     pub signer: Address,
@@ -108,22 +116,34 @@ where
     Datum: Clone + PartialEq + Debug + Send + Sync,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
-    fn signer(&self) -> &Address {
-        &self.signer
+    async fn signer(&self) -> LedgerClientResult<&Address> {
+        Ok(&self.signer)
     }
 
-    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
-        self.outputs
+    async fn outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        let outputs = self
+            .outputs
             .lock()
-            .unwrap() // TODO: Unwrap
+            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| {
+                LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
+            })?
             .iter()
             .cloned()
             .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-            .collect()
+            .collect();
+        Ok(outputs)
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
-        let mut my_outputs = self.outputs.lock().unwrap(); // TODO: Unwrap
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+        let mut my_outputs = self
+            .outputs
+            .lock()
+            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| TransactionIssuance(Box::new(e)))?;
         for tx_i in tx.inputs() {
             let index = my_outputs
                 .iter()

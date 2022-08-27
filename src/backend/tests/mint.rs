@@ -41,7 +41,8 @@ async fn mint__alice_can_mint() {
     let actual = backend
         .txo_record
         .balance_at_address(&signer, &policy_id)
-        .await;
+        .await
+        .unwrap();
 
     assert_eq!(expected, actual);
 }

@@ -60,11 +60,6 @@ impl Value {
     }
 }
 
-impl From<Value> for (PolicyId, u64) {
-    fn from(value: Value) -> Self {
-        todo!()
-    }
-}
 #[derive(Deserialize, Debug)]
 pub struct AddressInfo {
     address: String,
