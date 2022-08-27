@@ -48,7 +48,11 @@ async fn main() {
     let txo_record = setup_record();
 
     let backend = Backend::new(txo_record);
-    let signer = backend.txo_record().signer();
+    let signer = backend
+        .txo_record()
+        .signer()
+        .await
+        .expect("Can't find signer");
 
     let contract = SmartContract::new(&logic, &backend);
 
@@ -59,7 +63,8 @@ async fn main() {
             let balance = backend
                 .txo_record
                 .balance_at_address(signer, &PolicyId::ADA)
-                .await;
+                .await
+                .expect("Can't get balance");
             println!();
             println!("{}'s balance: {:?}", signer.to_str(), balance);
         }

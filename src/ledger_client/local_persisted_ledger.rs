@@ -14,7 +14,7 @@ use crate::values::Values;
 use crate::{
     address::Address,
     error::Result,
-    ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
+    ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
     transaction::Transaction,
     PolicyId,
@@ -96,19 +96,24 @@ where
     Datum: Serialize + DeserializeOwned + Clone + PartialEq + Debug + Send + Sync,
     Redeemer: Hash + Eq + Clone + Send + Sync,
 {
-    fn signer(&self) -> &Address {
-        &self.signer
+    async fn signer(&self) -> LedgerClientResult<&Address> {
+        Ok(&self.signer)
     }
 
-    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    async fn outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let data = self.get_data();
-        data.outputs
+        let outputs = data
+            .outputs
             .into_iter()
             .filter(|o| o.owner() == address)
-            .collect()
+            .collect();
+        Ok(outputs)
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
@@ -140,7 +145,7 @@ mod tests {
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
-        let mut outputs = record.outputs_at_address(&signer).await;
+        let mut outputs = record.outputs_at_address(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
@@ -158,7 +163,10 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&signer, &PolicyId::ADA).await;
+        let actual = record
+            .balance_at_address(&signer, &PolicyId::ADA)
+            .await
+            .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -172,7 +180,12 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         // let mut outputs = record.outputs_at_address(&signer);
-        let first_output = record.outputs_at_address(&signer).await.pop().unwrap();
+        let first_output = record
+            .outputs_at_address(&signer)
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
         let tx_hash = Uuid::new_v4().to_string();
         let index = 0;
         let owner = Address::new("bob");
@@ -188,7 +201,10 @@ mod tests {
         };
         record.issue(tx).unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&owner, &PolicyId::ADA).await;
+        let actual = record
+            .balance_at_address(&owner, &PolicyId::ADA)
+            .await
+            .unwrap();
         assert_eq!(expected, actual)
     }
 }

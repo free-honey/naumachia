@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::values::Values;
 use crate::{
     backend::Backend,
-    ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
+    ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
     Address, PolicyId, Transaction,
 };
@@ -108,21 +108,26 @@ where
     Datum: Clone + PartialEq + Debug + Send + Sync,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
-    fn signer(&self) -> &Address {
-        &self.signer
+    async fn signer(&self) -> LedgerClientResult<&Address> {
+        Ok(&self.signer)
     }
 
-    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
-        self.outputs
+    async fn outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        let outputs = self
+            .outputs
             .lock()
             .unwrap() // TODO: Unwrap
             .iter()
             .cloned()
             .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-            .collect()
+            .collect();
+        Ok(outputs)
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         let mut my_outputs = self.outputs.lock().unwrap(); // TODO: Unwrap
         for tx_i in tx.inputs() {
             let index = my_outputs

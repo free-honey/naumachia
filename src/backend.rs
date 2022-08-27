@@ -45,8 +45,8 @@ where
 
     pub async fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx).await?;
-        can_spend_inputs(&tx, self.signer().clone())?;
-        can_mint_tokens(&tx, self.txo_record.signer())?;
+        can_spend_inputs(&tx, self.signer().await?.clone())?;
+        can_mint_tokens(&tx, self.txo_record.signer().await?)?;
         self.txo_record.issue(tx)?;
         Ok(())
     }
@@ -55,8 +55,9 @@ where
         &self.txo_record
     }
 
-    pub fn signer(&self) -> &Address {
-        self.txo_record.signer()
+    pub async fn signer(&self) -> Result<&Address> {
+        let addr = self.txo_record.signer().await?;
+        Ok(addr)
     }
 
     // TODO: Remove allow
@@ -139,15 +140,23 @@ where
         }
         // inputs
         let (inputs, remainders) = self
-            .select_inputs_for_one(self.txo_record.signer(), &min_input_values, script_inputs)
+            .select_inputs_for_one(
+                self.txo_record.signer().await?,
+                &min_input_values,
+                script_inputs,
+            )
             .await?;
 
         // TODO: Dedupe
         let mut new_values = remainders;
-        if let Some(values) = min_output_values.get(self.txo_record.signer()) {
+        let signer = self.txo_record.signer().await?;
+        if let Some(values) = min_output_values.get(signer) {
             new_values.add_values(&values.borrow());
         }
-        min_output_values.insert(self.txo_record.signer().clone(), RefCell::new(new_values));
+        min_output_values.insert(
+            self.txo_record.signer().await?.clone(),
+            RefCell::new(new_values),
+        );
 
         let out_vecs = nested_map_to_vecs(min_output_values);
         let mut outputs = self.create_outputs_for(out_vecs)?;
@@ -175,7 +184,7 @@ where
         spending_values: &Values,
         script_inputs: Vec<Output<Datum>>,
     ) -> Result<(Vec<Output<Datum>>, Values)> {
-        let mut all_available_outputs = self.txo_record.outputs_at_address(address).await;
+        let mut all_available_outputs = self.txo_record.outputs_at_address(address).await?;
         all_available_outputs.extend(script_inputs);
         let address_values = Values::from_outputs(&all_available_outputs);
 

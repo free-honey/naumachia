@@ -12,11 +12,17 @@ use std::error;
 
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
-    fn signer(&self) -> &Address;
-    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>>;
-    async fn balance_at_address(&self, address: &Address, policy: &PolicyId) -> u64 {
-        self.outputs_at_address(address)
-            .await
+    async fn signer(&self) -> LedgerClientResult<&Address>;
+    async fn outputs_at_address(&self, address: &Address)
+        -> LedgerClientResult<Vec<Output<Datum>>>;
+    async fn balance_at_address(
+        &self,
+        address: &Address,
+        policy: &PolicyId,
+    ) -> LedgerClientResult<u64> {
+        let bal = self
+            .outputs_at_address(address)
+            .await?
             .iter()
             .fold(0, |acc, o| {
                 if let Some(val) = o.values().get(policy) {
@@ -24,17 +30,18 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
                 } else {
                     acc
                 }
-            })
+            });
+        Ok(bal)
     }
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()>; // TODO: Move to other trait
+    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()>; // TODO: Move to other trait
 }
 
 #[derive(Debug, Error)]
 pub enum LedgerClientError {
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
-    FailedToRetrieveOutputsAt(Address, Box<dyn error::Error>),
+    FailedToRetrieveOutputsAt(Address, Box<dyn error::Error + Send>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(OutputId),
 }
 
-pub type TxORecordResult<T> = Result<T, LedgerClientError>;
+pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

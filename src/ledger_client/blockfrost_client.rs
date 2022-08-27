@@ -1,6 +1,6 @@
 use crate::ledger_client::blockfrost_client::blockfrost_http_client::get_test_bf_http_clent;
 use crate::{
-    ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, TxORecordResult},
+    ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, LedgerClientResult},
     output::Output,
     Address, Transaction,
 };
@@ -29,11 +29,14 @@ impl<D: Default, R: Default> BlockFrostLedgerClient<D, R> {
 impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
     for BlockFrostLedgerClient<Datum, Redeemer>
 {
-    fn signer(&self) -> &Address {
+    async fn signer(&self) -> LedgerClientResult<&Address> {
         todo!()
     }
 
-    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    async fn outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
         match address {
             Address::Base(addr_string) => {
                 let address = CMLAddress::from_bech32(addr_string).unwrap(); // TODO: unwrap
@@ -70,13 +73,13 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                         .collect();
                     outputs_for_all_addresses.extend(nau_outputs);
                 }
-                outputs_for_all_addresses
+                Ok(outputs_for_all_addresses)
             }
             Address::Raw(_) => unimplemented!("Doesn't make sense here"),
         }
     }
 
-    fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> TxORecordResult<()> {
+    fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         todo!()
     }
 }
@@ -110,7 +113,7 @@ mod tests {
 
         let bf = BlockFrostLedgerClient::<(), ()>::new();
 
-        let my_utxos = bf.outputs_at_address(&my_addr).await;
+        let my_utxos = bf.outputs_at_address(&my_addr).await.unwrap();
 
         dbg!(my_utxos);
     }

@@ -91,7 +91,8 @@ impl SCLogic for EscrowContract {
     ) -> SCLogicResult<Self::LookupResponse> {
         let outputs = txo_record
             .outputs_at_address(&EscrowValidatorScript.address())
-            .await;
+            .await
+            .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
         Ok(outputs)
     }
 }
@@ -121,7 +122,10 @@ async fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
     txo_record: &Record,
 ) -> SCLogicResult<Output<EscrowDatum>> {
     let script_address = EscrowValidatorScript.address();
-    let outputs = txo_record.outputs_at_address(&script_address).await;
+    let outputs = txo_record
+        .outputs_at_address(&script_address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
     outputs
         .iter()
         .find(|o| o.id() == id)
