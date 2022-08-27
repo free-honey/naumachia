@@ -135,12 +135,13 @@ async fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
 mod tests {
     #![allow(non_snake_case)]
     use super::*;
-    use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
-    use naumachia::ledger_client::LedgerClient;
-    use naumachia::smart_contract::{SmartContract, SmartContractTrait};
+    use naumachia::{
+        ledger_client::{in_memory_ledger::TestBackendsBuilder, LedgerClient},
+        smart_contract::{SmartContract, SmartContractTrait},
+    };
 
-    #[test]
-    fn escrow__can_create_instance() {
+    #[tokio::test]
+    async fn escrow__can_create_instance() {
         let me = Address::new("me");
         let alice = Address::new("alice");
         let start_amount = 100;
@@ -157,46 +158,53 @@ mod tests {
         };
         let script = EscrowValidatorScript;
         let contract = SmartContract::new(&EscrowContract, &backend);
-        contract.hit_endpoint(call).unwrap();
+        contract.hit_endpoint(call).await.unwrap();
 
         let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
         let expected = escrow_amount;
         let actual = backend
             .txo_record
-            .balance_at_address(&script.address(), &PolicyId::ADA);
+            .balance_at_address(&script.address(), &PolicyId::ADA)
+            .await;
         assert_eq!(expected, actual);
 
         let expected = start_amount - escrow_amount;
-        let actual = backend.txo_record.balance_at_address(&me, &PolicyId::ADA);
+        let actual = backend
+            .txo_record
+            .balance_at_address(&me, &PolicyId::ADA)
+            .await;
         assert_eq!(expected, actual);
 
         let instance = backend
             .txo_record
             .outputs_at_address(&script.address())
+            .await
             .pop()
             .unwrap();
         // The creator tries to spend escrow but fails because not recipient
         let call = EscrowEndpoint::Claim {
-            output_id: instance.id().to_string(),
+            output_id: instance.id().clone(),
         };
 
         let contract = SmartContract::new(&EscrowContract, &backend);
-        let attempt = contract.hit_endpoint(call.clone());
+        let attempt = contract.hit_endpoint(call.clone()).await;
         assert!(attempt.is_err());
 
         // The recipient tries to spend and succeeds
         backend.txo_record.signer = alice.clone();
         let contract = SmartContract::new(&EscrowContract, &backend);
-        contract.hit_endpoint(call).unwrap();
+        contract.hit_endpoint(call).await.unwrap();
 
         let alice_balance = backend
             .txo_record
-            .balance_at_address(&alice, &PolicyId::ADA);
+            .balance_at_address(&alice, &PolicyId::ADA)
+            .await;
         assert_eq!(alice_balance, escrow_amount);
 
         let script_balance = backend
             .txo_record
-            .balance_at_address(&escrow_address, &PolicyId::ADA);
+            .balance_at_address(&escrow_address, &PolicyId::ADA)
+            .await;
         assert_eq!(script_balance, 0);
     }
 }
