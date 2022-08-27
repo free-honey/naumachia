@@ -16,12 +16,12 @@ const CONFIG_PATH: &str = ".blockfrost.toml";
 
 fn load_key_from_file(key_path: &str) -> Result<String> {
     let path = Path::new(key_path);
-    let text = fs::read_to_string(&path).map_err(|e| Error::FileRead(e))?;
-    let config: toml::Value = toml::from_str(&text).map_err(|e| Error::Toml(e))?;
+    let text = fs::read_to_string(&path).map_err(Error::FileRead)?;
+    let config: toml::Value = toml::from_str(&text).map_err(Error::Toml)?;
     let field = "project_id";
     let project_id = config[field]
         .as_str()
-        .ok_or(Error::Config(field.to_string()))?
+        .ok_or_else(|| Error::Config(field.to_string()))?
         .to_string();
     Ok(project_id)
 }

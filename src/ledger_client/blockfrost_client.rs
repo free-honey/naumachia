@@ -34,9 +34,9 @@ enum BFLCError {
     InvalidBaseAddr,
 }
 
-fn output_cml_err<'a>(
-    address: &'a Address,
-) -> impl Fn(cardano_multiplatform_lib::error::JsError) -> LedgerClientError + 'a {
+fn output_cml_err(
+    address: &Address,
+) -> impl Fn(cardano_multiplatform_lib::error::JsError) -> LedgerClientError + '_ {
     move |e| {
         LedgerClientError::FailedToRetrieveOutputsAt(
             address.to_owned(),
@@ -45,9 +45,9 @@ fn output_cml_err<'a>(
     }
 }
 
-fn output_http_err<'a>(
-    address: &'a Address,
-) -> impl Fn(blockfrost_http_client::Error) -> LedgerClientError + 'a {
+fn output_http_err(
+    address: &Address,
+) -> impl Fn(blockfrost_http_client::Error) -> LedgerClientError + '_ {
     move |e| LedgerClientError::FailedToRetrieveOutputsAt(address.to_owned(), Box::new(e))
 }
 
@@ -73,22 +73,22 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
         match address {
             Address::Base(addr_string) => {
                 let cml_address =
-                    CMLAddress::from_bech32(addr_string).map_err(output_cml_err(&address))?;
-                let base_addr =
-                    BaseAddress::from_address(&cml_address).ok_or(invalid_base_addr(&address))?;
+                    CMLAddress::from_bech32(addr_string).map_err(output_cml_err(address))?;
+                let base_addr = BaseAddress::from_address(&cml_address)
+                    .ok_or_else(|| invalid_base_addr(address))?;
                 let staking_cred = base_addr.stake_cred();
 
                 let reward_addr = RewardAddress::new(TESTNET, &staking_cred)
                     .to_address()
                     .to_bech32(None)
-                    .map_err(output_cml_err(&address))?;
+                    .map_err(output_cml_err(address))?;
 
-                let bf = get_test_bf_http_clent().map_err(output_http_err(&address))?;
+                let bf = get_test_bf_http_clent().map_err(output_http_err(address))?;
 
                 let addresses = bf
                     .assoc_addresses(&reward_addr)
                     .await
-                    .map_err(output_http_err(&address))?;
+                    .map_err(output_http_err(address))?;
 
                 let nested_utxos_futs: Vec<_> = addresses
                     .iter()
@@ -103,7 +103,7 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                 let mut outputs_for_all_addresses = Vec::new();
 
                 for (addr, utxos_res) in nested_utxos {
-                    let utxos = utxos_res.map_err(output_http_err(&address))?;
+                    let utxos = utxos_res.map_err(output_http_err(address))?;
                     let nau_addr = addr.into();
                     let nau_outputs: Vec<_> = utxos
                         .iter()
