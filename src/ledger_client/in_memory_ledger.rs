@@ -1,8 +1,7 @@
 use std::sync::{Arc, Mutex};
-use std::{cell::RefCell, fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
-use crate::output::OutputId;
 use crate::values::Values;
 use crate::{
     backend::Backend,
@@ -94,10 +93,12 @@ where
     }
 }
 
+type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
+
 #[derive(Debug)]
 pub struct InMemoryLedgerClient<Datum, Redeemer> {
     pub signer: Address,
-    pub outputs: Arc<Mutex<Vec<(Address, Output<Datum>)>>>,
+    pub outputs: MutableData<Datum>,
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 

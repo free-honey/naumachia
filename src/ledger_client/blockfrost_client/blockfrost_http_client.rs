@@ -107,8 +107,6 @@ pub mod tests {
     use crate::ledger_client::blockfrost_client::keys::TESTNET;
     use crate::ledger_client::blockfrost_client::tests::my_base_addr;
     use cardano_multiplatform_lib::address::RewardAddress;
-    use std::fs;
-    use std::path::Path;
 
     #[ignore]
     #[tokio::test]

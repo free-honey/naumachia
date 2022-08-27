@@ -49,8 +49,11 @@ pub struct Value {
 impl Value {
     pub fn as_nau_value(&self) -> (PolicyId, u64) {
         let policy_id = match self.unit.as_str() {
-            "" => PolicyId::ADA,
-            native_token => PolicyId::native_token(native_token),
+            "lovelace" => PolicyId::ADA,
+            native_token => {
+                let policy = &native_token[..56]; // TODO: Use the rest as asset info
+                PolicyId::native_token(policy)
+            }
         };
         let amount = self.quantity.parse().unwrap(); // TODO: unwrap
         (policy_id, amount)

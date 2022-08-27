@@ -12,7 +12,7 @@ pub fn base_address_from_entropy(entropy: &[u8], network: u8) -> BaseAddress {
         index | 0x80_00_00_00
     }
 
-    let root_key = Bip32PrivateKey::from_bip39_entropy(&entropy, &[]);
+    let root_key = Bip32PrivateKey::from_bip39_entropy(entropy, &[]);
 
     let account_key = root_key
         .derive(harden(1852))
@@ -39,8 +39,6 @@ pub fn load_phrase_from_file(config_path: &str) -> String {
 mod tests {
     use super::*;
     use bip39::{Language, Mnemonic};
-    use std::fs;
-    use std::path::Path;
 
     // Must include a TOML file at your project root with the field:
     //   phrase = <INSERT SECRET PHRASE HERE>

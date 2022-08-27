@@ -1,34 +1,27 @@
-use crate::ledger_client::blockfrost_client::blockfrost_http_client::{
-    get_test_bf_http_clent, schemas,
-};
+use crate::ledger_client::blockfrost_client::blockfrost_http_client::get_test_bf_http_clent;
 use crate::{
-    ledger_client::{
-        blockfrost_client::{blockfrost_http_client::schemas::UTxO, keys::TESTNET},
-        LedgerClient, TxORecordResult,
-    },
+    ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, TxORecordResult},
     output::Output,
     Address, Transaction,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
-use futures::{executor::block_on, future::join_all, FutureExt};
+use futures::{future::join_all, FutureExt};
 use std::marker::PhantomData;
 
 pub mod blockfrost_http_client;
 
 pub mod keys;
 
+#[derive(Default)]
 pub struct BlockFrostLedgerClient<Datum, Redeemer> {
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<D, R> BlockFrostLedgerClient<D, R> {
+impl<D: Default, R: Default> BlockFrostLedgerClient<D, R> {
     pub fn new() -> Self {
-        BlockFrostLedgerClient {
-            _datum: Default::default(),
-            _redeemer: Default::default(),
-        }
+        BlockFrostLedgerClient::default()
     }
 }
 
@@ -51,13 +44,10 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                     .to_address()
                     .to_bech32(None)
                     .unwrap(); // TODO: unwrap
-                dbg!(&reward_addr);
 
                 let bf = get_test_bf_http_clent();
 
                 let addresses = bf.assoc_addresses(&reward_addr).await.unwrap(); // TODO: unwrap
-
-                dbg!(&addresses);
 
                 let nested_utxos_futs: Vec<_> = addresses
                     .iter()
@@ -76,7 +66,7 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                     let nau_addr = addr.into();
                     let nau_outputs: Vec<_> = utxos
                         .iter()
-                        .map(|utxo| into_nau_output(utxo, &nau_addr))
+                        .map(|utxo| utxo.into_nau_output(&nau_addr))
                         .collect();
                     outputs_for_all_addresses.extend(nau_outputs);
                 }
@@ -91,18 +81,13 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
     }
 }
 
-fn into_nau_output<Datum>(utxo: &UTxO, owner: &Address) -> Output<Datum> {
-    todo!()
-    // Output::new_wallet()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger_client::blockfrost_client::{
-        blockfrost_http_client::BlockfrostHttp,
-        keys::{base_address_from_entropy, load_phrase_from_file, TESTNET},
+    use crate::ledger_client::blockfrost_client::keys::{
+        base_address_from_entropy, load_phrase_from_file, TESTNET,
     };
+    use crate::PolicyId;
     use bip39::{Language, Mnemonic};
 
     const CONFIG_PATH: &str = ".blockfrost.toml";
@@ -128,37 +113,38 @@ mod tests {
         let my_utxos = bf.outputs_at_address(&my_addr).await;
 
         dbg!(my_utxos);
+    }
 
-        // Should be: stake_test1urmk5g3m8wstqzgqfhqgyl4gqn2jpusz8wa96d5y4kdrg5cvf83m6
+    #[ignore]
+    #[tokio::test]
+    async fn get_my_lovelace_balance() {
+        let base_addr = my_base_addr();
+        let addr_string = base_addr.to_address().to_bech32(None).unwrap();
+        let my_addr = Address::Base(addr_string);
 
-        // let staking_cred = base_addr.stake_cred();
-        //
-        // let reward_addr = RewardAddress::new(TESTNET, &staking_cred)
-        //     .to_address()
-        //     .to_bech32(None)
-        //     .unwrap();
-        // dbg!(&reward_addr);
-        //
-        // let bf = get_test_bf_http_clent();
-        //
-        // let addresses = bf.assoc_addresses(&reward_addr).await.unwrap();
-        //
-        // dbg!(&addresses);
-        //
-        // let utxos_futs: Vec<_> = addresses
-        //     .iter()
-        //     .map(|addr| bf.utxos(addr.address()))
-        //     .collect();
-        //
-        // let utxos: Vec<_> = join_all(utxos_futs)
-        //     .await
-        //     .into_iter()
-        //     .collect::<Result<Vec<_>, _>>()
-        //     .unwrap()
-        //     .into_iter()
-        //     .flatten()
-        //     .collect();
-        //
-        // dbg!(&utxos);
+        let bf = BlockFrostLedgerClient::<(), ()>::new();
+
+        let my_balance = bf.balance_at_address(&my_addr, &PolicyId::ADA).await;
+
+        println!();
+        println!("ADA: {:?}", my_balance);
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn get_my_native_token_balance() {
+        let base_addr = my_base_addr();
+        let addr_string = base_addr.to_address().to_bech32(None).unwrap();
+        let my_addr = Address::Base(addr_string);
+
+        let bf = BlockFrostLedgerClient::<(), ()>::new();
+
+        let policy =
+            PolicyId::native_token("57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522");
+        let my_balance = bf.balance_at_address(&my_addr, &policy).await;
+
+        dbg!(&policy);
+        println!();
+        println!("Native Token {:?}: {:?}", policy, my_balance);
     }
 }
