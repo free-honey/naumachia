@@ -52,7 +52,7 @@ mod tests {
 
         let entropy = mnemonic.entropy();
 
-        let base_addr = base_address_from_entropy(&entropy, TESTNET);
+        let base_addr = base_address_from_entropy(entropy, TESTNET);
 
         dbg!(base_addr.to_address().to_bech32(None).unwrap());
     }

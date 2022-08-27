@@ -98,7 +98,7 @@ mod tests {
 
         let entropy = mnemonic.entropy();
 
-        base_address_from_entropy(&entropy, TESTNET)
+        base_address_from_entropy(entropy, TESTNET)
     }
 
     #[ignore]
