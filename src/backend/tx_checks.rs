@@ -2,7 +2,7 @@ use crate::{
     error::{Error, Result},
     output::Output,
     scripts::TxContext,
-    Address, Transaction,
+    Address, PolicyId, Transaction,
 };
 use std::{fmt::Debug, hash::Hash};
 
@@ -43,14 +43,17 @@ pub fn can_mint_tokens<Datum, Redeemer>(
         signer: signer.clone(),
     };
     for (id, _) in tx.minting.as_iter() {
-        if let Some(address) = id {
-            if let Some(policy) = tx.policies.get(address) {
-                policy.execute(ctx.clone())?;
-            } else {
-                return Err(Error::FailedToRetrieveScriptFor(address.clone()));
+        match id {
+            PolicyId::NativeToken(_) => {
+                if let Some(policy) = tx.policies.get(id) {
+                    policy.execute(ctx.clone())?;
+                } else {
+                    return Err(Error::FailedToRetrievePolicyFor(id.to_owned()));
+                }
             }
-        } else {
-            return Err(Error::ImpossibleToMintADA);
+            PolicyId::ADA => {
+                return Err(Error::ImpossibleToMintADA);
+            }
         }
     }
     Ok(())

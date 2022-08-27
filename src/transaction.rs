@@ -101,7 +101,7 @@ pub struct Transaction<Datum, Redeemer> {
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
     pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
     pub minting: Values,
-    pub policies: HashMap<Address, Box<dyn MintingPolicy>>,
+    pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
 }
 
 impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {

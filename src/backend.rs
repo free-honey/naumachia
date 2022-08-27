@@ -1,3 +1,4 @@
+use crate::output::OutputId;
 use crate::{
     address::{Address, PolicyId},
     backend::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs},
@@ -42,8 +43,8 @@ where
         }
     }
 
-    pub fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
-        let tx = self.build(u_tx)?;
+    pub async fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
+        let tx = self.build(u_tx).await?;
         can_spend_inputs(&tx, self.signer().clone())?;
         can_mint_tokens(&tx, self.txo_record.signer())?;
         self.txo_record.issue(tx)?;
@@ -60,7 +61,7 @@ where
 
     // TODO: Remove allow
     #[allow(clippy::type_complexity)]
-    fn handle_actions(
+    async fn handle_actions(
         &self,
         actions: Vec<Action<Datum, Redeemer>>,
     ) -> Result<Transaction<Datum, Redeemer>> {
@@ -72,7 +73,8 @@ where
 
         let mut redeemers = Vec::new();
         let mut validators = HashMap::new();
-        let mut policies: HashMap<Address, Box<dyn MintingPolicy>> = HashMap::new();
+        let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();
+        let mut new_utxo_index = 0; // TODO: This feels cheap and error prone
         for action in actions {
             match action {
                 Action::Transfer {
@@ -91,7 +93,7 @@ where
                     recipient,
                     policy,
                 } => {
-                    let policy_id = Some(policy.address());
+                    let policy_id = policy.id();
                     add_amount_to_nested_map(
                         &mut min_output_values,
                         amount,
@@ -99,7 +101,7 @@ where
                         &policy_id,
                     );
                     minting.add_one_value(&policy_id, amount);
-                    policies.insert(policy.address(), policy);
+                    policies.insert(policy.id(), policy);
                 }
                 Action::InitScript {
                     datum,
@@ -109,9 +111,13 @@ where
                     for (policy, amount) in values.as_iter() {
                         min_input_values.add_one_value(policy, *amount);
                     }
-                    let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                    let tx_hash = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                    let index = new_utxo_index;
+                    new_utxo_index += 1;
+                    let id = OutputId::new(tx_hash, index);
                     let owner = address;
                     let output = Output::Validator {
+                        // TODO: This should happen later
                         id,
                         owner,
                         values,
@@ -132,8 +138,9 @@ where
             }
         }
         // inputs
-        let (inputs, remainders) =
-            self.select_inputs_for_one(self.txo_record.signer(), &min_input_values, script_inputs)?;
+        let (inputs, remainders) = self
+            .select_inputs_for_one(self.txo_record.signer(), &min_input_values, script_inputs)
+            .await?;
 
         // TODO: Dedupe
         let mut new_values = remainders;
@@ -162,13 +169,13 @@ where
     //       but this is _good_enough_ for tests.
     // TODO: Remove allow
     #[allow(clippy::type_complexity)]
-    fn select_inputs_for_one(
+    async fn select_inputs_for_one(
         &self,
         address: &Address,
         spending_values: &Values,
         script_inputs: Vec<Output<Datum>>,
     ) -> Result<(Vec<Output<Datum>>, Values)> {
-        let mut all_available_outputs = self.txo_record.outputs_at_address(address);
+        let mut all_available_outputs = self.txo_record.outputs_at_address(address).await;
         all_available_outputs.extend(script_inputs);
         let address_values = Values::from_outputs(&all_available_outputs);
 
@@ -177,6 +184,7 @@ where
         Ok((spending_outputs, remainders))
     }
 
+    // TODO: This should be done by the LedgerClient
     fn create_outputs_for(
         &self,
         values: Vec<(Address, Vec<(PolicyId, u64)>)>,
@@ -190,19 +198,21 @@ where
                         acc.add_one_value(policy, *amt);
                         acc
                     });
-                let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
-                Output::new_wallet(id, owner, values)
+                // Very wrong
+                let tx_hash = Uuid::new_v4().to_string();
+                let index = 0;
+                Output::new_wallet(tx_hash, index, owner, values)
             })
             .collect();
         Ok(outputs)
     }
 
-    fn build(
+    async fn build(
         &self,
         unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
     ) -> Result<Transaction<Datum, Redeemer>> {
         let UnBuiltTransaction { actions } = unbuilt_tx;
-        self.handle_actions(actions)
+        self.handle_actions(actions).await
         // TODO: Calculate fees and then rebuild tx
     }
 }

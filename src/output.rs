@@ -11,26 +11,39 @@ use crate::values::Values;
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub enum Output<Datum> {
     Wallet {
-        id: String,
+        id: OutputId,
         owner: Address,
         values: Values,
     },
     Validator {
-        id: String,
+        id: OutputId,
         owner: Address,
         values: Values,
         datum: Datum,
     },
 }
 
+#[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
+pub struct OutputId {
+    tx_hash: String,
+    index: u32,
+}
+
+impl OutputId {
+    pub fn new(tx_hash: String, index: u32) -> Self {
+        OutputId { tx_hash, index }
+    }
+}
+
 pub type Value = (PolicyId, u64);
 
 impl<Datum> Output<Datum> {
-    pub fn new_wallet(id: String, owner: Address, values: Values) -> Self {
+    pub fn new_wallet(tx_hash: String, index: u32, owner: Address, values: Values) -> Self {
+        let id = OutputId::new(tx_hash, index);
         Output::Wallet { id, owner, values }
     }
 
-    pub fn id(&self) -> &str {
+    pub fn id(&self) -> &OutputId {
         match self {
             Output::Wallet { id, .. } => id,
             Output::Validator { id, .. } => id,

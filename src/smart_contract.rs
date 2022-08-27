@@ -1,13 +1,15 @@
+use async_trait::async_trait;
 use std::fmt::Debug;
 
 use crate::{backend::Backend, error::Result, ledger_client::LedgerClient, logic::SCLogic};
 
+#[async_trait]
 pub trait SmartContractTrait {
     type Endpoint;
     type Lookup;
     type LookupResponse;
-    fn hit_endpoint(&self, endpoint: Self::Endpoint) -> Result<()>;
-    fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse>;
+    async fn hit_endpoint(&self, endpoint: Self::Endpoint) -> Result<()>;
+    async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse>;
 }
 
 #[derive(Debug)]
@@ -36,22 +38,23 @@ where
     }
 }
 
+#[async_trait]
 impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
 where
-    Logic: SCLogic + Eq + Debug,
-    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
+    Logic: SCLogic + Eq + Debug + Send + Sync,
+    Record: LedgerClient<Logic::Datum, Logic::Redeemer> + Send + Sync,
 {
     type Endpoint = Logic::Endpoint;
     type Lookup = Logic::Lookup;
     type LookupResponse = Logic::LookupResponse;
 
-    fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
-        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.txo_record())?;
-        self.backend.process(unbuilt_tx)?;
+    async fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
+        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.txo_record()).await?;
+        self.backend.process(unbuilt_tx).await?;
         Ok(())
     }
 
-    fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
-        Ok(Logic::lookup(lookup, self.backend.txo_record())?)
+    async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
+        Ok(Logic::lookup(lookup, self.backend.txo_record()).await?)
     }
 }

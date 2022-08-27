@@ -1,23 +1,42 @@
 use serde::{Deserialize, Serialize};
 
-// TODO: As of now, wallet, script, and policy addresses are the same. This is an
-//       over-simplification in many ways. Wallet and address also need to be disambiguated.
-//       Really, it should be an assoc type for your TxORecord impl because we don't care what
-//       it is in our domain, as long as it's unique, and comparable.
+// TODO: Continue to hone this into a good API. I tried to make the Address generic, but it
+//   made for bad ergonomics. Instead, I want to make this as stable as possible.
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
-pub struct Address(String);
+pub enum Address {
+    Base(String),
+    Raw(String), // This is a placeholder for now to make tests work
+}
 
 impl Address {
     pub fn new(addr: &str) -> Self {
-        Address(addr.to_string())
+        Address::Raw(addr.to_string())
+    }
+
+    pub fn base(addr: &str) -> Self {
+        Address::Base(addr.to_string())
     }
 
     pub fn to_str(&self) -> &str {
-        &self.0
+        match self {
+            Address::Base(inner) => inner,
+            Address::Raw(inner) => inner,
+        }
     }
 }
 
-// TODO: This should represent PolicyId as well as AssetName. Maybe a custom enum would be good
-pub type PolicyId = Option<Address>;
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
+pub enum PolicyId {
+    ADA,
+    NativeToken(String),
+}
 
-pub const ADA: PolicyId = None;
+impl PolicyId {
+    pub fn ada() -> PolicyId {
+        PolicyId::ADA
+    }
+
+    pub fn native_token(id: &str) -> PolicyId {
+        PolicyId::NativeToken(id.to_string())
+    }
+}

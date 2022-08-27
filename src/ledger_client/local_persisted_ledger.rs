@@ -1,20 +1,23 @@
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-use std::fs::File;
-use std::hash::Hash;
-use std::io::{Read, Write};
-use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
+use async_trait::async_trait;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::{
+    fmt::Debug,
+    fs::File,
+    hash::Hash,
+    io::{Read, Write},
+    marker::PhantomData,
+    path::{Path, PathBuf},
+};
 use uuid::Uuid;
 
 use crate::values::Values;
 use crate::{
-    address::{Address, ADA},
+    address::Address,
     error::Result,
     ledger_client::{LedgerClient, LedgerClientError, TxORecordResult},
     output::Output,
     transaction::Transaction,
+    PolicyId,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -42,14 +45,11 @@ pub struct LocalPersistedLedgerClient<Datum, Redeemer> {
 }
 
 fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
-    let id = Uuid::new_v4().to_string();
+    let tx_hash = Uuid::new_v4().to_string();
+    let index = 0;
     let mut values = Values::default();
-    values.add_one_value(&ADA, amount);
-    Output::Wallet {
-        id,
-        owner: owner.clone(),
-        values,
-    }
+    values.add_one_value(&PolicyId::ADA, amount);
+    Output::new_wallet(tx_hash, index, owner.clone(), values)
 }
 
 impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<Datum, Redeemer> {
@@ -90,16 +90,17 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<D
     }
 }
 
+#[async_trait]
 impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for LocalPersistedLedgerClient<Datum, Redeemer>
 where
-    Datum: Serialize + DeserializeOwned + Clone + PartialEq + Debug,
-    Redeemer: Hash + Eq + Clone,
+    Datum: Serialize + DeserializeOwned + Clone + PartialEq + Debug + Send + Sync,
+    Redeemer: Hash + Eq + Clone + Send + Sync,
 {
     fn signer(&self) -> &Address {
         &self.signer
     }
 
-    fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
+    async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
         let data = self.get_data();
         data.outputs
             .into_iter()
@@ -111,7 +112,7 @@ where
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
-                LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+                LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().clone())
             })?;
             my_outputs.remove(index);
         }
@@ -130,8 +131,8 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    #[test]
-    fn outputs_at_address() {
+    #[tokio::test]
+    async fn outputs_at_address() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
@@ -139,16 +140,16 @@ mod tests {
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
-        let mut outputs = record.outputs_at_address(&signer);
+        let mut outputs = record.outputs_at_address(&signer).await;
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
-        let actual = first_output.values().get(&ADA).unwrap();
+        let actual = first_output.values().get(&PolicyId::ADA).unwrap();
         assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn balance_at_address() {
+    #[tokio::test]
+    async fn balance_at_address() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
@@ -157,12 +158,12 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&signer, &ADA);
+        let actual = record.balance_at_address(&signer, &PolicyId::ADA).await;
         assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn issue() {
+    #[tokio::test]
+    async fn issue() {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
@@ -171,14 +172,12 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         // let mut outputs = record.outputs_at_address(&signer);
-        let first_output = record.outputs_at_address(&signer).pop().unwrap();
-        let id = Uuid::new_v4().to_string();
+        let first_output = record.outputs_at_address(&signer).await.pop().unwrap();
+        let tx_hash = Uuid::new_v4().to_string();
+        let index = 0;
         let owner = Address::new("bob");
-        let new_output = Output::Wallet {
-            id,
-            owner: owner.clone(),
-            values: first_output.values().clone(),
-        };
+        let new_output =
+            Output::new_wallet(tx_hash, index, owner.clone(), first_output.values().clone());
         let tx: Transaction<(), ()> = Transaction {
             inputs: vec![first_output],
             outputs: vec![new_output],
@@ -189,7 +188,7 @@ mod tests {
         };
         record.issue(tx).unwrap();
         let expected = starting_amount;
-        let actual = record.balance_at_address(&owner, &ADA);
+        let actual = record.balance_at_address(&owner, &PolicyId::ADA).await;
         assert_eq!(expected, actual)
     }
 }

@@ -5,8 +5,9 @@ use crate::{
 };
 
 use clap::Parser;
+use naumachia::address::PolicyId;
 use naumachia::{
-    address::Address, address::ADA, backend::Backend, error::Result as NauResult,
+    address::Address, backend::Backend, error::Result as NauResult,
     ledger_client::local_persisted_ledger::LocalPersistedLedgerClient, ledger_client::LedgerClient,
     smart_contract::SmartContract,
 };
@@ -29,7 +30,7 @@ enum ActionParams {
     /// Check current signer's balance
     Balance,
     /// Redeem escrow contract for which signer is the receiver
-    Claim { id: String },
+    Claim { tx_hash: String, index: u32 },
     /// Create escrow contract for amount that only receiver can retrieve
     Escrow { amount: u64, receiver: String },
     /// List all active escrow contracts
@@ -38,7 +39,8 @@ enum ActionParams {
     Signer { signer: String },
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
 
     let logic = EscrowContract;
@@ -54,16 +56,24 @@ fn main() {
 
     match args.action {
         ActionParams::Balance => {
-            let balance = backend.txo_record.balance_at_address(signer, &ADA);
+            let balance = backend
+                .txo_record
+                .balance_at_address(signer, &PolicyId::ADA)
+                .await;
             println!();
             println!("{}'s balance: {:?}", signer.to_str(), balance);
         }
-        ActionParams::Claim { id } => handler.claim(&id).expect("unable to claim output"),
+        ActionParams::Claim { tx_hash, index } => handler
+            .claim(&tx_hash, index)
+            .await
+            .expect("unable to claim output"),
         ActionParams::Escrow { amount, receiver } => handler
             .escrow(amount, &receiver)
+            .await
             .expect("unable to escrow funds"),
         ActionParams::List => handler
             .list()
+            .await
             .expect("unable to list active escrow contracts"),
         ActionParams::Signer { signer } => {
             update_signer(&signer).expect("unable to update signer");
