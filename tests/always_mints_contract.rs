@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use naumachia::address::PolicyId;
 use naumachia::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
 use naumachia::{
@@ -34,6 +35,7 @@ enum Endpoint {
 
 const MINT_POLICY_ID: &str = "mint_policy";
 
+#[async_trait]
 impl SCLogic for AlwaysMintsSmartContract {
     type Endpoint = Endpoint;
     type Lookup = ();
@@ -41,7 +43,7 @@ impl SCLogic for AlwaysMintsSmartContract {
     type Datum = ();
     type Redeemer = ();
 
-    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
@@ -53,7 +55,7 @@ impl SCLogic for AlwaysMintsSmartContract {
         }
     }
 
-    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         _txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
@@ -67,8 +69,8 @@ fn mint(amount: u64, recipient: Address) -> SCLogicResult<UnBuiltTransaction<(),
     Ok(utx)
 }
 
-#[test]
-fn can_mint_from_always_true_minting_policy() {
+#[tokio::test]
+async fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
     let policy = PolicyId::native_token(MINT_POLICY_ID);
     let backend = TestBackendsBuilder::new(&me).build();
@@ -76,7 +78,7 @@ fn can_mint_from_always_true_minting_policy() {
     let amount = 69;
     let call = Endpoint::Mint { amount };
     let contract = SmartContract::new(&AlwaysMintsSmartContract, &backend);
-    contract.hit_endpoint(call).unwrap();
+    contract.hit_endpoint(call).await.unwrap();
 
     // Check my balance for minted tokens
     let expected = amount;
@@ -84,6 +86,7 @@ fn can_mint_from_always_true_minting_policy() {
         &backend.txo_record,
         &me,
         &policy,
-    );
+    )
+    .await;
     assert_eq!(expected, actual)
 }

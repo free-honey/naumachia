@@ -3,10 +3,12 @@ use crate::{error::Result, UnBuiltTransaction};
 
 use thiserror::Error;
 
+use async_trait::async_trait;
 use std::error;
 use std::fmt::Debug;
 use std::hash::Hash;
 
+#[async_trait]
 pub trait SCLogic: Send + Sync {
     type Endpoint: Send + Sync;
     type Lookup: Send + Sync;
@@ -14,12 +16,12 @@ pub trait SCLogic: Send + Sync {
     type Datum: Clone + Eq + Debug + Send + Sync;
     type Redeemer: Clone + PartialEq + Eq + Hash + Send + Sync;
 
-    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
 
-    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Lookup,
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse>;

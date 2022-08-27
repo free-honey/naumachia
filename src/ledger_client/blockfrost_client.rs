@@ -1,9 +1,9 @@
+use crate::ledger_client::blockfrost_client::blockfrost_http_client::{
+    get_test_bf_http_clent, schemas,
+};
 use crate::{
     ledger_client::{
-        blockfrost_client::{
-            blockfrost_http_client::{schemas::UTxO, tests::get_test_bf_http_clent},
-            keys::TESTNET,
-        },
+        blockfrost_client::{blockfrost_http_client::schemas::UTxO, keys::TESTNET},
         LedgerClient, TxORecordResult,
     },
     output::Output,
@@ -11,7 +11,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
-use futures::{executor::block_on, future::join_all};
+use futures::{executor::block_on, future::join_all, FutureExt};
 use std::marker::PhantomData;
 
 pub mod blockfrost_http_client;
@@ -43,37 +43,44 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
     async fn outputs_at_address(&self, address: &Address) -> Vec<Output<Datum>> {
         match address {
             Address::Base(addr_string) => {
-                let address = CMLAddress::from_bech32(addr_string).unwrap();
-                let base_addr = BaseAddress::from_address(&address).unwrap();
+                let address = CMLAddress::from_bech32(addr_string).unwrap(); // TODO: unwrap
+                let base_addr = BaseAddress::from_address(&address).unwrap(); // TODO: unwrap
                 let staking_cred = base_addr.stake_cred();
 
                 let reward_addr = RewardAddress::new(TESTNET, &staking_cred)
                     .to_address()
                     .to_bech32(None)
-                    .unwrap();
+                    .unwrap(); // TODO: unwrap
                 dbg!(&reward_addr);
 
                 let bf = get_test_bf_http_clent();
 
-                let addresses = bf.assoc_addresses(&reward_addr).await.unwrap();
+                let addresses = bf.assoc_addresses(&reward_addr).await.unwrap(); // TODO: unwrap
 
                 dbg!(&addresses);
 
-                let utxos_futs: Vec<_> = addresses
+                let nested_utxos_futs: Vec<_> = addresses
                     .iter()
-                    .map(|addr| bf.utxos(addr.address()))
+                    .map(|addr| {
+                        bf.utxos(addr.as_string())
+                            .map(|utxos| (addr.to_owned(), utxos))
+                    })
                     .collect();
 
-                let utxos: Vec<_> = join_all(utxos_futs)
-                    .await
-                    .into_iter()
-                    .collect::<Result<Vec<_>, _>>()
-                    .unwrap()
-                    .into_iter()
-                    .flatten()
-                    .collect();
+                let nested_utxos: Vec<_> = join_all(nested_utxos_futs).await;
 
-                utxos.iter().map(into_nau_output).collect()
+                let mut outputs_for_all_addresses = Vec::new();
+
+                for (addr, utxos_res) in nested_utxos {
+                    let utxos = utxos_res.unwrap(); // TODO: unwrap
+                    let nau_addr = addr.into();
+                    let nau_outputs: Vec<_> = utxos
+                        .iter()
+                        .map(|utxo| into_nau_output(utxo, &nau_addr))
+                        .collect();
+                    outputs_for_all_addresses.extend(nau_outputs);
+                }
+                outputs_for_all_addresses
             }
             Address::Raw(_) => unimplemented!("Doesn't make sense here"),
         }
@@ -84,15 +91,16 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
     }
 }
 
-fn into_nau_output<Datum>(utxo: &UTxO) -> Output<Datum> {
+fn into_nau_output<Datum>(utxo: &UTxO, owner: &Address) -> Output<Datum> {
     todo!()
+    // Output::new_wallet()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ledger_client::blockfrost_client::{
-        blockfrost_http_client::{tests::get_test_bf_http_clent, BlockfrostHttp},
+        blockfrost_http_client::BlockfrostHttp,
         keys::{base_address_from_entropy, load_phrase_from_file, TESTNET},
     };
     use bip39::{Language, Mnemonic};

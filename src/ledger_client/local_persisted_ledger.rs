@@ -45,14 +45,11 @@ pub struct LocalPersistedLedgerClient<Datum, Redeemer> {
 }
 
 fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
-    let id = Uuid::new_v4().to_string();
+    let tx_hash = Uuid::new_v4().to_string();
+    let index = 0;
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
-    Output::Wallet {
-        id,
-        owner: owner.clone(),
-        values,
-    }
+    Output::new_wallet(tx_hash, index, owner.clone(), values)
 }
 
 impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<Datum, Redeemer> {
@@ -115,7 +112,7 @@ where
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
-                LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+                LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().clone())
             })?;
             my_outputs.remove(index);
         }
@@ -176,13 +173,11 @@ mod tests {
                 .unwrap();
         // let mut outputs = record.outputs_at_address(&signer);
         let first_output = record.outputs_at_address(&signer).await.pop().unwrap();
-        let id = Uuid::new_v4().to_string();
+        let tx_hash = Uuid::new_v4().to_string();
+        let index = 0;
         let owner = Address::new("bob");
-        let new_output = Output::Wallet {
-            id,
-            owner: owner.clone(),
-            values: first_output.values().clone(),
-        };
+        let new_output =
+            Output::new_wallet(tx_hash, index, owner.clone(), first_output.values().clone());
         let tx: Transaction<(), ()> = Transaction {
             inputs: vec![first_output],
             outputs: vec![new_output],

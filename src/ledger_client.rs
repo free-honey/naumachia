@@ -7,6 +7,7 @@ pub mod in_memory_ledger;
 pub mod local_persisted_ledger;
 use async_trait::async_trait;
 
+use crate::output::OutputId;
 use std::error;
 
 #[async_trait]
@@ -33,7 +34,7 @@ pub enum LedgerClientError {
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
-    FailedToRetrieveOutputWithId(String),
+    FailedToRetrieveOutputWithId(OutputId),
 }
 
 pub type TxORecordResult<T> = Result<T, LedgerClientError>;

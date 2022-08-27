@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::{cell::RefCell, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
+use crate::output::OutputId;
 use crate::values::Values;
 use crate::{
     backend::Backend,
@@ -85,8 +86,9 @@ where
             values,
         } = self;
         let address = owner.clone();
-        let id = Uuid::new_v4().to_string();
-        let output = Output::new_wallet(id, address, values);
+        let tx_hash = Uuid::new_v4().to_string();
+        let index = 0;
+        let output = Output::new_wallet(tx_hash, index, address, values);
         inner.add_output(&owner, output);
         inner
     }
@@ -126,7 +128,7 @@ where
                 .iter()
                 .position(|(_, x)| x == tx_i)
                 .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().to_string())
+                    LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().clone())
                 })?;
             my_outputs.remove(index);
         }

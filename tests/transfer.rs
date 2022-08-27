@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use naumachia::address::PolicyId;
 use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
 use naumachia::logic::SCLogicResult;
@@ -13,6 +14,7 @@ enum Endpoint {
     Transfer { amount: u64, recipient: Address },
 }
 
+#[async_trait]
 impl SCLogic for TransferADASmartContract {
     type Endpoint = Endpoint;
     type Lookup = ();
@@ -20,7 +22,7 @@ impl SCLogic for TransferADASmartContract {
     type Datum = ();
     type Redeemer = ();
 
-    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         _txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
@@ -33,7 +35,7 @@ impl SCLogic for TransferADASmartContract {
         }
     }
 
-    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         _txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
@@ -41,8 +43,8 @@ impl SCLogic for TransferADASmartContract {
     }
 }
 
-#[test]
-fn can_transfer_and_keep_remainder() {
+#[tokio::test]
+async fn can_transfer_and_keep_remainder() {
     let me = Address::new("me");
     let alice = Address::new("alice");
 
@@ -66,19 +68,26 @@ fn can_transfer_and_keep_remainder() {
         recipient: alice.clone(),
     };
 
-    contract.hit_endpoint(call).unwrap();
+    contract.hit_endpoint(call).await.unwrap();
 
     let alice_expected = amount;
     let alice_actual = backend
         .txo_record
-        .balance_at_address(&alice, &PolicyId::ADA);
+        .balance_at_address(&alice, &PolicyId::ADA)
+        .await;
     assert_eq!(alice_expected, alice_actual);
 
     let me_expected = input_amount - amount;
-    let me_actual = backend.txo_record.balance_at_address(&me, &PolicyId::ADA);
+    let me_actual = backend
+        .txo_record
+        .balance_at_address(&me, &PolicyId::ADA)
+        .await;
     assert_eq!(me_expected, me_actual);
 
     let expected_extra_amount = extra_amount;
-    let actual_extra_amount = backend.txo_record.balance_at_address(&me, &extra_policy);
+    let actual_extra_amount = backend
+        .txo_record
+        .balance_at_address(&me, &extra_policy)
+        .await;
     assert_eq!(expected_extra_amount, actual_extra_amount);
 }

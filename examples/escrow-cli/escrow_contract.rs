@@ -1,4 +1,6 @@
+use async_trait::async_trait;
 use naumachia::address::PolicyId;
+use naumachia::output::OutputId;
 use naumachia::{
     address::Address,
     ledger_client::LedgerClient,
@@ -45,7 +47,7 @@ pub struct EscrowContract;
 #[derive(Clone)]
 pub enum EscrowEndpoint {
     Escrow { amount: u64, receiver: Address },
-    Claim { output_id: String },
+    Claim { output_id: OutputId },
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
@@ -62,9 +64,10 @@ impl EscrowDatum {
 #[derive(Debug, Error)]
 enum EscrowContractError {
     #[error("Output with ID {0:?} not found.")]
-    OutputNotFound(String),
+    OutputNotFound(OutputId),
 }
 
+#[async_trait]
 impl SCLogic for EscrowContract {
     type Endpoint = EscrowEndpoint;
     type Lookup = ();
@@ -72,21 +75,23 @@ impl SCLogic for EscrowContract {
     type Datum = EscrowDatum;
     type Redeemer = ();
 
-    fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
     ) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
         match endpoint {
             EscrowEndpoint::Escrow { amount, receiver } => escrow(amount, receiver),
-            EscrowEndpoint::Claim { output_id } => claim(&output_id, txo_record),
+            EscrowEndpoint::Claim { output_id } => claim(&output_id, txo_record).await,
         }
     }
 
-    fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
+    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         _endpoint: Self::Lookup,
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
-        let outputs = txo_record.outputs_at_address(&EscrowValidatorScript.address());
+        let outputs = txo_record
+            .outputs_at_address(&EscrowValidatorScript.address())
+            .await;
         Ok(outputs)
     }
 }
@@ -101,30 +106,28 @@ fn escrow(amount: u64, receiver: Address) -> SCLogicResult<UnBuiltTransaction<Es
     Ok(u_tx)
 }
 
-fn claim<Record: LedgerClient<EscrowDatum, ()>>(
-    output_id: &str,
+async fn claim<Record: LedgerClient<EscrowDatum, ()>>(
+    output_id: &OutputId,
     txo_record: &Record,
 ) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
     let script = Box::new(EscrowValidatorScript);
-    let output = lookup_output(output_id, txo_record)?;
+    let output = lookup_output(output_id, txo_record).await?;
     let u_tx = UnBuiltTransaction::default().with_script_redeem(output, (), script);
     Ok(u_tx)
 }
 
-fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
-    id: &str,
+async fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
+    id: &OutputId,
     txo_record: &Record,
 ) -> SCLogicResult<Output<EscrowDatum>> {
     let script_address = EscrowValidatorScript.address();
-    let outputs = txo_record.outputs_at_address(&script_address);
+    let outputs = txo_record.outputs_at_address(&script_address).await;
     outputs
         .iter()
         .find(|o| o.id() == id)
         .cloned()
         .ok_or_else(|| {
-            SCLogicError::Lookup(Box::new(EscrowContractError::OutputNotFound(
-                id.to_string(),
-            )))
+            SCLogicError::Lookup(Box::new(EscrowContractError::OutputNotFound(id.clone())))
         })
 }
 

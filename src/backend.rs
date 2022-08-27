@@ -1,3 +1,4 @@
+use crate::output::OutputId;
 use crate::{
     address::{Address, PolicyId},
     backend::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs},
@@ -73,6 +74,7 @@ where
         let mut redeemers = Vec::new();
         let mut validators = HashMap::new();
         let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();
+        let mut new_utxo_index = 0; // TODO: This feels cheap and error prone
         for action in actions {
             match action {
                 Action::Transfer {
@@ -109,9 +111,13 @@ where
                     for (policy, amount) in values.as_iter() {
                         min_input_values.add_one_value(policy, *amount);
                     }
-                    let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                    let tx_hash = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
+                    let index = new_utxo_index;
+                    new_utxo_index += 1;
+                    let id = OutputId::new(tx_hash, index);
                     let owner = address;
                     let output = Output::Validator {
+                        // TODO: This should happen later
                         id,
                         owner,
                         values,
@@ -178,6 +184,7 @@ where
         Ok((spending_outputs, remainders))
     }
 
+    // TODO: This should be done by the LedgerClient
     fn create_outputs_for(
         &self,
         values: Vec<(Address, Vec<(PolicyId, u64)>)>,
@@ -191,8 +198,10 @@ where
                         acc.add_one_value(policy, *amt);
                         acc
                     });
-                let id = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
-                Output::new_wallet(id, owner, values)
+                // Very wrong
+                let tx_hash = Uuid::new_v4().to_string();
+                let index = 0;
+                Output::new_wallet(tx_hash, index, owner, values)
             })
             .collect();
         Ok(outputs)

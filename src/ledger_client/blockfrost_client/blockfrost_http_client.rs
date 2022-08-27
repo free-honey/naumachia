@@ -2,10 +2,29 @@ use crate::ledger_client::blockfrost_client::blockfrost_http_client::schemas::{
     Address, AddressInfo, Genesis, UTxO,
 };
 use serde::de::DeserializeOwned;
+use std::fs;
+use std::path::Path;
 use thiserror::Error;
 use url::Url;
 
 pub mod schemas;
+
+const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
+// Must include a TOML file at your project root with the field:
+//   project_id = <INSERT API KEY HERE>
+const CONFIG_PATH: &str = ".blockfrost.toml";
+
+fn load_key_from_file(key_path: &str) -> String {
+    let path = Path::new(key_path);
+    let text = fs::read_to_string(&path).unwrap();
+    let config: toml::Value = toml::from_str(&text).unwrap();
+    config["project_id"].as_str().unwrap().to_string()
+}
+
+pub fn get_test_bf_http_clent() -> BlockfrostHttp {
+    let key = load_key_from_file(CONFIG_PATH);
+    BlockfrostHttp::new(TEST_URL, &key)
+}
 
 pub struct BlockfrostHttp {
     parent_url: String,
@@ -90,23 +109,6 @@ pub mod tests {
     use cardano_multiplatform_lib::address::RewardAddress;
     use std::fs;
     use std::path::Path;
-
-    const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
-    // Must include a TOML file at your project root with the field:
-    //   project_id = <INSERT API KEY HERE>
-    const CONFIG_PATH: &str = ".blockfrost.toml";
-
-    fn load_key_from_file(key_path: &str) -> String {
-        let path = Path::new(key_path);
-        let text = fs::read_to_string(&path).unwrap();
-        let config: toml::Value = toml::from_str(&text).unwrap();
-        config["project_id"].as_str().unwrap().to_string()
-    }
-
-    pub fn get_test_bf_http_clent() -> BlockfrostHttp {
-        let key = load_key_from_file(CONFIG_PATH);
-        BlockfrostHttp::new(TEST_URL, &key)
-    }
 
     #[ignore]
     #[tokio::test]
