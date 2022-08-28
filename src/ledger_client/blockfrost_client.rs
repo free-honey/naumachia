@@ -1,4 +1,6 @@
-use crate::ledger_client::blockfrost_client::blockfrost_http_client::get_test_bf_http_clent;
+use crate::ledger_client::blockfrost_client::blockfrost_http_client::{
+    get_test_bf_http_clent, BlockFrostHttpTrait,
+};
 use crate::ledger_client::LedgerClientError;
 use crate::{
     ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, LedgerClientResult},
@@ -15,15 +17,24 @@ pub mod blockfrost_http_client;
 
 pub mod keys;
 
-#[derive(Default)]
-pub struct BlockFrostLedgerClient<Datum, Redeemer> {
+pub struct BlockFrostLedgerClient<'a, Client: BlockFrostHttpTrait, Datum, Redeemer> {
+    client: &'a Client,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<D: Default, R: Default> BlockFrostLedgerClient<D, R> {
-    pub fn new() -> Self {
-        BlockFrostLedgerClient::default()
+impl<'a, Client, D, R> BlockFrostLedgerClient<'a, Client, D, R>
+where
+    Client: BlockFrostHttpTrait,
+    D: Default,
+    R: Default,
+{
+    pub fn new(client: &'a Client) -> Self {
+        BlockFrostLedgerClient {
+            client,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        }
     }
 }
 #[derive(Debug, Error)]
@@ -59,8 +70,12 @@ fn invalid_base_addr(address: &Address) -> LedgerClientError {
 }
 
 #[async_trait]
-impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
-    for BlockFrostLedgerClient<Datum, Redeemer>
+impl<Client, Datum, Redeemer> LedgerClient<Datum, Redeemer>
+    for BlockFrostLedgerClient<'_, Client, Datum, Redeemer>
+where
+    Client: BlockFrostHttpTrait + Send + Sync,
+    Datum: Send + Sync,
+    Redeemer: Send + Sync,
 {
     async fn signer(&self) -> LedgerClientResult<&Address> {
         todo!()
@@ -83,9 +98,8 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                     .to_bech32(None)
                     .map_err(output_cml_err(address))?;
 
-                let bf = get_test_bf_http_clent().map_err(output_http_err(address))?;
-
-                let addresses = bf
+                let addresses = self
+                    .client
                     .assoc_addresses(&reward_addr)
                     .await
                     .map_err(output_http_err(address))?;
@@ -93,7 +107,8 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                 let nested_utxos_futs: Vec<_> = addresses
                     .iter()
                     .map(|addr| {
-                        bf.utxos(addr.as_string())
+                        self.client
+                            .utxos(addr.as_string())
                             .map(|utxos| (addr.to_owned(), utxos))
                     })
                     .collect();
@@ -125,6 +140,7 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ledger_client::blockfrost_client::blockfrost_http_client::BlockFrostHttp;
     use crate::ledger_client::blockfrost_client::keys::{
         base_address_from_entropy, load_phrase_from_file, TESTNET,
     };
@@ -149,7 +165,9 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let bf = BlockFrostLedgerClient::<(), ()>::new();
+        let client = get_test_bf_http_clent().unwrap();
+
+        let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
 
         let my_utxos = bf.outputs_at_address(&my_addr).await.unwrap();
 
@@ -163,9 +181,14 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let bf = BlockFrostLedgerClient::<(), ()>::new();
+        let client = get_test_bf_http_clent().unwrap();
 
-        let my_balance = bf.balance_at_address(&my_addr, &PolicyId::ADA).await;
+        let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
+
+        let my_balance = bf
+            .balance_at_address(&my_addr, &PolicyId::ADA)
+            .await
+            .unwrap();
 
         println!();
         println!("ADA: {:?}", my_balance);
@@ -178,13 +201,14 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let bf = BlockFrostLedgerClient::<(), ()>::new();
+        let client = get_test_bf_http_clent().unwrap();
+
+        let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
 
         let policy =
             PolicyId::native_token("57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522");
-        let my_balance = bf.balance_at_address(&my_addr, &policy).await;
+        let my_balance = bf.balance_at_address(&my_addr, &policy).await.unwrap();
 
-        dbg!(&policy);
         println!();
         println!("Native Token {:?}: {:?}", policy, my_balance);
     }

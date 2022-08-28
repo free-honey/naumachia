@@ -1,7 +1,9 @@
 use crate::ledger_client::blockfrost_client::blockfrost_http_client::schemas::{
     Address, AddressInfo, Genesis, UTxO,
 };
+use async_trait::async_trait;
 use serde::de::DeserializeOwned;
+use serde_json::Value;
 use std::path::Path;
 use std::{fs, io};
 use thiserror::Error;
@@ -26,13 +28,13 @@ fn load_key_from_file(key_path: &str) -> Result<String> {
     Ok(project_id)
 }
 
-pub fn get_test_bf_http_clent() -> Result<BlockfrostHttp> {
+pub fn get_test_bf_http_clent() -> Result<BlockFrostHttp> {
     let key = load_key_from_file(CONFIG_PATH)?;
-    let bf = BlockfrostHttp::new(TEST_URL, &key);
+    let bf = BlockFrostHttp::new(TEST_URL, &key);
     Ok(bf)
 }
 
-pub struct BlockfrostHttp {
+pub struct BlockFrostHttp {
     parent_url: String,
     api_key: String, // A.K.A. `project_id`
 }
@@ -53,39 +55,59 @@ pub enum Error {
     Toml(toml::de::Error),
 }
 
-impl BlockfrostHttp {
+#[async_trait]
+pub trait BlockFrostHttpTrait {
+    async fn genesis(&self) -> Result<Genesis>;
+
+    async fn address_info(&self, address: &str) -> Result<AddressInfo>;
+
+    async fn utxos(&self, address: &str) -> Result<Vec<UTxO>>;
+
+    async fn datum(&self, datum_hash: &str) -> Result<serde_json::Value>;
+
+    async fn assoc_addresses(&self, stake_address: &str) -> Result<Vec<Address>>;
+}
+
+#[async_trait]
+impl BlockFrostHttpTrait for BlockFrostHttp {
+    async fn genesis(&self) -> Result<Genesis> {
+        let ext = "./genesis";
+        self.get_endpoint(ext).await
+    }
+
+    async fn address_info(&self, address: &str) -> Result<AddressInfo> {
+        let ext = format!("./addresses/{}", address);
+        self.get_endpoint(&ext).await
+    }
+
+    async fn utxos(&self, address: &str) -> Result<Vec<UTxO>> {
+        let ext = format!("./addresses/{}/utxos", address);
+        self.get_endpoint(&ext).await
+    }
+
+    async fn datum(&self, datum_hash: &str) -> Result<serde_json::Value> {
+        let ext = format!("./scripts/datum/{}", datum_hash);
+        self.get_endpoint(&ext).await
+    }
+
+    async fn assoc_addresses(&self, stake_address: &str) -> Result<Vec<Address>> {
+        let ext = format!("./accounts/{}/addresses", stake_address);
+        self.get_endpoint(&ext).await
+    }
+}
+
+impl BlockFrostHttp {
     pub fn new(url: &str, key: &str) -> Self {
         let parent_url = url.to_string();
         let api_key = key.to_string();
-        BlockfrostHttp {
+        BlockFrostHttp {
             parent_url,
             api_key,
         }
     }
 
-    pub async fn genesis(&self) -> Result<Genesis> {
-        let ext = "./genesis";
-        self.get_endpoint(ext).await
-    }
-
-    pub async fn address_info(&self, address: &str) -> Result<AddressInfo> {
-        let ext = format!("./addresses/{}", address);
-        self.get_endpoint(&ext).await
-    }
-
-    pub async fn utxos(&self, address: &str) -> Result<Vec<UTxO>> {
-        let ext = format!("./addresses/{}/utxos", address);
-        self.get_endpoint(&ext).await
-    }
-
-    pub async fn datum(&self, datum_hash: &str) -> Result<serde_json::Value> {
-        let ext = format!("./scripts/datum/{}", datum_hash);
-        self.get_endpoint(&ext).await
-    }
-
-    pub async fn assoc_addresses(&self, stake_address: &str) -> Result<Vec<Address>> {
-        let ext = format!("./accounts/{}/addresses", stake_address);
-        self.get_endpoint(&ext).await
+    pub async fn execution_units(&self) -> Result<()> {
+        todo!()
     }
 
     pub async fn account_associated_addresses_total(
@@ -197,5 +219,13 @@ pub mod tests {
             .await
             .unwrap();
         dbg!(&res);
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn execution_units() {
+        let bf = get_test_bf_http_clent().unwrap();
+        let base_addr = my_base_addr();
+        todo!()
     }
 }
