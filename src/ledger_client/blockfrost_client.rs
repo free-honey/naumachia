@@ -1,20 +1,14 @@
-use crate::ledger_client::LedgerClientError;
+use crate::ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult};
 use crate::values::Values;
-use crate::{
-    address,
-    ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, LedgerClientResult},
-    output::Output,
-    Address, PolicyId, Transaction,
-};
+use crate::{address, output::Output, Address, PolicyId, Transaction};
 use async_trait::async_trait;
+use blockfrost_http_client::keys::TESTNET;
 use blockfrost_http_client::schemas::{UTxO, Value};
 use blockfrost_http_client::BlockFrostHttpTrait;
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
 use futures::{future::join_all, FutureExt};
 use std::marker::PhantomData;
 use thiserror::Error;
-
-pub mod keys;
 
 pub struct BlockFrostLedgerClient<'a, Client: BlockFrostHttpTrait, Datum, Redeemer> {
     client: &'a Client,
@@ -57,7 +51,7 @@ fn output_cml_err(
 
 fn output_http_err(
     address: &Address,
-) -> impl Fn(blockfrost_http_client::Error) -> LedgerClientError + '_ {
+) -> impl Fn(blockfrost_http_client::error::Error) -> LedgerClientError + '_ {
     move |e| LedgerClientError::FailedToRetrieveOutputsAt(address.to_owned(), Box::new(e))
 }
 
@@ -167,7 +161,7 @@ fn convert_address(bf_addr: blockfrost_http_client::schemas::Address) -> Address
 mod tests {
     use super::*;
     use crate::PolicyId;
-    use blockfrost_http_client::{get_test_bf_http_clent, my_base_addr};
+    use blockfrost_http_client::{get_test_bf_http_client, keys::my_base_addr};
 
     #[ignore]
     #[tokio::test]
@@ -176,7 +170,7 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let client = get_test_bf_http_clent().unwrap();
+        let client = get_test_bf_http_client().unwrap();
 
         let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
 
@@ -192,7 +186,7 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let client = get_test_bf_http_clent().unwrap();
+        let client = get_test_bf_http_client().unwrap();
 
         let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
 
@@ -212,7 +206,7 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let client = get_test_bf_http_clent().unwrap();
+        let client = get_test_bf_http_client().unwrap();
 
         let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
 
