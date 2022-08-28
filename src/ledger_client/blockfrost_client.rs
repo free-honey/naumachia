@@ -1,10 +1,16 @@
-use crate::ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult};
-use crate::values::Values;
-use crate::{address, output::Output, Address, PolicyId, Transaction};
+use crate::{
+    address,
+    ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
+    output::Output,
+    values::Values,
+    Address, PolicyId, Transaction,
+};
 use async_trait::async_trait;
-use blockfrost_http_client::keys::TESTNET;
-use blockfrost_http_client::schemas::{UTxO, Value};
-use blockfrost_http_client::BlockFrostHttpTrait;
+use blockfrost_http_client::{
+    keys::TESTNET,
+    schemas::{UTxO, Value},
+    BlockFrostHttpTrait,
+};
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
 use futures::{future::join_all, FutureExt};
 use std::marker::PhantomData;
@@ -136,7 +142,7 @@ fn into_nau_output<Datum>(utxo: &UTxO, owner: &address::Address) -> Output<Datum
     let mut values = Values::default();
     utxo.amount()
         .iter()
-        .map(|value| as_nau_value(value))
+        .map(as_nau_value)
         .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
     Output::new_wallet(tx_hash, index, owner.to_owned(), values)
 }
