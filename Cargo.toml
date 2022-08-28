@@ -22,6 +22,9 @@ tiny-bip39 = "1.0.0"
 futures = "0.3.23"
 async-trait = "0.1.57"
 
+# 1st Party
+blockfrost-http-client = {path = "./blockfrost-http-client"}
+
 [dependencies.uuid]
 version = "1.1.2"
 features = [
@@ -35,3 +38,10 @@ clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
 tempfile = "3.3.0"
+
+[workspace]
+
+members = [
+    "blockfrost-http-client"
+]
+

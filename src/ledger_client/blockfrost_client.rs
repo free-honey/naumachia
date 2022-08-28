@@ -1,29 +1,39 @@
-use crate::ledger_client::blockfrost_client::blockfrost_http_client::get_test_bf_http_clent;
-use crate::ledger_client::LedgerClientError;
 use crate::{
-    ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, LedgerClientResult},
+    address,
+    ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
-    Address, Transaction,
+    values::Values,
+    Address, PolicyId, Transaction,
 };
 use async_trait::async_trait;
+use blockfrost_http_client::{
+    keys::TESTNET,
+    schemas::{UTxO, Value},
+    BlockFrostHttpTrait,
+};
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
 use futures::{future::join_all, FutureExt};
 use std::marker::PhantomData;
 use thiserror::Error;
 
-pub mod blockfrost_http_client;
-
-pub mod keys;
-
-#[derive(Default)]
-pub struct BlockFrostLedgerClient<Datum, Redeemer> {
+pub struct BlockFrostLedgerClient<'a, Client: BlockFrostHttpTrait, Datum, Redeemer> {
+    client: &'a Client,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<D: Default, R: Default> BlockFrostLedgerClient<D, R> {
-    pub fn new() -> Self {
-        BlockFrostLedgerClient::default()
+impl<'a, Client, D, R> BlockFrostLedgerClient<'a, Client, D, R>
+where
+    Client: BlockFrostHttpTrait,
+    D: Default,
+    R: Default,
+{
+    pub fn new(client: &'a Client) -> Self {
+        BlockFrostLedgerClient {
+            client,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        }
     }
 }
 #[derive(Debug, Error)]
@@ -47,7 +57,7 @@ fn output_cml_err(
 
 fn output_http_err(
     address: &Address,
-) -> impl Fn(blockfrost_http_client::Error) -> LedgerClientError + '_ {
+) -> impl Fn(blockfrost_http_client::error::Error) -> LedgerClientError + '_ {
     move |e| LedgerClientError::FailedToRetrieveOutputsAt(address.to_owned(), Box::new(e))
 }
 
@@ -59,8 +69,12 @@ fn invalid_base_addr(address: &Address) -> LedgerClientError {
 }
 
 #[async_trait]
-impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
-    for BlockFrostLedgerClient<Datum, Redeemer>
+impl<Client, Datum, Redeemer> LedgerClient<Datum, Redeemer>
+    for BlockFrostLedgerClient<'_, Client, Datum, Redeemer>
+where
+    Client: BlockFrostHttpTrait + Send + Sync,
+    Datum: Send + Sync,
+    Redeemer: Send + Sync,
 {
     async fn signer(&self) -> LedgerClientResult<&Address> {
         todo!()
@@ -83,9 +97,8 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                     .to_bech32(None)
                     .map_err(output_cml_err(address))?;
 
-                let bf = get_test_bf_http_clent().map_err(output_http_err(address))?;
-
-                let addresses = bf
+                let addresses = self
+                    .client
                     .assoc_addresses(&reward_addr)
                     .await
                     .map_err(output_http_err(address))?;
@@ -93,7 +106,8 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
                 let nested_utxos_futs: Vec<_> = addresses
                     .iter()
                     .map(|addr| {
-                        bf.utxos(addr.as_string())
+                        self.client
+                            .utxos(addr.as_string())
                             .map(|utxos| (addr.to_owned(), utxos))
                     })
                     .collect();
@@ -104,10 +118,10 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
 
                 for (addr, utxos_res) in nested_utxos {
                     let utxos = utxos_res.map_err(output_http_err(address))?;
-                    let nau_addr = addr.into();
+                    let nau_addr = convert_address(addr);
                     let nau_outputs: Vec<_> = utxos
                         .iter()
-                        .map(|utxo| utxo.into_nau_output(&nau_addr))
+                        .map(|utxo| into_nau_output(utxo, &nau_addr))
                         .collect();
                     outputs_for_all_addresses.extend(nau_outputs);
                 }
@@ -122,25 +136,38 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> LedgerClient<Datum, Redeemer>
     }
 }
 
+fn into_nau_output<Datum>(utxo: &UTxO, owner: &address::Address) -> Output<Datum> {
+    let tx_hash = utxo.tx_hash().to_owned();
+    let index = utxo.output_index().to_owned();
+    let mut values = Values::default();
+    utxo.amount()
+        .iter()
+        .map(as_nau_value)
+        .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
+    Output::new_wallet(tx_hash, index, owner.to_owned(), values)
+}
+
+fn as_nau_value(value: &Value) -> (PolicyId, u64) {
+    let policy_id = match value.unit() {
+        "lovelace" => PolicyId::ADA,
+        native_token => {
+            let policy = &native_token[..56]; // TODO: Use the rest as asset info
+            PolicyId::native_token(policy)
+        }
+    };
+    let amount = value.quantity().parse().unwrap(); // TODO: unwrap
+    (policy_id, amount)
+}
+
+fn convert_address(bf_addr: blockfrost_http_client::schemas::Address) -> Address {
+    Address::new(bf_addr.as_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger_client::blockfrost_client::keys::{
-        base_address_from_entropy, load_phrase_from_file, TESTNET,
-    };
     use crate::PolicyId;
-    use bip39::{Language, Mnemonic};
-
-    const CONFIG_PATH: &str = ".blockfrost.toml";
-
-    pub fn my_base_addr() -> BaseAddress {
-        let phrase = load_phrase_from_file(CONFIG_PATH);
-        let mnemonic = Mnemonic::from_phrase(&phrase, Language::English).unwrap();
-
-        let entropy = mnemonic.entropy();
-
-        base_address_from_entropy(entropy, TESTNET)
-    }
+    use blockfrost_http_client::{get_test_bf_http_client, keys::my_base_addr};
 
     #[ignore]
     #[tokio::test]
@@ -149,7 +176,9 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let bf = BlockFrostLedgerClient::<(), ()>::new();
+        let client = get_test_bf_http_client().unwrap();
+
+        let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
 
         let my_utxos = bf.outputs_at_address(&my_addr).await.unwrap();
 
@@ -163,9 +192,14 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let bf = BlockFrostLedgerClient::<(), ()>::new();
+        let client = get_test_bf_http_client().unwrap();
 
-        let my_balance = bf.balance_at_address(&my_addr, &PolicyId::ADA).await;
+        let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
+
+        let my_balance = bf
+            .balance_at_address(&my_addr, &PolicyId::ADA)
+            .await
+            .unwrap();
 
         println!();
         println!("ADA: {:?}", my_balance);
@@ -178,13 +212,14 @@ mod tests {
         let addr_string = base_addr.to_address().to_bech32(None).unwrap();
         let my_addr = Address::Base(addr_string);
 
-        let bf = BlockFrostLedgerClient::<(), ()>::new();
+        let client = get_test_bf_http_client().unwrap();
+
+        let bf = BlockFrostLedgerClient::<_, (), ()>::new(&client);
 
         let policy =
             PolicyId::native_token("57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522");
-        let my_balance = bf.balance_at_address(&my_addr, &policy).await;
+        let my_balance = bf.balance_at_address(&my_addr, &policy).await.unwrap();
 
-        dbg!(&policy);
         println!();
         println!("Native Token {:?}: {:?}", policy, my_balance);
     }
