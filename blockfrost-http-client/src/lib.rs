@@ -2,7 +2,6 @@ use crate::schemas::{Address, AddressInfo, Genesis, UTxO};
 use async_trait::async_trait;
 use cardano_multiplatform_lib::address::{BaseAddress, StakeCredential};
 use serde::de::DeserializeOwned;
-use serde_json::Value;
 use std::path::Path;
 use std::{fs, io};
 use thiserror::Error;

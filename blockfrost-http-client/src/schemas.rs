@@ -24,18 +24,19 @@ pub struct UTxO {
     data_hash: Option<String>,
 }
 
-// impl UTxO {
-//     pub fn into_nau_output<Datum>(&self, owner: &address::Address) -> Output<Datum> {
-//         let tx_hash = self.tx_hash.to_owned();
-//         let index = self.output_index.to_owned();
-//         let mut values = Values::default();
-//         self.amount
-//             .iter()
-//             .map(|value| value.as_nau_value())
-//             .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
-//         Output::new_wallet(tx_hash, index, owner.to_owned(), values)
-//     }
-// }
+impl UTxO {
+    pub fn tx_hash(&self) -> &str {
+        &self.tx_hash
+    }
+
+    pub fn output_index(&self) -> u32 {
+        self.output_index
+    }
+
+    pub fn amount(&self) -> &Vec<Value> {
+        &self.amount
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct Value {
@@ -43,19 +44,15 @@ pub struct Value {
     quantity: String,
 }
 
-// impl Value {
-//     pub fn as_nau_value(&self) -> (PolicyId, u64) {
-//         let policy_id = match self.unit.as_str() {
-//             "lovelace" => PolicyId::ADA,
-//             native_token => {
-//                 let policy = &native_token[..56]; // TODO: Use the rest as asset info
-//                 PolicyId::native_token(policy)
-//             }
-//         };
-//         let amount = self.quantity.parse().unwrap(); // TODO: unwrap
-//         (policy_id, amount)
-//     }
-// }
+impl Value {
+    pub fn unit(&self) -> &str {
+        &self.unit
+    }
+
+    pub fn quantity(&self) -> &str {
+        &self.quantity
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct AddressInfo {
@@ -70,12 +67,6 @@ pub struct AddressInfo {
 pub struct Address {
     address: String,
 }
-
-// impl From<Address> for address::Address {
-//     fn from(addr: Address) -> Self {
-//         address::Address::new(addr.as_string())
-//     }
-// }
 
 impl Address {
     pub fn as_string(&self) -> &str {

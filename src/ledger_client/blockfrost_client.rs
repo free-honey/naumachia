@@ -1,19 +1,18 @@
-use crate::ledger_client::blockfrost_client::blockfrost_http_client::{
-    get_test_bf_http_clent, BlockFrostHttpTrait,
-};
 use crate::ledger_client::LedgerClientError;
+use crate::values::Values;
 use crate::{
+    address,
     ledger_client::{blockfrost_client::keys::TESTNET, LedgerClient, LedgerClientResult},
     output::Output,
-    Address, Transaction,
+    Address, PolicyId, Transaction,
 };
 use async_trait::async_trait;
+use blockfrost_http_client::schemas::{UTxO, Value};
+use blockfrost_http_client::BlockFrostHttpTrait;
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
 use futures::{future::join_all, FutureExt};
 use std::marker::PhantomData;
 use thiserror::Error;
-
-pub mod blockfrost_http_client;
 
 pub mod keys;
 
@@ -119,10 +118,10 @@ where
 
                 for (addr, utxos_res) in nested_utxos {
                     let utxos = utxos_res.map_err(output_http_err(address))?;
-                    let nau_addr = addr.into();
+                    let nau_addr = convert_address(addr);
                     let nau_outputs: Vec<_> = utxos
                         .iter()
-                        .map(|utxo| utxo.into_nau_output(&nau_addr))
+                        .map(|utxo| into_nau_output(utxo, &nau_addr))
                         .collect();
                     outputs_for_all_addresses.extend(nau_outputs);
                 }
@@ -137,26 +136,38 @@ where
     }
 }
 
+fn into_nau_output<Datum>(utxo: &UTxO, owner: &address::Address) -> Output<Datum> {
+    let tx_hash = utxo.tx_hash().to_owned();
+    let index = utxo.output_index().to_owned();
+    let mut values = Values::default();
+    utxo.amount()
+        .iter()
+        .map(|value| as_nau_value(value))
+        .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
+    Output::new_wallet(tx_hash, index, owner.to_owned(), values)
+}
+
+fn as_nau_value(value: &Value) -> (PolicyId, u64) {
+    let policy_id = match value.unit() {
+        "lovelace" => PolicyId::ADA,
+        native_token => {
+            let policy = &native_token[..56]; // TODO: Use the rest as asset info
+            PolicyId::native_token(policy)
+        }
+    };
+    let amount = value.quantity().parse().unwrap(); // TODO: unwrap
+    (policy_id, amount)
+}
+
+fn convert_address(bf_addr: blockfrost_http_client::schemas::Address) -> Address {
+    Address::new(bf_addr.as_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger_client::blockfrost_client::blockfrost_http_client::BlockFrostHttp;
-    use crate::ledger_client::blockfrost_client::keys::{
-        base_address_from_entropy, load_phrase_from_file, TESTNET,
-    };
     use crate::PolicyId;
-    use bip39::{Language, Mnemonic};
-
-    const CONFIG_PATH: &str = ".blockfrost.toml";
-
-    pub fn my_base_addr() -> BaseAddress {
-        let phrase = load_phrase_from_file(CONFIG_PATH);
-        let mnemonic = Mnemonic::from_phrase(&phrase, Language::English).unwrap();
-
-        let entropy = mnemonic.entropy();
-
-        base_address_from_entropy(entropy, TESTNET)
-    }
+    use blockfrost_http_client::{get_test_bf_http_clent, my_base_addr};
 
     #[ignore]
     #[tokio::test]
