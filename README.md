@@ -88,9 +88,9 @@ Successfully updated signer to "Bob"!
 
 claim the active contract with Bob as recipient
 ```
-> cargo run --example escrow-cli claim cfb9ad1a-9621-4ed0-9d33-f0d25a37817e
+> cargo run --example escrow-cli claim ec6b54b6-238c-435c-8b1a-536831d97bc3
 
-Successfully claimed output cfb9ad1a-9621-4ed0-9d33-f0d25a37817e!
+Successfully claimed output OutputId { tx_hash: "ec6b54b6-238c-435c-8b1a-536831d97bc3", index: 0 }!
 ```
 
 now check Bob's balance
