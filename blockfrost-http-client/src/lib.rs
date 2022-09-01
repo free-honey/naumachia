@@ -51,6 +51,8 @@ pub trait BlockFrostHttpTrait {
     async fn datum(&self, datum_hash: &str) -> Result<serde_json::Value>;
 
     async fn assoc_addresses(&self, stake_address: &str) -> Result<Vec<Address>>;
+
+    async fn execution_units(&self) -> Result<()>;
 }
 
 #[async_trait]
@@ -79,6 +81,10 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
         let ext = format!("./accounts/{}/addresses", stake_address);
         self.get_endpoint(&ext).await
     }
+
+    async fn execution_units(&self) -> Result<()> {
+        todo!()
+    }
 }
 
 impl BlockFrostHttp {
@@ -89,10 +95,6 @@ impl BlockFrostHttp {
             parent_url,
             api_key,
         }
-    }
-
-    pub async fn execution_units(&self) -> Result<()> {
-        todo!()
     }
 
     pub async fn account_associated_addresses_total(

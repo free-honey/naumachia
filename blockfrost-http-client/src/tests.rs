@@ -1,6 +1,43 @@
 use super::*;
 use crate::keys::{my_base_addr, TESTNET};
 use cardano_multiplatform_lib::address::RewardAddress;
+use cardano_multiplatform_lib::builders::tx_builder::{
+    TransactionBuilder, TransactionBuilderConfigBuilder,
+};
+use cardano_multiplatform_lib::ledger::alonzo::fees::LinearFee;
+use cardano_multiplatform_lib::ledger::common::value::BigNum;
+use cardano_multiplatform_lib::plutus::ExUnitPrices;
+use cardano_multiplatform_lib::{Transaction, UnitInterval};
+
+// Most of these values are made up
+fn test_tx_builder() -> TransactionBuilder {
+    let coefficient = BigNum::from_str("44").unwrap();
+    let constant = BigNum::from_str("155381").unwrap();
+    let linear_fee = LinearFee::new(&coefficient, &constant);
+    let pool_deposit = BigNum::from_str("500000000").unwrap();
+    let key_deposit = BigNum::from_str("2000000").unwrap();
+    let coins_per_utxo_byte = BigNum::from_str("34482").unwrap();
+    let mem_num = BigNum::from_str("123").unwrap();
+    let mem_den = BigNum::from_str("456").unwrap();
+    let mem_price = UnitInterval::new(&mem_num, &mem_den);
+    let step_num = BigNum::from_str("123").unwrap();
+    let step_den = BigNum::from_str("456").unwrap();
+    let step_price = UnitInterval::new(&step_num, &step_den);
+    let ex_unit_prices = ExUnitPrices::new(&mem_price, &step_price);
+    let tx_builder_cfg = TransactionBuilderConfigBuilder::new()
+        .fee_algo(&linear_fee)
+        .pool_deposit(&pool_deposit)
+        .key_deposit(&key_deposit)
+        .max_value_size(4000)
+        .max_tx_size(8000)
+        .coins_per_utxo_byte(&coins_per_utxo_byte)
+        .ex_unit_prices(&ex_unit_prices)
+        .collateral_percentage(1)
+        .max_collateral_inputs(5)
+        .build()
+        .unwrap();
+    TransactionBuilder::new(&tx_builder_cfg)
+}
 
 #[ignore]
 #[tokio::test]
@@ -86,5 +123,13 @@ async fn account_associated_addresses_total() {
 async fn execution_units() {
     let bf = get_test_bf_http_client().unwrap();
     let base_addr = my_base_addr();
-    todo!()
+
+    let mut tx_builder = test_tx_builder();
+    let fee = BigNum::zero();
+    tx_builder.set_fee(&fee);
+    let tx_redeemer_builder = tx_builder.build().unwrap();
+    let signed_tx_builder = tx_redeemer_builder.build().unwrap();
+    let transaction = signed_tx_builder.build_unchecked();
+    let bytes = transaction.to_bytes();
+    dbg!(&bytes);
 }
