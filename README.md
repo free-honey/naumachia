@@ -65,17 +65,20 @@ Successfully submitted escrow for 200 Lovelace to Bob!
 ```
 
 list all active contracts
+
 ```
 > cargo run --example escrow-cli list
 
 Active contracts:
-id: "cfb9ad1a-9621-4ed0-9d33-f0d25a37817e", recipient: Address("Bob"), values: {None: 200}
+id: OutputId { tx_hash: "fbf651f8-c60f-419d-9d36-221c205339b9", index: 0 }, recipient: Raw("Bob"), values: Values { values: {ADA: 200} }
 ```
-if you try to claim the contract as Alice, the contract will return an error:
-```
-> cargo run --example escrow-cli claim cfb9ad1a-9621-4ed0-9d33-f0d25a37817e
 
-thread 'main' panicked at 'unable to claim output: Script(FailedToExecute("Signer: Address(\"Alice\") doesn't match receiver: Address(\"Bob\")"))', examples/escrow-cli/main.rs:63:58
+if you try to claim the contract as Alice, the contract will return an error:
+
+```
+> cargo run --example escrow-cli claim fbf651f8-c60f-419d-9d36-221c205339b9 0
+
+thread 'main' panicked at 'unable to claim output: Script(FailedToExecute("Signer: Raw(\"Alice\") doesn't match receiver: Raw(\"Bob\")"))', examples/escrow-cli/main.rs:74:14
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ```
 
@@ -88,9 +91,9 @@ Successfully updated signer to "Bob"!
 
 claim the active contract with Bob as recipient
 ```
-> cargo run --example escrow-cli claim cfb9ad1a-9621-4ed0-9d33-f0d25a37817e
+> cargo run --example escrow-cli claim fbf651f8-c60f-419d-9d36-221c205339b9 0
 
-Successfully claimed output cfb9ad1a-9621-4ed0-9d33-f0d25a37817e!
+Successfully claimed output OutputId { tx_hash: "fbf651f8-c60f-419d-9d36-221c205339b9", index: 0 }!
 ```
 
 now check Bob's balance
