@@ -1,4 +1,4 @@
-use crate::schemas::{Address, AddressInfo, Genesis, UTxO};
+use crate::schemas::{Address, AddressInfo, EvaluateTxResult, Genesis, UTxO};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::{fs, path::Path};
@@ -52,7 +52,9 @@ pub trait BlockFrostHttpTrait {
 
     async fn assoc_addresses(&self, stake_address: &str) -> Result<Vec<Address>>;
 
-    async fn execution_units(&self) -> Result<()>;
+    async fn account_associated_addresses_total(&self, base_addr: &str) -> Result<Vec<Address>>;
+
+    async fn execution_units(&self, bytes: &[u8]) -> Result<EvaluateTxResult>;
 }
 
 #[async_trait]
@@ -82,8 +84,27 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
         self.get_endpoint(&ext).await
     }
 
-    async fn execution_units(&self) -> Result<()> {
-        todo!()
+    async fn account_associated_addresses_total(&self, base_addr: &str) -> Result<Vec<Address>> {
+        let ext = format!("./accounts/{}/addresses/total", base_addr);
+        dbg!(&ext);
+        self.get_endpoint(&ext).await
+    }
+
+    async fn execution_units(&self, bytes: &[u8]) -> Result<EvaluateTxResult> {
+        let ext = format!("./utils/txs/evaluate");
+        let url = Url::parse(&self.parent_url)?.join(&ext)?;
+        let client = reqwest::Client::new();
+        let project_id = &self.api_key;
+        let encoded = hex::encode(bytes);
+        let res = client
+            .post(url)
+            .header("Content-Type", "application/cbor")
+            .header("project_id", project_id)
+            .body(encoded)
+            .send()
+            .await
+            .unwrap();
+        Ok(res.json().await?)
     }
 }
 
@@ -95,16 +116,6 @@ impl BlockFrostHttp {
             parent_url,
             api_key,
         }
-    }
-
-    pub async fn account_associated_addresses_total(
-        &self,
-        base_addr: &str,
-    ) -> Result<Vec<Address>> {
-        // pub async fn account_associated_addresses(&self, base_addr: &str) -> Result<AccountAssocAddr> {
-        let ext = format!("./accounts/{}/addresses/total", base_addr);
-        dbg!(&ext);
-        self.get_endpoint(&ext).await
     }
 
     async fn get_endpoint<T: DeserializeOwned>(&self, ext: &str) -> Result<T> {

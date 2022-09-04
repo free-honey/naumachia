@@ -1,13 +1,27 @@
 use super::*;
 use crate::keys::{my_base_addr, TESTNET};
 use cardano_multiplatform_lib::address::RewardAddress;
+use cardano_multiplatform_lib::builders::output_builder::SingleOutputBuilderResult;
 use cardano_multiplatform_lib::builders::tx_builder::{
     TransactionBuilder, TransactionBuilderConfigBuilder,
 };
+use cardano_multiplatform_lib::crypto::TransactionHash;
 use cardano_multiplatform_lib::ledger::alonzo::fees::LinearFee;
-use cardano_multiplatform_lib::ledger::common::value::BigNum;
-use cardano_multiplatform_lib::plutus::ExUnitPrices;
-use cardano_multiplatform_lib::{Transaction, UnitInterval};
+use cardano_multiplatform_lib::ledger::common::value::{BigInt, BigNum, Value};
+use cardano_multiplatform_lib::plutus::{
+    CostModel, Costmdls, ExUnitPrices, Language, PlutusData, PlutusScript, PlutusScriptEnum,
+    PlutusV1Script,
+};
+use cardano_multiplatform_lib::{
+    RequiredSigners, TransactionInput, TransactionOutput, UnitInterval,
+};
+use std::fs::File;
+use std::io::Read;
+
+use cardano_multiplatform_lib::address::Address as CMLAddress;
+use cardano_multiplatform_lib::builders::input_builder::SingleInputBuilder;
+use cardano_multiplatform_lib::builders::witness_builder::PartialPlutusWitness;
+use serde_json::map::Values;
 
 // Most of these values are made up
 fn test_tx_builder() -> TransactionBuilder {
@@ -24,6 +38,11 @@ fn test_tx_builder() -> TransactionBuilder {
     let step_den = BigNum::from_str("456").unwrap();
     let step_price = UnitInterval::new(&step_num, &step_den);
     let ex_unit_prices = ExUnitPrices::new(&mem_price, &step_price);
+    let mut cost_models = Costmdls::new();
+    let language = Language::new_plutus_v1();
+    let op_costs = Vec::new();
+    let v1_model = CostModel::new(&language, &op_costs);
+    cost_models.insert(&v1_model);
     let tx_builder_cfg = TransactionBuilderConfigBuilder::new()
         .fee_algo(&linear_fee)
         .pool_deposit(&pool_deposit)
@@ -34,6 +53,7 @@ fn test_tx_builder() -> TransactionBuilder {
         .ex_unit_prices(&ex_unit_prices)
         .collateral_percentage(1)
         .max_collateral_inputs(5)
+        .costmdls(&cost_models)
         .build()
         .unwrap();
     TransactionBuilder::new(&tx_builder_cfg)
@@ -125,11 +145,97 @@ async fn execution_units() {
     let base_addr = my_base_addr();
 
     let mut tx_builder = test_tx_builder();
-    let fee = BigNum::zero();
-    tx_builder.set_fee(&fee);
+
+    // Add input
+    let index = BigNum::from_str("0").unwrap();
+    let hash_raw = "8561258e210352fba2ac0488afed67b3427a27ccf1d41ec030c98a8199bc22ec";
+    let tx_hash = TransactionHash::from_hex(hash_raw).unwrap();
+    let input = TransactionInput::new(
+        &tx_hash, // tx hash
+        &index,   // index
+    );
+    let coin = BigNum::from_str("23000000").unwrap();
+    let value = Value::new(&coin);
+    let utxo_info = TransactionOutput::new(&base_addr.to_address(), &value);
+    let input_builder = SingleInputBuilder::new(&input, &utxo_info);
+    let script_bytes = read_script_from_file("./game.plutus");
+    let v1 = PlutusV1Script::new(script_bytes);
+    let script = PlutusScript::from_v1(&v1);
+    let redeemer_integer = BigInt::from_str("456").unwrap();
+    let data = PlutusData::new_integer(&redeemer_integer);
+    let partial_witness = PartialPlutusWitness::new(&script, &data);
+    let required_signers = RequiredSigners::new();
+    let datum_integer = BigInt::from_str("123").unwrap();
+    let datum = PlutusData::new_integer(&datum_integer);
+    let input_builder_res = input_builder
+        .plutus_script(&partial_witness, &required_signers, &datum)
+        .unwrap();
+    tx_builder.add_input(&input_builder_res);
+
+    // Add output
+    let output_address = CMLAddress::from_bech32("addr_test1qpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5ewvxwdrt70qlcpeeagscasafhffqsxy36t90ldv06wqrk2qum8x5w").unwrap();
+    let coin = BigNum::from_str("17758450").unwrap();
+    let value = Value::new(&coin);
+    let output = TransactionOutput::new(&output_address, &value);
+    let single_output = SingleOutputBuilderResult::new(&output);
+    tx_builder.add_output(&single_output).unwrap();
+
+    // Add change address
+    let change_address = CMLAddress::from_bech32(
+        "addr_test1gz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzerspqgpsqe70et",
+    )
+    .unwrap();
+    tx_builder.add_change_if_needed(&change_address).unwrap();
+
     let tx_redeemer_builder = tx_builder.build().unwrap();
     let signed_tx_builder = tx_redeemer_builder.build().unwrap();
+
     let transaction = signed_tx_builder.build_unchecked();
     let bytes = transaction.to_bytes();
-    dbg!(&bytes);
+
+    let res = bf.execution_units(&bytes).await.unwrap();
+
+    dbg!(res);
 }
+
+fn read_script_from_file(file_path: &str) -> Vec<u8> {
+    let mut file = File::open(file_path).unwrap();
+    let mut data = String::new();
+    file.read_to_string(&mut data).unwrap();
+    let script_file: PlutusScriptFile = serde_json::from_str(&data).unwrap();
+    hex::decode(script_file.cbor_hex()).unwrap()
+}
+
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+struct PlutusScriptFile {
+    r#type: String,
+    description: String,
+    cborHex: String,
+}
+
+impl PlutusScriptFile {
+    pub fn cbor_hex(&self) -> &str {
+        &self.cborHex
+    }
+}
+
+// -- create a data script for the guessing game by hashing the string
+// -- and lifting the hash to its on-chain representation
+// hashString :: Haskell.String -> HashedString
+// hashString = HashedString . sha2_256 . toBuiltin . C.pack
+//
+// -- create a redeemer script for the guessing game by lifting the
+// -- string to its on-chain representation
+// clearString :: Haskell.String -> ClearString
+// clearString = ClearString . toBuiltin . C.pack
+//
+// -- | The validation function (Datum -> Redeemer -> ScriptContext -> Bool)
+// validateGuess :: HashedString -> ClearString -> ScriptContext -> Bool
+// validateGuess hs cs _ = isGoodGuess hs cs
+//
+// isGoodGuess :: HashedString -> ClearString -> Bool
+// isGoodGuess (HashedString actual) (ClearString guess') = actual == sha2_256 guess'
+#[test]
+fn can_submit_script() {}

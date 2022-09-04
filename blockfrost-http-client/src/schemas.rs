@@ -1,5 +1,7 @@
 #![allow(unused)]
+
 use serde::Deserialize;
+use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
 pub struct Genesis {
@@ -81,3 +83,38 @@ pub struct AccountAssocAddrTotal {
     sent_sum: Vec<Value>,
     tx_count: u32,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct Fault {
+    code: String,
+    string: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct EvaluateTxResult {
+    methodname: Option<String>,
+    reflection: HashMap<String, String>,
+    result: serde_json::Value,
+    fault: Option<HashMap<String, String>>,
+    servicename: String,
+    r#type: String,
+    version: String,
+}
+
+//"result": Object({
+//         "EvaluationFailure": Object({
+//             "ScriptFailures": Object({
+//                 "spend:0": Array([
+//                     Object({
+//                         "extraRedeemers": Array([
+//                             String(
+//                                 "spend:0",
+//                             ),
+//                         ]),
+//                     }),
+//                 ]),
+//             }),
+//         }),
+//     }),
+#[derive(Deserialize, Debug)]
+pub struct EvaluationFailure {}
