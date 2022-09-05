@@ -1,4 +1,4 @@
-use crate::schemas::{Address, AddressInfo, EvaluateTxResult, Genesis, UTxO};
+use crate::schemas::{Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, UTxO};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::{fs, path::Path};
@@ -44,6 +44,8 @@ pub struct BlockFrostHttp {
 pub trait BlockFrostHttpTrait {
     async fn genesis(&self) -> Result<Genesis>;
 
+    async fn protocol_params(&self, epoch: u32) -> Result<ProtocolParams>;
+
     async fn address_info(&self, address: &str) -> Result<AddressInfo>;
 
     async fn utxos(&self, address: &str) -> Result<Vec<UTxO>>;
@@ -62,6 +64,11 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
     async fn genesis(&self) -> Result<Genesis> {
         let ext = "./genesis";
         self.get_endpoint(ext).await
+    }
+
+    async fn protocol_params(&self, epoch: u32) -> Result<ProtocolParams> {
+        let ext = format!("./epochs/{}/parameters", epoch);
+        self.get_endpoint(&ext).await
     }
 
     async fn address_info(&self, address: &str) -> Result<AddressInfo> {

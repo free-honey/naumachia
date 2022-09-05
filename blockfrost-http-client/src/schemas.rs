@@ -17,6 +17,55 @@ pub struct Genesis {
     security_param: u32,
 }
 
+#[allow(non_snake_case)]
+#[derive(Deserialize, Debug)]
+pub struct CostModels {
+    PlutusV1: HashMap<String, u64>,
+    PlutusV2: HashMap<String, u64>,
+}
+
+// #[derive(Deserialize, Debug)]
+// pub struct CostModel {
+//     addInteger_cpu_arguments_intercept: u32,
+//     addInteger_cpu_arguments_slope: u32,
+// }
+
+#[derive(Deserialize, Debug)]
+pub struct ProtocolParams {
+    epoch: u32,
+    min_fee_a: u32,
+    min_fee_b: u32,
+    max_block_size: u32,
+    max_tx_size: u32,
+    max_block_header_size: u32,
+    key_deposit: String,
+    pool_deposit: String,
+    e_max: u32,
+    n_opt: u32,
+    a0: f32,
+    rho: f32,
+    tau: f32,
+    decentralisation_param: f32,
+    extra_entropy: Option<serde_json::Value>,
+    protocol_major_ver: u32,
+    protocol_minor_ver: u32,
+    min_utxo: String,
+    min_pool_cost: String,
+    nonce: String,
+    price_mem: f32,
+    price_step: f32,
+    max_tx_ex_mem: String,
+    max_tx_ex_steps: String,
+    max_block_ex_mem: String,
+    max_block_ex_steps: String,
+    max_val_size: String,
+    collateral_percent: u32,
+    max_collateral_inputs: u32,
+    coins_per_utxo_size: String,
+    coins_per_utxo_word: String,
+    cost_models: CostModels,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct UTxO {
     tx_hash: String,
