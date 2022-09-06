@@ -1,5 +1,5 @@
 use super::*;
-use crate::keys::{my_base_addr, TESTNET};
+use crate::keys::{my_base_addr, MAINNET, TESTNET};
 use cardano_multiplatform_lib::address::{EnterpriseAddress, RewardAddress, StakeCredential};
 use cardano_multiplatform_lib::builders::output_builder::SingleOutputBuilderResult;
 use cardano_multiplatform_lib::builders::tx_builder::{
@@ -185,6 +185,30 @@ fn payment_input(amt: u64, owner_addr: &CMLAddress) -> InputBuilderResult {
     input_builder.payment_key().unwrap()
 }
 
+fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
+    let mut file = File::open(file_path).unwrap();
+    let mut data = String::new();
+    file.read_to_string(&mut data).unwrap();
+    serde_json::from_str(&data).unwrap()
+}
+
+fn always_succeeds_script() -> PlutusScript {
+    let script_file = read_script_from_file("./always-succeeds-spending.plutus");
+    // let script_file = read_script_from_file("./game.plutus");
+    let script_hex = script_file.cborHex;
+    let script_bytes = hex::decode(&script_hex).unwrap();
+    let v1 = PlutusV1Script::from_bytes(script_bytes).unwrap();
+    PlutusScript::from_v1(&v1)
+}
+
+fn always_succeeds_script_address() -> CMLAddress {
+    let script = always_succeeds_script();
+    let script_hash = script.hash();
+    let stake_cred = StakeCredential::from_scripthash(&script_hash);
+    let enterprise_addr = EnterpriseAddress::new(TESTNET, &stake_cred);
+    enterprise_addr.to_address()
+}
+
 fn script_input(amt: u64) -> InputBuilderResult {
     let hash_raw = "8561258e210352fba2ac0488afed67b3427a27ccf1d41ec030c98a8199bc22ec";
     let index = BigNum::from_str("1").unwrap();
@@ -193,14 +217,9 @@ fn script_input(amt: u64) -> InputBuilderResult {
         &tx_hash, // tx hash
         &index,   // index
     );
-    let script_bytes = read_script_from_file("./game.plutus");
-    let v1 = PlutusV1Script::new(script_bytes);
-    let script = PlutusScript::from_v1(&v1);
 
-    let script_hash = script.hash();
-    let stake_cred = StakeCredential::from_scripthash(&script_hash);
-    let enterprise_addr = EnterpriseAddress::new(TESTNET, &stake_cred);
-    let script_addr = enterprise_addr.to_address();
+    let script = always_succeeds_script();
+    let script_addr = always_succeeds_script_address();
 
     let coin = amt.into();
     let value = Value::new(&coin);
@@ -267,14 +286,6 @@ async fn execution_units() {
     dbg!(res);
 }
 
-fn read_script_from_file(file_path: &str) -> Vec<u8> {
-    let mut file = File::open(file_path).unwrap();
-    let mut data = String::new();
-    file.read_to_string(&mut data).unwrap();
-    let script_file: PlutusScriptFile = serde_json::from_str(&data).unwrap();
-    hex::decode(script_file.cbor_hex()).unwrap()
-}
-
 use serde::Deserialize;
 
 #[allow(non_snake_case)]
@@ -308,5 +319,12 @@ impl PlutusScriptFile {
 //
 // isGoodGuess :: HashedString -> ClearString -> Bool
 // isGoodGuess (HashedString actual) (ClearString guess') = actual == sha2_256 guess'
-#[test]
-fn can_submit_script() {}
+#[ignore]
+#[tokio::test]
+async fn doodle() {
+    let script_addr = always_succeeds_script_address().to_bech32(None).unwrap();
+    dbg!(script_addr);
+    // let ___cli_addr = "addr1w8nnz8lt7pzhrdx4cfh83tym479jwgqjn38kh2p42g95ykc57pc9j";
+    // for `game.plutus`
+    // dbg!(___cli_addr);
+}
