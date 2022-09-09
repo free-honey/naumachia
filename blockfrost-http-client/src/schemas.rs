@@ -69,10 +69,35 @@ pub struct ProtocolParams {
 #[derive(Deserialize, Debug)]
 pub struct UTxO {
     tx_hash: String,
-    output_index: u32,
+    output_index: u64,
     amount: Vec<Value>,
     block: String,
     data_hash: Option<String>,
+}
+
+impl UTxO {
+    pub fn data_hash(&self) -> &Option<String> {
+        &self.data_hash
+    }
+
+    pub fn with_data(&self, data: Option<serde_json::Value>) -> UTxOWithData {
+        UTxOWithData {
+            tx_hash: self.tx_hash.clone(),
+            output_index: self.output_index.clone(),
+            amount: self.amount.clone(),
+            block: self.block.clone(),
+            data,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct UTxOWithData {
+    tx_hash: String,
+    output_index: u64,
+    amount: Vec<Value>,
+    block: String,
+    data: Option<serde_json::Value>,
 }
 
 impl UTxO {
@@ -80,7 +105,7 @@ impl UTxO {
         &self.tx_hash
     }
 
-    pub fn output_index(&self) -> u32 {
+    pub fn output_index(&self) -> u64 {
         self.output_index
     }
 
@@ -89,10 +114,10 @@ impl UTxO {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Value {
-    unit: String,
-    quantity: String,
+    pub(crate) unit: String,
+    pub(crate) quantity: String,
 }
 
 impl Value {

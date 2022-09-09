@@ -1,25 +1,27 @@
 use super::*;
 use crate::keys::{my_base_addr, MAINNET, TESTNET};
-use cardano_multiplatform_lib::address::{EnterpriseAddress, RewardAddress, StakeCredential};
-use cardano_multiplatform_lib::builders::output_builder::SingleOutputBuilderResult;
-use cardano_multiplatform_lib::builders::tx_builder::{
-    ChangeSelectionAlgo, TransactionBuilder, TransactionBuilderConfigBuilder,
-};
-use cardano_multiplatform_lib::crypto::TransactionHash;
-use cardano_multiplatform_lib::ledger::alonzo::fees::LinearFee;
-use cardano_multiplatform_lib::ledger::common::value::{BigInt, BigNum, Int, Value};
-use cardano_multiplatform_lib::plutus::{
-    CostModel, Costmdls, ExUnitPrices, Language, PlutusData, PlutusScript, PlutusV1Script,
-};
 use cardano_multiplatform_lib::{
-    RequiredSigners, TransactionInput, TransactionOutput, UnitInterval,
+    address::Address as CMLAddress,
+    address::{EnterpriseAddress, RewardAddress, StakeCredential},
+    builders::input_builder::{InputBuilderResult, SingleInputBuilder},
+    builders::output_builder::SingleOutputBuilderResult,
+    builders::tx_builder::{
+        ChangeSelectionAlgo, TransactionBuilder, TransactionBuilderConfigBuilder,
+    },
+    builders::witness_builder::PartialPlutusWitness,
+    crypto::TransactionHash,
+    ledger::alonzo::fees::LinearFee,
+    ledger::common::value::{BigInt, BigNum, Int, Value as CMLValue},
+    plutus::{
+        CostModel, Costmdls, ExUnitPrices, Language, PlutusData, PlutusScript, PlutusV1Script,
+    },
+    AssetName, Assets, MultiAsset, PolicyID, RequiredSigners, TransactionInput, TransactionOutput,
+    UnitInterval,
 };
 use std::fs::File;
 use std::io::Read;
 
-use cardano_multiplatform_lib::address::Address as CMLAddress;
-use cardano_multiplatform_lib::builders::input_builder::{InputBuilderResult, SingleInputBuilder};
-use cardano_multiplatform_lib::builders::witness_builder::PartialPlutusWitness;
+use futures::future::join_all;
 
 #[ignore]
 #[tokio::test]
@@ -178,7 +180,7 @@ fn payment_input(amt: u64, owner_addr: &CMLAddress) -> InputBuilderResult {
         &index,   // index
     );
     let coin = amt.into();
-    let value = Value::new(&coin);
+    let value = CMLValue::new(&coin);
     let utxo_info = TransactionOutput::new(&owner_addr, &value);
     let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
 
@@ -194,7 +196,6 @@ fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
 
 fn always_succeeds_script() -> PlutusScript {
     let script_file = read_script_from_file("./always-succeeds-spending.plutus");
-    // let script_file = read_script_from_file("./game.plutus");
     let script_hex = script_file.cborHex;
     let script_bytes = hex::decode(&script_hex).unwrap();
     let v1 = PlutusV1Script::from_bytes(script_bytes).unwrap();
@@ -222,7 +223,7 @@ fn script_input(amt: u64) -> InputBuilderResult {
     let script_addr = always_succeeds_script_address();
 
     let coin = amt.into();
-    let value = Value::new(&coin);
+    let value = CMLValue::new(&coin);
     let utxo_info = TransactionOutput::new(&script_addr, &value);
     let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
 
@@ -241,7 +242,7 @@ fn script_input(amt: u64) -> InputBuilderResult {
 fn new_output(amt: u64) -> SingleOutputBuilderResult {
     let output_address = CMLAddress::from_bech32("addr_test1qpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5ewvxwdrt70qlcpeeagscasafhffqsxy36t90ldv06wqrk2qum8x5w").unwrap();
     let coin = amt.into();
-    let value = Value::new(&coin);
+    let value = CMLValue::new(&coin);
     let output = TransactionOutput::new(&output_address, &value);
     SingleOutputBuilderResult::new(&output)
 }
@@ -279,6 +280,7 @@ async fn execution_units() {
     let transaction = tx_redeemer_builder.draft_tx();
     // let transaction = signed_tx_builder.build_unchecked();
 
+    println!("{}", &transaction.to_json().unwrap());
     let bytes = transaction.to_bytes();
 
     let res = bf.execution_units(&bytes).await.unwrap();
@@ -286,6 +288,7 @@ async fn execution_units() {
     dbg!(res);
 }
 
+use crate::schemas::Value;
 use serde::Deserialize;
 
 #[allow(non_snake_case)]
@@ -303,28 +306,71 @@ impl PlutusScriptFile {
     }
 }
 
-// -- create a data script for the guessing game by hashing the string
-// -- and lifting the hash to its on-chain representation
-// hashString :: Haskell.String -> HashedString
-// hashString = HashedString . sha2_256 . toBuiltin . C.pack
-//
-// -- create a redeemer script for the guessing game by lifting the
-// -- string to its on-chain representation
-// clearString :: Haskell.String -> ClearString
-// clearString = ClearString . toBuiltin . C.pack
-//
-// -- | The validation function (Datum -> Redeemer -> ScriptContext -> Bool)
-// validateGuess :: HashedString -> ClearString -> ScriptContext -> Bool
-// validateGuess hs cs _ = isGoodGuess hs cs
-//
-// isGoodGuess :: HashedString -> ClearString -> Bool
-// isGoodGuess (HashedString actual) (ClearString guess') = actual == sha2_256 guess'
 #[ignore]
 #[tokio::test]
-async fn doodle() {
+async fn init_always_succeeds_script() {
+    let my_base_addr = my_base_addr();
+    let my_address = my_base_addr.to_address();
     let script_addr = always_succeeds_script_address().to_bech32(None).unwrap();
-    dbg!(script_addr);
-    // let ___cli_addr = "addr1w8nnz8lt7pzhrdx4cfh83tym479jwgqjn38kh2p42g95ykc57pc9j";
-    // for `game.plutus`
-    // dbg!(___cli_addr);
+    dbg!(&script_addr);
+
+    let bf = get_test_bf_http_client().unwrap();
+
+    let my_utxos = bf
+        .utxos(&my_address.to_bech32(None).unwrap())
+        .await
+        .unwrap();
+
+    // dbg!(&my_utxos);d
+    let mut tx_builder = test_tx_builder();
+
+    for utxo in my_utxos.iter() {
+        let input = input_from_utxo(&my_address, utxo);
+        tx_builder.add_input(&input);
+    }
+
+    let algo = ChangeSelectionAlgo::Default;
+    let redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
+    let tx = redeemer_builder.draft_tx();
+    println!("{}", tx.to_json().unwrap());
+}
+
+fn input_from_utxo(my_address: &CMLAddress, utxo: &UTxO) -> InputBuilderResult {
+    let index = utxo.output_index().into();
+    let hash_raw = utxo.tx_hash();
+    let tx_hash = TransactionHash::from_hex(hash_raw).unwrap();
+    let payment_input = TransactionInput::new(
+        &tx_hash, // tx hash
+        &index,   // index
+    );
+    let value = cmlvalue_from_values(&utxo.amount());
+    let utxo_info = TransactionOutput::new(&my_address, &value);
+    let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
+
+    input_builder.payment_key().unwrap()
+}
+
+fn cmlvalue_from_values(values: &[Value]) -> CMLValue {
+    let mut cml_value = CMLValue::zero();
+    for value in values.iter() {
+        if let Value { unit, quantity } = value {
+            let add_value = match unit.as_str() {
+                "lovelace" => CMLValue::new(&BigNum::from_str(quantity).unwrap()),
+                _ => {
+                    let policy_id_hex = &unit[..56];
+                    let policy_id = PolicyID::from_hex(policy_id_hex).unwrap();
+                    let asset_name_hex = &unit[56..];
+                    let asset_name_bytes = hex::decode(asset_name_hex).unwrap();
+                    let asset_name = AssetName::new(asset_name_bytes.into()).unwrap();
+                    let mut assets = Assets::new();
+                    assets.insert(&asset_name, &BigNum::from_str(quantity).unwrap());
+                    let mut multi_assets = MultiAsset::new();
+                    multi_assets.insert(&policy_id, &assets);
+                    CMLValue::new_from_assets(&multi_assets)
+                }
+            };
+            cml_value = cml_value.checked_add(&add_value).unwrap();
+        }
+    }
+    dbg!(cml_value)
 }
