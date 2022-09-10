@@ -1,5 +1,7 @@
 use super::*;
-use crate::keys::{my_base_addr, MAINNET, TESTNET};
+use crate::keys::{my_base_addr, my_priv_key, MAINNET, TESTNET};
+use cardano_multiplatform_lib::ledger::common::hash::hash_transaction;
+use cardano_multiplatform_lib::ledger::shelley::witness::make_vkey_witness;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     address::{EnterpriseAddress, RewardAddress, StakeCredential},
@@ -50,7 +52,8 @@ async fn utxos() -> Result<()> {
     // let address = "addr_test1wrtlw9csk7vc9peauh9nzpg45zemvj3w9m532e93nwer24gjwycdl";
     // let address = "addr_test1wrsexavz37208qda7mwwu4k7hcpg26cz0ce86f5e9kul3hqzlh22t";
     let address = "addr_test1wp9m8xkpt2tmy7madqldspgzgug8f2p3pwhz589cq75685slenwf4";
-    let res = bf.utxos(address).await.unwrap();
+    let address = my_base_addr().to_address().to_bech32(None).unwrap();
+    let res = bf.utxos(&address).await.unwrap();
     dbg!(&res);
     Ok(())
 }
@@ -308,11 +311,10 @@ impl PlutusScriptFile {
 
 #[ignore]
 #[tokio::test]
-async fn init_always_succeeds_script() {
+async fn send_to_self() {
     let my_base_addr = my_base_addr();
     let my_address = my_base_addr.to_address();
-    let script_addr = always_succeeds_script_address().to_bech32(None).unwrap();
-    dbg!(&script_addr);
+    let priv_key = my_priv_key();
 
     let bf = get_test_bf_http_client().unwrap();
 
@@ -321,7 +323,6 @@ async fn init_always_succeeds_script() {
         .await
         .unwrap();
 
-    // dbg!(&my_utxos);d
     let mut tx_builder = test_tx_builder();
 
     for utxo in my_utxos.iter() {
@@ -329,10 +330,26 @@ async fn init_always_succeeds_script() {
         tx_builder.add_input(&input);
     }
 
+    let coin = 69_000_000.into();
+    let value = CMLValue::new(&coin);
+    let output = TransactionOutput::new(&my_address, &value);
+    let res = SingleOutputBuilderResult::new(&output);
+
+    tx_builder.add_output(&res).unwrap();
+
     let algo = ChangeSelectionAlgo::Default;
-    let redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
-    let tx = redeemer_builder.draft_tx();
+    let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
+    let unchecked_tx = signed_tx_builder.build_unchecked();
+    let tx_body = unchecked_tx.body();
+    let tx_hash = hash_transaction(&tx_body);
+    dbg!(tx_hash.to_hex());
+    let vkey_witness = make_vkey_witness(&tx_hash, &priv_key);
+    signed_tx_builder.add_vkey(&vkey_witness);
+    let tx = signed_tx_builder.build_checked().unwrap();
     println!("{}", tx.to_json().unwrap());
+    let submit_res = bf.submit_tx(&tx.to_bytes()).await.unwrap();
+    // let submit_res = bf.execution_units(&tx.to_bytes()).await.unwrap();
+    dbg!(&submit_res);
 }
 
 fn input_from_utxo(my_address: &CMLAddress, utxo: &UTxO) -> InputBuilderResult {
@@ -372,5 +389,5 @@ fn cmlvalue_from_values(values: &[Value]) -> CMLValue {
             cml_value = cml_value.checked_add(&add_value).unwrap();
         }
     }
-    dbg!(cml_value)
+    cml_value
 }

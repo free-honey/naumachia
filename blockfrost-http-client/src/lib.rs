@@ -1,6 +1,7 @@
 use crate::schemas::{Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, UTxO};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
+use serde_json::Value;
 use std::{fs, path::Path};
 use url::Url;
 
@@ -57,6 +58,8 @@ pub trait BlockFrostHttpTrait {
     async fn account_associated_addresses_total(&self, base_addr: &str) -> Result<Vec<Address>>;
 
     async fn execution_units(&self, bytes: &[u8]) -> Result<EvaluateTxResult>;
+
+    async fn submit_tx(&self, bytes: &[u8]) -> Result<serde_json::Value>;
 }
 
 #[async_trait]
@@ -108,6 +111,22 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
             .header("Content-Type", "application/cbor")
             .header("project_id", project_id)
             .body(encoded)
+            .send()
+            .await
+            .unwrap();
+        Ok(res.json().await?)
+    }
+
+    async fn submit_tx(&self, bytes: &[u8]) -> Result<Value> {
+        let ext = format!("./tx/submit");
+        let url = Url::parse(&self.parent_url)?.join(&ext)?;
+        let client = reqwest::Client::new();
+        let project_id = &self.api_key;
+        let res = client
+            .post(url)
+            .header("Content-Type", "application/cbor")
+            .header("project_id", project_id)
+            .body(bytes.to_owned()) // For some dumb-ass reason this is binary
             .send()
             .await
             .unwrap();
