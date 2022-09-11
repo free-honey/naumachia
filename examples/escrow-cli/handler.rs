@@ -35,7 +35,7 @@ where
         Ok(())
     }
 
-    pub async fn claim(&self, tx_hash: &str, index: u32) -> NauResult<()> {
+    pub async fn claim(&self, tx_hash: &str, index: u64) -> NauResult<()> {
         let output_id = OutputId::new(tx_hash.to_string(), index);
         let call = EscrowEndpoint::Claim {
             output_id: output_id.clone(),

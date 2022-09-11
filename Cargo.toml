@@ -17,7 +17,7 @@ tokio = { version = "1.20.1", features = ["full"] }
 reqwest = { version = "0.11.11", features = ["json"] }
 url = "2.2.2"
 toml = "0.5.9"
-cardano-multiplatform-lib = "0.3.0"
+cardano-multiplatform-lib = "2.0.1"
 tiny-bip39 = "1.0.0"
 futures = "0.3.23"
 async-trait = "0.1.57"
