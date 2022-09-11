@@ -88,7 +88,7 @@ impl UTxO {
     pub fn with_data(&self, data: Option<serde_json::Value>) -> UTxOWithData {
         UTxOWithData {
             tx_hash: self.tx_hash.clone(),
-            output_index: self.output_index.clone(),
+            output_index: self.output_index,
             amount: self.amount.clone(),
             block: self.block.clone(),
             data,

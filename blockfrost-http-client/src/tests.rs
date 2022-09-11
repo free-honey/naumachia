@@ -2,6 +2,7 @@ use super::*;
 use crate::keys::{my_base_addr, my_priv_key, TESTNET};
 use cardano_multiplatform_lib::builders::output_builder::TransactionOutputBuilder;
 use cardano_multiplatform_lib::builders::redeemer_builder::RedeemerWitnessKey;
+use cardano_multiplatform_lib::builders::tx_builder::CoinSelectionStrategyCIP2;
 use cardano_multiplatform_lib::builders::witness_builder::PlutusScriptWitness;
 use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
 use cardano_multiplatform_lib::plutus::{ExUnits, RedeemerTag};
@@ -61,7 +62,9 @@ async fn my_utxos() -> Result<()> {
 #[tokio::test]
 async fn script_utxos() -> Result<()> {
     let bf = get_test_bf_http_client().unwrap();
-    let address = always_succeeds_script_address().to_bech32(None).unwrap();
+    let address = always_succeeds_script_address(TESTNET)
+        .to_bech32(None)
+        .unwrap();
     let filtered: Vec<_> = bf
         .utxos(&address)
         .await
@@ -104,7 +107,9 @@ async fn datum() -> Result<()> {
 #[tokio::test]
 async fn address_info() -> Result<()> {
     let bf = get_test_bf_http_client().unwrap();
-    let address = always_succeeds_script_address().to_bech32(None).unwrap();
+    let address = always_succeeds_script_address(TESTNET)
+        .to_bech32(None)
+        .unwrap();
     let res = bf.address_info(&address).await.unwrap();
     dbg!(&res);
     Ok(())
@@ -195,22 +200,6 @@ fn test_tx_builder() -> TransactionBuilder {
     TransactionBuilder::new(&tx_builder_cfg)
 }
 
-fn _payment_input(amt: u64, owner_addr: &CMLAddress) -> InputBuilderResult {
-    let index = BigNum::from_str("0").unwrap();
-    let hash_raw = "8561258e210352fba2ac0488afed67b3427a27ccf1d41ec030c98a8199bc22ec";
-    let tx_hash = TransactionHash::from_hex(hash_raw).unwrap();
-    let payment_input = TransactionInput::new(
-        &tx_hash, // tx hash
-        &index,   // index
-    );
-    let coin = amt.into();
-    let value = CMLValue::new(&coin);
-    let utxo_info = TransactionOutput::new(&owner_addr, &value);
-    let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
-
-    input_builder.payment_key().unwrap()
-}
-
 fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
     let mut file = File::open(file_path).unwrap();
     let mut data = String::new();
@@ -226,11 +215,11 @@ fn always_succeeds_script() -> PlutusScript {
     PlutusScript::from_v1(&v1)
 }
 
-fn always_succeeds_script_address() -> CMLAddress {
+fn always_succeeds_script_address(network: u8) -> CMLAddress {
     let script = always_succeeds_script();
     let script_hash = script.hash();
     let stake_cred = StakeCredential::from_scripthash(&script_hash);
-    let enterprise_addr = EnterpriseAddress::new(TESTNET, &stake_cred);
+    let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);
     enterprise_addr.to_address()
 }
 
@@ -242,7 +231,7 @@ fn always_succeeds_script_input(amt: u64, hash_raw: &str, index: u64) -> InputBu
     );
 
     let script = always_succeeds_script();
-    let script_addr = always_succeeds_script_address();
+    let script_addr = always_succeeds_script_address(TESTNET);
 
     let coin = amt.into();
     let value = CMLValue::new(&coin);
@@ -258,14 +247,6 @@ fn always_succeeds_script_input(amt: u64, hash_raw: &str, index: u64) -> InputBu
     input_builder
         .plutus_script(&partial_witness, &required_signers, &datum)
         .unwrap()
-}
-
-fn _new_output(amt: u64) -> SingleOutputBuilderResult {
-    let output_address = CMLAddress::from_bech32("addr_test1qpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5ewvxwdrt70qlcpeeagscasafhffqsxy36t90ldv06wqrk2qum8x5w").unwrap();
-    let coin = amt.into();
-    let value = CMLValue::new(&coin);
-    let output = TransactionOutput::new(&output_address, &value);
-    SingleOutputBuilderResult::new(&output)
 }
 
 fn input_from_utxo(my_address: &CMLAddress, utxo: &UTxO) -> InputBuilderResult {
@@ -343,15 +324,18 @@ async fn send_to_self() {
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
-        tx_builder.add_input(&input).unwrap();
+        tx_builder.add_utxo(&input);
     }
 
-    let coin = 1_000_000.into();
+    let coin = 150_000_000.into();
     let value = CMLValue::new(&coin);
     let output = TransactionOutput::new(&my_address, &value);
     let res = SingleOutputBuilderResult::new(&output);
 
     tx_builder.add_output(&res).unwrap();
+
+    let strat = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
+    tx_builder.select_utxos(strat).unwrap();
 
     let algo = ChangeSelectionAlgo::Default;
     let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
@@ -364,7 +348,6 @@ async fn send_to_self() {
     let tx = signed_tx_builder.build_checked().unwrap();
     println!("{}", tx.to_json().unwrap());
     let submit_res = bf.submit_tx(&tx.to_bytes()).await.unwrap();
-    // let submit_res = bf.execution_units(&tx.to_bytes()).await.unwrap();
     dbg!(&submit_res);
 }
 
@@ -386,10 +369,10 @@ async fn init_always_succeeds_contract() {
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
-        tx_builder.add_input(&input).unwrap();
+        tx_builder.add_utxo(&input);
     }
 
-    let script_address = always_succeeds_script_address();
+    let script_address = always_succeeds_script_address(TESTNET);
     let coin = 2_000_000.into();
     let value = CMLValue::new(&coin);
     let mut output = TransactionOutput::new(&script_address, &value);
@@ -402,8 +385,12 @@ async fn init_always_succeeds_contract() {
 
     tx_builder.add_output(&res).unwrap();
 
+    let strat = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
+    tx_builder.select_utxos(strat).unwrap();
+
     let algo = ChangeSelectionAlgo::Default;
     let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
+
     let unchecked_tx = signed_tx_builder.build_unchecked();
     let tx_body = unchecked_tx.body();
     let tx_hash = hash_transaction(&tx_body);
@@ -440,7 +427,7 @@ async fn spend_datum() {
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
-        tx_builder.add_input(&input).unwrap();
+        tx_builder.add_utxo(&input);
     }
 
     let input_utxo = TransactionOutputBuilder::new()
@@ -465,13 +452,14 @@ async fn spend_datum() {
 
     tx_builder.add_collateral(&collateral_intput).unwrap();
 
+    let strat = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
+    tx_builder.select_utxos(strat).unwrap();
+
     let algo = ChangeSelectionAlgo::Default;
     // let signed_tx_builder = tx_builder.build(algo, &change_address).unwrap();
     let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
     let transaction = tx_redeemer_builder.draft_tx();
-    // let transaction = signed_tx_builder.build_unchecked();
 
-    // println!("{}", &transaction.to_json().unwrap());
     let bytes = transaction.to_bytes();
 
     let res = bf.execution_units(&bytes).await.unwrap();
@@ -495,6 +483,5 @@ async fn spend_datum() {
     let tx = signed_tx_builder.build_checked().unwrap();
     println!("{}", tx.to_json().unwrap());
     let submit_res = bf.submit_tx(&tx.to_bytes()).await.unwrap();
-    // let submit_res = bf.execution_units(&tx.to_bytes()).await.unwrap();
     dbg!(&submit_res);
 }

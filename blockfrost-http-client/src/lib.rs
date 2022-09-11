@@ -12,6 +12,7 @@ pub mod schemas;
 #[cfg(test)]
 pub mod tests;
 
+// const MAINNET_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
 const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
 // Must include a TOML file at your project root with the field:
 //   project_id = <INSERT API KEY HERE>
@@ -101,7 +102,7 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
     }
 
     async fn execution_units(&self, bytes: &[u8]) -> Result<EvaluateTxResult> {
-        let ext = format!("./utils/txs/evaluate");
+        let ext = "./utils/txs/evaluate".to_string();
         let url = Url::parse(&self.parent_url)?.join(&ext)?;
         let client = reqwest::Client::new();
         let project_id = &self.api_key;
@@ -120,7 +121,7 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
     }
 
     async fn submit_tx(&self, bytes: &[u8]) -> Result<serde_json::Value> {
-        let ext = format!("./tx/submit");
+        let ext = "./tx/submit".to_string();
         let url = Url::parse(&self.parent_url)?.join(&ext)?;
         let client = reqwest::Client::new();
         let project_id = &self.api_key;
@@ -164,7 +165,6 @@ impl BlockFrostHttp {
             .header("project_id", project_id)
             .send()
             .await?;
-        // dbg!(&res);
         let res = res.json().await?;
         Ok(res)
     }

@@ -30,7 +30,7 @@ enum ActionParams {
     /// Check current signer's balance
     Balance,
     /// Redeem escrow contract for which signer is the receiver
-    Claim { tx_hash: String, index: u32 },
+    Claim { tx_hash: String, index: u64 },
     /// Create escrow contract for amount that only receiver can retrieve
     Escrow { amount: u64, receiver: String },
     /// List all active escrow contracts
