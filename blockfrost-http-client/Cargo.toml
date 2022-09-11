@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.57"
-cardano-multiplatform-lib = { git = "https://github.com/dcSpark/cardano-multiplatform-lib", branch = "develop"}
+cardano-multiplatform-lib = { version = "3.0.1"}
 futures = "0.3.23"
 hex = "0.4.3"
 serde = { version = "1.0.143", features = ["derive"] }

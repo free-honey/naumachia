@@ -2,6 +2,7 @@ use super::*;
 use crate::keys::{my_base_addr, my_priv_key, TESTNET};
 use cardano_multiplatform_lib::builders::output_builder::TransactionOutputBuilder;
 use cardano_multiplatform_lib::builders::redeemer_builder::RedeemerWitnessKey;
+use cardano_multiplatform_lib::builders::witness_builder::PlutusScriptWitness;
 use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
 use cardano_multiplatform_lib::plutus::{ExUnits, RedeemerTag};
 use cardano_multiplatform_lib::{
@@ -249,7 +250,8 @@ fn always_succeeds_script_input(amt: u64, hash_raw: &str, index: u64) -> InputBu
     let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
 
     let data = PlutusData::new_bytes(Vec::new());
-    let partial_witness = PartialPlutusWitness::new(&script, &data);
+    let script_witness = PlutusScriptWitness::from_script(script);
+    let partial_witness = PartialPlutusWitness::new(&script_witness, &data);
 
     let required_signers = RequiredSigners::new();
     let datum = PlutusData::new_bytes(Vec::new());
@@ -341,7 +343,7 @@ async fn send_to_self() {
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
-        tx_builder.add_input(&input);
+        tx_builder.add_input(&input).unwrap();
     }
 
     let coin = 1_000_000.into();
@@ -384,7 +386,7 @@ async fn init_always_succeeds_contract() {
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
-        tx_builder.add_input(&input);
+        tx_builder.add_input(&input).unwrap();
     }
 
     let script_address = always_succeeds_script_address();
@@ -434,11 +436,11 @@ async fn spend_datum() {
     let hash_raw = "d5be9549bfb82b5981f6cdf49187b6140bac5f129adbb50281ee0e680c0a411a";
     let index = 0;
     let script_input = always_succeeds_script_input(2_000_000, hash_raw, index);
-    tx_builder.add_input(&script_input);
+    tx_builder.add_input(&script_input).unwrap();
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
-        tx_builder.add_input(&input);
+        tx_builder.add_input(&input).unwrap();
     }
 
     let input_utxo = TransactionOutputBuilder::new()
