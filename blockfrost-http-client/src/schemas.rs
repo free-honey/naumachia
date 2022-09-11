@@ -76,10 +76,15 @@ pub struct UTxO {
 }
 
 impl UTxO {
+    pub fn tx_hash(&self) -> &str {
+        &self.tx_hash
+    }
+
     pub fn data_hash(&self) -> &Option<String> {
         &self.data_hash
     }
 
+    // I don't think this is right
     pub fn with_data(&self, data: Option<serde_json::Value>) -> UTxOWithData {
         UTxOWithData {
             tx_hash: self.tx_hash.clone(),
@@ -88,6 +93,18 @@ impl UTxO {
             block: self.block.clone(),
             data,
         }
+    }
+
+    pub fn block(&self) -> &str {
+        &self.block
+    }
+
+    pub fn output_index(&self) -> u64 {
+        self.output_index
+    }
+
+    pub fn amount(&self) -> &Vec<Value> {
+        &self.amount
     }
 }
 
@@ -98,20 +115,6 @@ pub struct UTxOWithData {
     amount: Vec<Value>,
     block: String,
     data: Option<serde_json::Value>,
-}
-
-impl UTxO {
-    pub fn tx_hash(&self) -> &str {
-        &self.tx_hash
-    }
-
-    pub fn output_index(&self) -> u64 {
-        self.output_index
-    }
-
-    pub fn amount(&self) -> &Vec<Value> {
-        &self.amount
-    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -168,11 +171,40 @@ pub struct Fault {
 pub struct EvaluateTxResult {
     methodname: Option<String>,
     reflection: HashMap<String, String>,
-    result: serde_json::Value,
+    // pub(crate) result: Option<serde_json::Value>,
+    result: Option<Success>,
     fault: Option<HashMap<String, String>>,
     servicename: String,
     r#type: String,
     version: String,
+}
+
+impl EvaluateTxResult {
+    pub fn get_spend(&self) -> Option<Spend> {
+        self.result
+            .as_ref()
+            .map(|res| res.evalutation_result.spend.clone())
+    }
+}
+
+// result: Some(
+//         Object({
+//             "EvaluationResult": Object({
+//                 "spend:0": Object({
+//                     "memory": Number(
+//                         1700,
+//                     ),
+//                     "steps": Number(
+//                         368100,
+//                     ),
+//                 }),
+//             }),
+//         }),
+//     ),
+#[derive(Deserialize, Debug)]
+pub struct Success {
+    #[serde(rename = "EvaluationResult")]
+    evalutation_result: EvaluationResult,
 }
 
 //"result": Object({
@@ -191,4 +223,22 @@ pub struct EvaluateTxResult {
 //         }),
 //     }),
 #[derive(Deserialize, Debug)]
-pub struct EvaluationFailure {}
+pub struct EvaluationResult {
+    #[serde(rename = "spend:2")]
+    spend: Spend,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Spend {
+    memory: u64,
+    steps: u64,
+}
+
+impl Spend {
+    pub fn memory(&self) -> u64 {
+        self.memory
+    }
+    pub fn steps(&self) -> u64 {
+        self.steps
+    }
+}

@@ -1,7 +1,6 @@
 use crate::schemas::{Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, UTxO};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
-use serde_json::Value;
 use std::{fs, path::Path};
 use url::Url;
 
@@ -81,7 +80,8 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
 
     async fn utxos(&self, address: &str) -> Result<Vec<UTxO>> {
         let ext = format!("./addresses/{}/utxos", address);
-        self.get_endpoint(&ext).await
+        let params = [("order", "desc")];
+        self.get_endpoint_with_params(&ext, &params).await
     }
 
     async fn datum(&self, datum_hash: &str) -> Result<serde_json::Value> {
@@ -114,10 +114,12 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
             .send()
             .await
             .unwrap();
+        // let json_for_fun: serde_json::Value = res.json().await?;
+        // dbg!(&json_for_fun);
         Ok(res.json().await?)
     }
 
-    async fn submit_tx(&self, bytes: &[u8]) -> Result<Value> {
+    async fn submit_tx(&self, bytes: &[u8]) -> Result<serde_json::Value> {
         let ext = format!("./tx/submit");
         let url = Url::parse(&self.parent_url)?.join(&ext)?;
         let client = reqwest::Client::new();
@@ -145,7 +147,16 @@ impl BlockFrostHttp {
     }
 
     async fn get_endpoint<T: DeserializeOwned>(&self, ext: &str) -> Result<T> {
-        let url = Url::parse(&self.parent_url)?.join(ext)?;
+        self.get_endpoint_with_params(ext, &[]).await
+    }
+
+    async fn get_endpoint_with_params<T: DeserializeOwned>(
+        &self,
+        ext: &str,
+        params: &[(&str, &str)],
+    ) -> Result<T> {
+        let mut url = Url::parse(&self.parent_url)?.join(ext)?;
+        url.query_pairs_mut().extend_pairs(params);
         let client = reqwest::Client::new();
         let project_id = &self.api_key;
         let res = client
