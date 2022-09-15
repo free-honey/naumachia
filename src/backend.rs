@@ -92,12 +92,6 @@ where
                     policy,
                 } => {
                     let policy_id = policy.id();
-                    // add_amount_to_nested_map(
-                    //     &mut min_output_values,
-                    //     amount,
-                    //     &recipient,
-                    //     &policy_id,
-                    // );
                     if let Some(values) = minting.remove(&recipient) {
                         let mut new_values = values;
                         new_values.add_one_value(&policy_id, amount);

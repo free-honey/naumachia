@@ -11,8 +11,8 @@ use std::{
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::ledger_client::minting_to_outputs;
 use crate::ledger_client::LedgerClientError::TransactionIssuance;
+use crate::ledger_client::{minting_to_outputs, new_output};
 use crate::values::Values;
 use crate::{
     address::Address,
@@ -160,10 +160,7 @@ where
 
         let mut combined_outputs = Vec::new();
         if let Some(remainder) = maybe_remainder {
-            let tx_hash = Uuid::new_v4().to_string();
-            let index = 0;
-            let change_output = Output::new_wallet(tx_hash, index, self.signer.clone(), remainder);
-            combined_outputs.push(change_output);
+            combined_outputs.push(new_output(&signer, &remainder));
         }
 
         let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);

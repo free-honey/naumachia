@@ -25,19 +25,24 @@ impl Values {
         let mut remainders = Vec::new();
         let mut mine_cloned = self.values.clone();
         let mut there_is_a_difference = false;
-        for (policy, amt) in other.as_iter() {
-            if let Some(available) = mine_cloned.remove(policy) {
-                if amt < &available {
-                    let remaining = available - amt;
-                    remainders.push((policy.clone(), remaining));
-                    there_is_a_difference = true;
-                } else if amt > &available {
+        if other.len() > 0 {
+            for (policy, amt) in other.as_iter() {
+                if let Some(available) = mine_cloned.remove(policy) {
+                    if amt < &available {
+                        let remaining = available - amt;
+                        remainders.push((policy.clone(), remaining));
+                        there_is_a_difference = true;
+                    } else if amt > &available {
+                        return Err(Error::InsufficientAmountOf(policy.to_owned()));
+                    }
+                } else {
                     return Err(Error::InsufficientAmountOf(policy.to_owned()));
                 }
-            } else {
-                return Err(Error::InsufficientAmountOf(policy.to_owned()));
             }
+        } else {
+            there_is_a_difference = true; // We just keep what we started with
         }
+
         let other_remainders: Vec<_> = mine_cloned.into_iter().collect();
         remainders.extend(other_remainders);
 
@@ -70,6 +75,10 @@ impl Values {
 
     pub fn get(&self, policy: &PolicyId) -> Option<u64> {
         self.values.get(policy).copied()
+    }
+
+    pub fn len(&self) -> usize {
+        self.values.len()
     }
 }
 

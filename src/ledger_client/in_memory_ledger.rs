@@ -1,14 +1,19 @@
-use std::sync::{Arc, Mutex};
-use std::{fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 use uuid::Uuid;
 
-use crate::ledger_client::minting_to_outputs;
-use crate::ledger_client::LedgerClientError::TransactionIssuance;
-use crate::values::Values;
+use crate::ledger_client::new_output;
 use crate::{
     backend::Backend,
+    ledger_client::minting_to_outputs,
+    ledger_client::LedgerClientError::TransactionIssuance,
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
+    values::Values,
     Address, PolicyId, Transaction,
 };
 use async_trait::async_trait;
@@ -143,7 +148,8 @@ where
 
     async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         // TODO: Have all matching Tx Id
-        let mut combined_inputs = self.outputs_at_address(&self.signer).await?;
+        let signer = self.signer().await?;
+        let mut combined_inputs = self.outputs_at_address(&signer).await?;
         combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
 
         let total_input_value = combined_inputs
@@ -181,10 +187,7 @@ where
 
         let mut combined_outputs = Vec::new();
         if let Some(remainder) = maybe_remainder {
-            let tx_hash = Uuid::new_v4().to_string();
-            let index = 0;
-            let change_output = Output::new_wallet(tx_hash, index, self.signer.clone(), remainder);
-            combined_outputs.push(change_output);
+            combined_outputs.push(new_output(&signer, &remainder));
         }
 
         let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
