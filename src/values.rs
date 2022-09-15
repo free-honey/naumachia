@@ -30,12 +30,12 @@ impl Values {
             for (policy, amt) in other.as_iter() {
                 if let Some(available) = mine_cloned.remove(policy) {
                     match amt.cmp(&available) {
-                        Ordering::Greater => {
+                        Ordering::Less => {
                             let remaining = available - amt;
                             remainders.push((policy.clone(), remaining));
                             there_is_a_difference = true;
                         }
-                        Ordering::Less => {
+                        Ordering::Greater => {
                             return Err(Error::InsufficientAmountOf(policy.to_owned()))
                         }
                         _ => {}
