@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
 
+use crate::ledger_client::minting_to_outputs;
 use crate::ledger_client::LedgerClientError::TransactionIssuance;
 use crate::values::Values;
 use crate::{
@@ -22,7 +22,7 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
 }
 
 impl<
-        Datum: Clone + PartialEq + Debug + Send + Sync + Hash + Eq + Ord + PartialOrd,
+        Datum: Clone + PartialEq + Debug + Send + Sync,
         Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
     > TestBackendsBuilder<Datum, Redeemer>
 {
@@ -69,7 +69,7 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
 
 impl<Datum, Redeemer> OutputBuilder<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync + Hash + Eq + Ord + PartialOrd,
+    Datum: Clone + PartialEq + Debug + Send + Sync,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
@@ -116,7 +116,7 @@ pub struct InMemoryLedgerClient<Datum, Redeemer> {
 #[async_trait]
 impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for InMemoryLedgerClient<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync + Hash + PartialEq + Eq + Ord + PartialOrd,
+    Datum: Clone + PartialEq + Debug + Send + Sync,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     async fn signer(&self) -> LedgerClientResult<&Address> {
@@ -143,7 +143,6 @@ where
 
     async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         // TODO: Have all matching Tx Id
-
         let mut combined_inputs = self.outputs_at_address(&self.signer).await?;
         combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
 
@@ -160,7 +159,7 @@ where
                 acc.add_values(utxo.values());
                 acc
             });
-        let remainder = total_input_value
+        let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| InMemoryLCError::NotEnoughInputs)
             .map_err(|e| TransactionIssuance(Box::new(e)))?;
@@ -180,13 +179,16 @@ where
             ledger_utxos.remove(index);
         }
 
-        let tx_hash = Uuid::new_v4().to_string();
-        let index = 0;
-        let change_output = Output::new_wallet(tx_hash, index, self.signer.clone(), remainder);
+        let mut combined_outputs = Vec::new();
+        if let Some(remainder) = maybe_remainder {
+            let tx_hash = Uuid::new_v4().to_string();
+            let index = 0;
+            let change_output = Output::new_wallet(tx_hash, index, self.signer.clone(), remainder);
+            combined_outputs.push(change_output);
+        }
 
         let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
 
-        let mut combined_outputs = vec![change_output];
         combined_outputs.extend(tx.outputs);
         combined_outputs.extend(minting_outputs);
 
@@ -195,15 +197,4 @@ where
         }
         Ok(())
     }
-}
-
-fn minting_to_outputs<Datum>(minting: &HashMap<Address, Values>) -> Vec<Output<Datum>> {
-    minting
-        .iter()
-        .map(|(addr, vals)| {
-            let tx_hash = Uuid::new_v4().to_string();
-            let index = 0;
-            Output::new_wallet(tx_hash, index, addr.clone(), vals.clone())
-        })
-        .collect()
 }

@@ -21,15 +21,17 @@ impl Values {
         })
     }
 
-    pub fn try_subtract(&self, other: &Values) -> Result<Values> {
+    pub fn try_subtract(&self, other: &Values) -> Result<Option<Values>> {
         let mut remainders = Vec::new();
         let mut mine_cloned = self.values.clone();
+        let mut there_is_a_difference = false;
         for (policy, amt) in other.as_iter() {
             if let Some(available) = mine_cloned.remove(policy) {
-                if amt <= &available {
+                if amt < &available {
                     let remaining = available - amt;
                     remainders.push((policy.clone(), remaining));
-                } else {
+                    there_is_a_difference = true;
+                } else if amt > &available {
                     return Err(Error::InsufficientAmountOf(policy.to_owned()));
                 }
             } else {
@@ -40,8 +42,12 @@ impl Values {
         remainders.extend(other_remainders);
 
         let values = remainders.into_iter().collect();
-        let difference = Values { values };
-        Ok(difference)
+        if there_is_a_difference {
+            let difference = Values { values };
+            Ok(Some(difference))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn add_one_value(&mut self, policy: &PolicyId, amount: u64) {

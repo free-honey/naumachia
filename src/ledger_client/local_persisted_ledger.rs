@@ -8,8 +8,11 @@ use std::{
     marker::PhantomData,
     path::{Path, PathBuf},
 };
+use thiserror::Error;
 use uuid::Uuid;
 
+use crate::ledger_client::minting_to_outputs;
+use crate::ledger_client::LedgerClientError::TransactionIssuance;
 use crate::values::Values;
 use crate::{
     address::Address,
@@ -24,6 +27,12 @@ use crate::{
 struct Data<Datum> {
     signer: Address,
     outputs: Vec<Output<Datum>>,
+}
+
+#[derive(Debug, Error)]
+enum LocalPersistedLCError {
+    #[error("Not enough input value available for outputs")]
+    NotEnoughInputs,
 }
 
 impl<Datum> Data<Datum> {
@@ -114,18 +123,58 @@ where
     }
 
     async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
-        let mut my_outputs = self.get_data().outputs;
-        for tx_i in tx.inputs() {
-            let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
-                LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().clone())
-            })?;
-            my_outputs.remove(index);
+        // TODO: Have all matching Tx Id
+        let signer = self.signer().await?;
+        let mut combined_inputs = self.outputs_at_address(&signer).await?;
+        combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
+
+        let total_input_value = combined_inputs
+            .iter()
+            .fold(Values::default(), |mut acc, utxo| {
+                acc.add_values(utxo.values());
+                acc
+            });
+        let total_output_value = tx
+            .outputs()
+            .iter()
+            .fold(Values::default(), |mut acc, utxo| {
+                acc.add_values(utxo.values());
+                acc
+            });
+        let maybe_remainder = total_input_value
+            .try_subtract(&total_output_value)
+            .map_err(|_| LocalPersistedLCError::NotEnoughInputs)
+            .map_err(|e| TransactionIssuance(Box::new(e)))?;
+
+        let mut ledger_utxos = self.get_data().outputs;
+
+        for inputs in combined_inputs {
+            let index = ledger_utxos
+                .iter()
+                .position(|x| x == &inputs)
+                .ok_or_else(|| {
+                    LedgerClientError::FailedToRetrieveOutputWithId(inputs.id().clone())
+                })?;
+            ledger_utxos.remove(index);
         }
 
-        for tx_o in tx.outputs() {
-            my_outputs.push(tx_o.clone())
+        let mut combined_outputs = Vec::new();
+        if let Some(remainder) = maybe_remainder {
+            let tx_hash = Uuid::new_v4().to_string();
+            let index = 0;
+            let change_output = Output::new_wallet(tx_hash, index, self.signer.clone(), remainder);
+            combined_outputs.push(change_output);
         }
-        self.update_outputs(my_outputs);
+
+        let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
+
+        combined_outputs.extend(tx.outputs().clone());
+        combined_outputs.extend(minting_outputs);
+
+        for output in combined_outputs {
+            ledger_utxos.push(output.clone())
+        }
+        self.update_outputs(ledger_utxos);
         Ok(())
     }
 }
@@ -179,7 +228,6 @@ mod tests {
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
-        // let mut outputs = record.outputs_at_address(&signer);
         let first_output = record
             .outputs_at_address(&signer)
             .await
@@ -192,7 +240,7 @@ mod tests {
         let new_output =
             Output::new_wallet(tx_hash, index, owner.clone(), first_output.values().clone());
         let tx: Transaction<(), ()> = Transaction {
-            script_inputs: vec![first_output],
+            script_inputs: vec![],
             outputs: vec![new_output],
             redeemers: vec![],
             validators: Default::default(),
@@ -200,11 +248,18 @@ mod tests {
             policies: Default::default(),
         };
         record.issue(tx).await.unwrap();
-        let expected = starting_amount;
-        let actual = record
+        let expected_bob = starting_amount;
+        let actual_bob = record
             .balance_at_address(&owner, &PolicyId::ADA)
             .await
             .unwrap();
-        assert_eq!(expected, actual)
+        assert_eq!(expected_bob, actual_bob);
+
+        let expected_alice = 0;
+        let actual_alice = record
+            .balance_at_address(&signer, &PolicyId::ADA)
+            .await
+            .unwrap();
+        assert_eq!(expected_alice, actual_alice)
     }
 }

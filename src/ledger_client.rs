@@ -1,4 +1,5 @@
 use crate::{address::Address, output::Output, transaction::Transaction, PolicyId};
+use std::collections::HashMap;
 
 use thiserror::Error;
 
@@ -8,7 +9,9 @@ pub mod local_persisted_ledger;
 use async_trait::async_trait;
 
 use crate::output::OutputId;
+use crate::values::Values;
 use std::error;
+use uuid::Uuid;
 
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
@@ -47,3 +50,15 @@ pub enum LedgerClientError {
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;
+
+pub(crate) fn minting_to_outputs<Datum>(minting: &HashMap<Address, Values>) -> Vec<Output<Datum>> {
+    minting
+        .iter()
+        .map(|(addr, vals)| {
+            // TODO: Fix to not do tx_hash here maybe
+            let tx_hash = Uuid::new_v4().to_string();
+            let index = 0;
+            Output::new_wallet(tx_hash, index, addr.clone(), vals.clone())
+        })
+        .collect()
+}
