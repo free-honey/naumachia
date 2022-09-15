@@ -1,13 +1,19 @@
-use std::sync::{Arc, Mutex};
-use std::{fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 use uuid::Uuid;
 
-use crate::ledger_client::LedgerClientError::TransactionIssuance;
-use crate::values::Values;
+use crate::ledger_client::new_output;
 use crate::{
     backend::Backend,
+    ledger_client::minting_to_outputs,
+    ledger_client::LedgerClientError::TransactionIssuance,
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
+    values::Values,
     Address, PolicyId, Transaction,
 };
 use async_trait::async_trait;
@@ -54,7 +60,7 @@ impl<
         Backend {
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
-            txo_record,
+            ledger_client: txo_record,
         }
     }
 }
@@ -101,6 +107,8 @@ type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
 enum InMemoryLCError {
     #[error("Mutex lock error: {0:?}")]
     Mutex(String),
+    #[error("Not enough input value available for outputs")]
+    NotEnoughInputs,
 }
 
 #[derive(Debug)]
@@ -138,24 +146,57 @@ where
         Ok(outputs)
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
-        let mut my_outputs = self
+    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+        // TODO: Have all matching Tx Id
+        let signer = self.signer().await?;
+        let mut combined_inputs = self.outputs_at_address(signer).await?;
+        combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
+
+        let total_input_value = combined_inputs
+            .iter()
+            .fold(Values::default(), |mut acc, utxo| {
+                acc.add_values(utxo.values());
+                acc
+            });
+        let total_output_value = tx
+            .outputs()
+            .iter()
+            .fold(Values::default(), |mut acc, utxo| {
+                acc.add_values(utxo.values());
+                acc
+            });
+        let maybe_remainder = total_input_value
+            .try_subtract(&total_output_value)
+            .map_err(|_| InMemoryLCError::NotEnoughInputs)
+            .map_err(|e| TransactionIssuance(Box::new(e)))?;
+
+        let mut ledger_utxos = self
             .outputs
             .lock()
             .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| TransactionIssuance(Box::new(e)))?;
-        for tx_i in tx.inputs() {
-            let index = my_outputs
+        for input in combined_inputs {
+            let index = ledger_utxos
                 .iter()
-                .position(|(_, x)| x == tx_i)
+                .position(|(_, x)| x == &input)
                 .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().clone())
+                    LedgerClientError::FailedToRetrieveOutputWithId(input.id().clone())
                 })?;
-            my_outputs.remove(index);
+            ledger_utxos.remove(index);
         }
 
-        for tx_o in tx.outputs() {
-            my_outputs.push((tx_o.owner().clone(), tx_o.clone()))
+        let mut combined_outputs = Vec::new();
+        if let Some(remainder) = maybe_remainder {
+            combined_outputs.push(new_output(signer, &remainder));
+        }
+
+        let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
+
+        combined_outputs.extend(tx.outputs);
+        combined_outputs.extend(minting_outputs);
+
+        for output in combined_outputs {
+            ledger_utxos.push((output.owner().clone(), output.clone()))
         }
         Ok(())
     }

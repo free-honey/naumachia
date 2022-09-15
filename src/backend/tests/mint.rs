@@ -30,8 +30,8 @@ async fn mint__alice_can_mint() {
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
 
-    let u_tx: UnBuiltTransaction<(), ()> =
-        UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
+    let u_tx: TxActions<(), ()> =
+        TxActions::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
 
     backend.process(u_tx).await.unwrap();
 
@@ -39,7 +39,7 @@ async fn mint__alice_can_mint() {
 
     let expected = 100;
     let actual = backend
-        .txo_record
+        .ledger_client
         .balance_at_address(&signer, &policy_id)
         .await
         .unwrap();
@@ -53,8 +53,8 @@ async fn mint__bob_cannot_mint() {
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
     let amount = 100;
 
-    let u_tx: UnBuiltTransaction<(), ()> =
-        UnBuiltTransaction::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
+    let u_tx: TxActions<(), ()> =
+        TxActions::default().with_mint(amount, &signer, Box::new(AliceCanMintPolicy));
 
     let actual_err = backend.process(u_tx).await.unwrap_err();
 

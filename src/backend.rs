@@ -9,7 +9,7 @@ use crate::{
     scripts::MintingPolicy,
     transaction::Action,
     values::Values,
-    Transaction, UnBuiltTransaction,
+    Transaction, TxActions,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
@@ -22,53 +22,54 @@ pub mod tx_checks;
 mod tests;
 
 #[derive(Debug)]
-pub struct Backend<Datum, Redeemer: Clone + Eq, Record: LedgerClient<Datum, Redeemer>> {
+pub struct Backend<Datum, Redeemer, LC>
+where
+    Redeemer: Clone + Eq,
+    LC: LedgerClient<Datum, Redeemer>,
+{
     // TODO: Make fields private
     pub _datum: PhantomData<Datum>,
     pub _redeemer: PhantomData<Redeemer>,
-    pub txo_record: Record,
+    pub ledger_client: LC,
 }
 
-impl<Datum, Redeemer, Record> Backend<Datum, Redeemer, Record>
+impl<Datum, Redeemer, LC> Backend<Datum, Redeemer, LC>
 where
     Datum: Clone + Eq + Debug,
     Redeemer: Clone + Eq + Hash,
-    Record: LedgerClient<Datum, Redeemer>,
+    LC: LedgerClient<Datum, Redeemer>,
 {
-    pub fn new(txo_record: Record) -> Self {
+    pub fn new(txo_record: LC) -> Self {
         Backend {
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
-            txo_record,
+            ledger_client: txo_record,
         }
     }
 
-    pub async fn process(&self, u_tx: UnBuiltTransaction<Datum, Redeemer>) -> Result<()> {
+    pub async fn process(&self, u_tx: TxActions<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx).await?;
         can_spend_inputs(&tx, self.signer().await?.clone())?;
-        can_mint_tokens(&tx, self.txo_record.signer().await?)?;
-        self.txo_record.issue(tx)?;
+        can_mint_tokens(&tx, self.ledger_client.signer().await?)?;
+        self.ledger_client.issue(tx).await?;
         Ok(())
     }
 
-    pub fn txo_record(&self) -> &Record {
-        &self.txo_record
+    pub fn ledger_client(&self) -> &LC {
+        &self.ledger_client
     }
 
     pub async fn signer(&self) -> Result<&Address> {
-        let addr = self.txo_record.signer().await?;
+        let addr = self.ledger_client.signer().await?;
         Ok(addr)
     }
 
-    // TODO: Remove allow
-    #[allow(clippy::type_complexity)]
     async fn handle_actions(
         &self,
         actions: Vec<Action<Datum, Redeemer>>,
     ) -> Result<Transaction<Datum, Redeemer>> {
-        let mut min_input_values = Values::default();
         let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
-        let mut minting = Values::default();
+        let mut minting: HashMap<Address, Values> = HashMap::new();
         let mut script_inputs: Vec<Output<Datum>> = Vec::new();
         let mut specific_outputs: Vec<Output<Datum>> = Vec::new();
 
@@ -83,10 +84,6 @@ where
                     recipient,
                     policy_id: policy,
                 } => {
-                    // Input
-                    min_input_values.add_one_value(&policy, amount);
-
-                    // Output
                     add_amount_to_nested_map(&mut min_output_values, amount, &recipient, &policy);
                 }
                 Action::Mint {
@@ -95,13 +92,16 @@ where
                     policy,
                 } => {
                     let policy_id = policy.id();
-                    add_amount_to_nested_map(
-                        &mut min_output_values,
-                        amount,
-                        &recipient,
-                        &policy_id,
-                    );
-                    minting.add_one_value(&policy_id, amount);
+                    if let Some(values) = minting.remove(&recipient) {
+                        let mut new_values = values;
+                        new_values.add_one_value(&policy_id, amount);
+                        minting.insert(recipient, new_values);
+                    } else {
+                        let mut new_values = Values::default();
+                        new_values.add_one_value(&policy_id, amount);
+                        minting.insert(recipient, new_values);
+                    }
+                    // minting.add_one_value(&policy_id, amount);
                     policies.insert(policy.id(), policy);
                 }
                 Action::InitScript {
@@ -109,9 +109,6 @@ where
                     values,
                     address,
                 } => {
-                    for (policy, amount) in values.as_iter() {
-                        min_input_values.add_one_value(policy, *amount);
-                    }
                     let tx_hash = Uuid::new_v4().to_string(); // TODO: This should be done by the TxORecord impl or something
                     let index = new_utxo_index;
                     new_utxo_index += 1;
@@ -138,32 +135,13 @@ where
                 }
             }
         }
-        // inputs
-        let (inputs, remainders) = self
-            .select_inputs_for_one(
-                self.txo_record.signer().await?,
-                &min_input_values,
-                script_inputs,
-            )
-            .await?;
-
-        // TODO: Dedupe
-        let mut new_values = remainders;
-        let signer = self.txo_record.signer().await?;
-        if let Some(values) = min_output_values.get(signer) {
-            new_values.add_values(&values.borrow());
-        }
-        min_output_values.insert(
-            self.txo_record.signer().await?.clone(),
-            RefCell::new(new_values),
-        );
 
         let out_vecs = nested_map_to_vecs(min_output_values);
         let mut outputs = self.create_outputs_for(out_vecs)?;
         outputs.extend(specific_outputs);
 
         let tx = Transaction {
-            inputs,
+            script_inputs,
             outputs,
             redeemers,
             validators,
@@ -171,26 +149,6 @@ where
             policies,
         };
         Ok(tx)
-    }
-
-    // LOL Super Naive Solution, just select ALL inputs!
-    // TODO: Use Random Improve prolly: https://cips.cardano.org/cips/cip2/
-    //       but this is _good_enough_ for tests.
-    // TODO: Remove allow
-    #[allow(clippy::type_complexity)]
-    async fn select_inputs_for_one(
-        &self,
-        address: &Address,
-        spending_values: &Values,
-        script_inputs: Vec<Output<Datum>>,
-    ) -> Result<(Vec<Output<Datum>>, Values)> {
-        let mut all_available_outputs = self.txo_record.outputs_at_address(address).await?;
-        all_available_outputs.extend(script_inputs);
-        let address_values = Values::from_outputs(&all_available_outputs);
-
-        let spending_outputs = all_available_outputs;
-        let remainders = address_values.try_subtract(spending_values)?;
-        Ok((spending_outputs, remainders))
     }
 
     // TODO: This should be done by the LedgerClient
@@ -218,9 +176,9 @@ where
 
     async fn build(
         &self,
-        unbuilt_tx: UnBuiltTransaction<Datum, Redeemer>,
+        unbuilt_tx: TxActions<Datum, Redeemer>,
     ) -> Result<Transaction<Datum, Redeemer>> {
-        let UnBuiltTransaction { actions } = unbuilt_tx;
+        let TxActions { actions } = unbuilt_tx;
         self.handle_actions(actions).await
         // TODO: Calculate fees and then rebuild tx
     }

@@ -8,7 +8,7 @@ use crate::{
 use async_trait::async_trait;
 use blockfrost_http_client::{
     keys::TESTNET,
-    schemas::{UTxO, Value},
+    models::{UTxO, Value},
     BlockFrostHttpTrait,
 };
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
@@ -135,7 +135,7 @@ where
         }
     }
 
-    fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+    async fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         todo!()
     }
 }
@@ -163,6 +163,6 @@ fn as_nau_value(value: &Value) -> (PolicyId, u64) {
     (policy_id, amount)
 }
 
-fn convert_address(bf_addr: blockfrost_http_client::schemas::Address) -> Address {
+fn convert_address(bf_addr: blockfrost_http_client::models::Address) -> Address {
     Address::new(bf_addr.as_string())
 }

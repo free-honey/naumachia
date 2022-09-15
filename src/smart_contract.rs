@@ -49,12 +49,12 @@ where
     type LookupResponse = Logic::LookupResponse;
 
     async fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
-        let unbuilt_tx = Logic::handle_endpoint(endpoint, self.backend.txo_record()).await?;
-        self.backend.process(unbuilt_tx).await?;
+        let tx_actions = Logic::handle_endpoint(endpoint, self.backend.ledger_client()).await?;
+        self.backend.process(tx_actions).await?;
         Ok(())
     }
 
     async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
-        Ok(Logic::lookup(lookup, self.backend.txo_record()).await?)
+        Ok(Logic::lookup(lookup, self.backend.ledger_client()).await?)
     }
 }

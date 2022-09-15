@@ -4,6 +4,7 @@ use crate::{
     PolicyId,
 };
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 #[serde_with::serde_as]
@@ -21,27 +22,42 @@ impl Values {
         })
     }
 
-    pub fn try_subtract(&self, other: &Values) -> Result<Values> {
+    pub fn try_subtract(&self, other: &Values) -> Result<Option<Values>> {
         let mut remainders = Vec::new();
         let mut mine_cloned = self.values.clone();
-        for (policy, amt) in other.as_iter() {
-            if let Some(available) = mine_cloned.remove(policy) {
-                if amt <= &available {
-                    let remaining = available - amt;
-                    remainders.push((policy.clone(), remaining));
+        let mut there_is_a_difference = false;
+        if !other.is_empty() {
+            for (policy, amt) in other.as_iter() {
+                if let Some(available) = mine_cloned.remove(policy) {
+                    match amt.cmp(&available) {
+                        Ordering::Less => {
+                            let remaining = available - amt;
+                            remainders.push((policy.clone(), remaining));
+                            there_is_a_difference = true;
+                        }
+                        Ordering::Greater => {
+                            return Err(Error::InsufficientAmountOf(policy.to_owned()))
+                        }
+                        _ => {}
+                    }
                 } else {
                     return Err(Error::InsufficientAmountOf(policy.to_owned()));
                 }
-            } else {
-                return Err(Error::InsufficientAmountOf(policy.to_owned()));
             }
+        } else {
+            there_is_a_difference = true; // We just keep what we started with
         }
+
         let other_remainders: Vec<_> = mine_cloned.into_iter().collect();
         remainders.extend(other_remainders);
 
         let values = remainders.into_iter().collect();
-        let difference = Values { values };
-        Ok(difference)
+        if there_is_a_difference {
+            let difference = Values { values };
+            Ok(Some(difference))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn add_one_value(&mut self, policy: &PolicyId, amount: u64) {
@@ -64,6 +80,14 @@ impl Values {
 
     pub fn get(&self, policy: &PolicyId) -> Option<u64> {
         self.values.get(policy).copied()
+    }
+
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

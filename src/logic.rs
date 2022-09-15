@@ -1,5 +1,5 @@
 use crate::ledger_client::LedgerClient;
-use crate::{error::Result, UnBuiltTransaction};
+use crate::{error::Result, TxActions};
 
 use thiserror::Error;
 
@@ -19,7 +19,7 @@ pub trait SCLogic: Send + Sync {
     async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> SCLogicResult<UnBuiltTransaction<Self::Datum, Self::Redeemer>>;
+    ) -> SCLogicResult<TxActions<Self::Datum, Self::Redeemer>>;
 
     async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Lookup,

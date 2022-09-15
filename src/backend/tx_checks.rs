@@ -1,3 +1,4 @@
+use crate::values::Values;
 use crate::{
     error::{Error, Result},
     output::Output,
@@ -14,7 +15,7 @@ pub fn can_spend_inputs<
     signer: Address,
 ) -> Result<()> {
     let ctx = TxContext { signer };
-    for input in &tx.inputs {
+    for input in &tx.script_inputs {
         match input {
             Output::Wallet { .. } => {} // TODO: Make sure not spending other's outputs
             Output::Validator { owner, datum, .. } => {
@@ -42,7 +43,14 @@ pub fn can_mint_tokens<Datum, Redeemer>(
     let ctx = TxContext {
         signer: signer.clone(),
     };
-    for (id, _) in tx.minting.as_iter() {
+    let vals = tx
+        .minting
+        .iter()
+        .fold(Values::default(), |mut acc, (_recp, vals)| {
+            acc.add_values(vals);
+            acc
+        });
+    for (id, _) in vals.as_iter() {
         match id {
             PolicyId::NativeToken(_) => {
                 if let Some(policy) = tx.policies.get(id) {
@@ -56,5 +64,6 @@ pub fn can_mint_tokens<Datum, Redeemer>(
             }
         }
     }
+
     Ok(())
 }

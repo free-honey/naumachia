@@ -49,7 +49,7 @@ async fn main() {
 
     let backend = Backend::new(txo_record);
     let signer = backend
-        .txo_record()
+        .ledger_client()
         .signer()
         .await
         .expect("Can't find signer");
@@ -61,7 +61,7 @@ async fn main() {
     match args.action {
         ActionParams::Balance => {
             let balance = backend
-                .txo_record
+                .ledger_client
                 .balance_at_address(signer, &PolicyId::ADA)
                 .await
                 .expect("Can't get balance");

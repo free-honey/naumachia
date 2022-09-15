@@ -1,6 +1,6 @@
 use crate::{
     address::{Address, PolicyId},
-    transaction::{Transaction, UnBuiltTransaction},
+    transaction::{Transaction, TxActions},
 };
 pub mod error;
 

@@ -1,4 +1,4 @@
-use crate::schemas::{Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, UTxO};
+use crate::models::{Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, UTxO};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::{fs, path::Path};
@@ -8,7 +8,7 @@ use crate::error::{Error, Result};
 
 pub mod error;
 pub mod keys;
-pub mod schemas;
+pub mod models;
 #[cfg(test)]
 pub mod tests;
 
