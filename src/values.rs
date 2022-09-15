@@ -4,6 +4,7 @@ use crate::{
     PolicyId,
 };
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 #[serde_with::serde_as]
@@ -25,15 +26,19 @@ impl Values {
         let mut remainders = Vec::new();
         let mut mine_cloned = self.values.clone();
         let mut there_is_a_difference = false;
-        if other.len() > 0 {
+        if !other.is_empty() {
             for (policy, amt) in other.as_iter() {
                 if let Some(available) = mine_cloned.remove(policy) {
-                    if amt < &available {
-                        let remaining = available - amt;
-                        remainders.push((policy.clone(), remaining));
-                        there_is_a_difference = true;
-                    } else if amt > &available {
-                        return Err(Error::InsufficientAmountOf(policy.to_owned()));
+                    match amt.cmp(&available) {
+                        Ordering::Greater => {
+                            let remaining = available - amt;
+                            remainders.push((policy.clone(), remaining));
+                            there_is_a_difference = true;
+                        }
+                        Ordering::Less => {
+                            return Err(Error::InsufficientAmountOf(policy.to_owned()))
+                        }
+                        _ => {}
                     }
                 } else {
                     return Err(Error::InsufficientAmountOf(policy.to_owned()));
@@ -79,6 +84,10 @@ impl Values {
 
     pub fn len(&self) -> usize {
         self.values.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

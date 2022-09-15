@@ -47,7 +47,7 @@ pub fn can_mint_tokens<Datum, Redeemer>(
         .minting
         .iter()
         .fold(Values::default(), |mut acc, (_recp, vals)| {
-            acc.add_values(&vals);
+            acc.add_values(vals);
             acc
         });
     for (id, _) in vals.as_iter() {
