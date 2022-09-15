@@ -13,6 +13,7 @@ pub enum Action<Datum, Redeemer> {
         recipient: Address,
         policy_id: PolicyId,
     },
+    // TODO: Support sending to script address
     Mint {
         amount: u64,
         recipient: Address,
@@ -30,19 +31,19 @@ pub enum Action<Datum, Redeemer> {
     },
 }
 
-pub struct UnBuiltTransaction<Datum, Redeemer> {
+pub struct TxActions<Datum, Redeemer> {
     pub actions: Vec<Action<Datum, Redeemer>>,
 }
 
-impl<Datum, Redeemer> Default for UnBuiltTransaction<Datum, Redeemer> {
+impl<Datum, Redeemer> Default for TxActions<Datum, Redeemer> {
     fn default() -> Self {
-        UnBuiltTransaction {
+        TxActions {
             actions: Vec::new(),
         }
     }
 }
 
-impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
+impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
     pub fn with_transfer(mut self, amount: u64, recipient: Address, policy_id: PolicyId) -> Self {
         let action = Action::Transfer {
             amount,
@@ -96,11 +97,11 @@ impl<Datum, Redeemer> UnBuiltTransaction<Datum, Redeemer> {
 }
 
 pub struct Transaction<Datum, Redeemer> {
-    pub inputs: Vec<Output<Datum>>,
+    pub script_inputs: Vec<Output<Datum>>,
     pub outputs: Vec<Output<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
     pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
-    pub minting: Values,
+    pub minting: HashMap<Address, Values>,
     pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
 }
 
@@ -110,6 +111,6 @@ impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {
     }
 
     pub fn inputs(&self) -> &Vec<Output<Datum>> {
-        &self.inputs
+        &self.script_inputs
     }
 }

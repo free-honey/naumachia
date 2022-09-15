@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 use uuid::Uuid;
@@ -21,7 +22,7 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
 }
 
 impl<
-        Datum: Clone + PartialEq + Debug + Send + Sync,
+        Datum: Clone + PartialEq + Debug + Send + Sync + Hash + Eq + Ord + PartialOrd,
         Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
     > TestBackendsBuilder<Datum, Redeemer>
 {
@@ -54,7 +55,7 @@ impl<
         Backend {
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
-            txo_record,
+            ledger_client: txo_record,
         }
     }
 }
@@ -68,7 +69,7 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
 
 impl<Datum, Redeemer> OutputBuilder<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Hash + Eq + Ord + PartialOrd,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
@@ -101,6 +102,8 @@ type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
 enum InMemoryLCError {
     #[error("Mutex lock error: {0:?}")]
     Mutex(String),
+    #[error("Not enough input value available for outputs")]
+    NotEnoughInputs,
 }
 
 #[derive(Debug)]
@@ -113,7 +116,7 @@ pub struct InMemoryLedgerClient<Datum, Redeemer> {
 #[async_trait]
 impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for InMemoryLedgerClient<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Hash + PartialEq + Eq + Ord + PartialOrd,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     async fn signer(&self) -> LedgerClientResult<&Address> {
@@ -138,25 +141,69 @@ where
         Ok(outputs)
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
-        let mut my_outputs = self
+    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+        // TODO: Have all matching Tx Id
+
+        let mut combined_inputs = self.outputs_at_address(&self.signer).await?;
+        combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
+
+        let total_input_value = combined_inputs
+            .iter()
+            .fold(Values::default(), |mut acc, utxo| {
+                acc.add_values(utxo.values());
+                acc
+            });
+        let total_output_value = tx
+            .outputs()
+            .iter()
+            .fold(Values::default(), |mut acc, utxo| {
+                acc.add_values(utxo.values());
+                acc
+            });
+        let remainder = total_input_value
+            .try_subtract(&total_output_value)
+            .map_err(|_| InMemoryLCError::NotEnoughInputs)
+            .map_err(|e| TransactionIssuance(Box::new(e)))?;
+
+        let mut ledger_utxos = self
             .outputs
             .lock()
             .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| TransactionIssuance(Box::new(e)))?;
-        for tx_i in tx.inputs() {
-            let index = my_outputs
+        for input in combined_inputs {
+            let index = ledger_utxos
                 .iter()
-                .position(|(_, x)| x == tx_i)
+                .position(|(_, x)| x == &input)
                 .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(tx_i.id().clone())
+                    LedgerClientError::FailedToRetrieveOutputWithId(input.id().clone())
                 })?;
-            my_outputs.remove(index);
+            ledger_utxos.remove(index);
         }
 
-        for tx_o in tx.outputs() {
-            my_outputs.push((tx_o.owner().clone(), tx_o.clone()))
+        let tx_hash = Uuid::new_v4().to_string();
+        let index = 0;
+        let change_output = Output::new_wallet(tx_hash, index, self.signer.clone(), remainder);
+
+        let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
+
+        let mut combined_outputs = vec![change_output];
+        combined_outputs.extend(tx.outputs);
+        combined_outputs.extend(minting_outputs);
+
+        for output in combined_outputs {
+            ledger_utxos.push((output.owner().clone(), output.clone()))
         }
         Ok(())
     }
+}
+
+fn minting_to_outputs<Datum>(minting: &HashMap<Address, Values>) -> Vec<Output<Datum>> {
+    minting
+        .iter()
+        .map(|(addr, vals)| {
+            let tx_hash = Uuid::new_v4().to_string();
+            let index = 0;
+            Output::new_wallet(tx_hash, index, addr.clone(), vals.clone())
+        })
+        .collect()
 }

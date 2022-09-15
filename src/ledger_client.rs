@@ -33,7 +33,7 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
             });
         Ok(bal)
     }
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()>; // TODO: Move to other trait
+    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()>; // TODO: Move to other trait
 }
 
 #[derive(Debug, Error)]

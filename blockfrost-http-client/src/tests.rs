@@ -1,33 +1,35 @@
 use super::*;
 use crate::keys::{my_base_addr, my_priv_key, TESTNET};
-use cardano_multiplatform_lib::builders::output_builder::TransactionOutputBuilder;
-use cardano_multiplatform_lib::builders::redeemer_builder::RedeemerWitnessKey;
-use cardano_multiplatform_lib::builders::tx_builder::CoinSelectionStrategyCIP2;
-use cardano_multiplatform_lib::builders::witness_builder::PlutusScriptWitness;
-use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
-use cardano_multiplatform_lib::plutus::{ExUnits, RedeemerTag};
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress,
-    address::{EnterpriseAddress, RewardAddress, StakeCredential},
-    builders::input_builder::{InputBuilderResult, SingleInputBuilder},
-    builders::output_builder::SingleOutputBuilderResult,
-    builders::tx_builder::{
-        ChangeSelectionAlgo, TransactionBuilder, TransactionBuilderConfigBuilder,
+    address::{Address as CMLAddress, EnterpriseAddress, RewardAddress, StakeCredential},
+    builders::{
+        input_builder::{InputBuilderResult, SingleInputBuilder},
+        output_builder::SingleOutputBuilderResult,
+        output_builder::TransactionOutputBuilder,
+        redeemer_builder::RedeemerWitnessKey,
+        tx_builder::CoinSelectionStrategyCIP2,
+        tx_builder::{ChangeSelectionAlgo, TransactionBuilder, TransactionBuilderConfigBuilder},
+        witness_builder::PartialPlutusWitness,
+        witness_builder::PlutusScriptWitness,
     },
-    builders::witness_builder::PartialPlutusWitness,
     crypto::TransactionHash,
-    ledger::alonzo::fees::LinearFee,
-    ledger::common::hash::hash_transaction,
-    ledger::common::value::{BigNum, Int, Value as CMLValue},
-    ledger::shelley::witness::make_vkey_witness,
+    ledger::{
+        alonzo::fees::LinearFee,
+        common::{
+            hash::hash_plutus_data,
+            hash::hash_transaction,
+            value::{BigNum, Int, Value as CMLValue},
+        },
+        shelley::witness::make_vkey_witness,
+    },
     plutus::{
         CostModel, Costmdls, ExUnitPrices, Language, PlutusData, PlutusScript, PlutusV1Script,
     },
+    plutus::{ExUnits, RedeemerTag},
     AssetName, Assets, Datum, MultiAsset, PolicyID, RequiredSigners, TransactionInput,
     TransactionOutput, UnitInterval,
 };
-use std::fs::File;
-use std::io::Read;
+use std::{fs::File, io::Read};
 
 #[ignore]
 #[tokio::test]
@@ -149,7 +151,7 @@ async fn account_associated_addresses_total() {
 }
 
 // Most of these values are made up
-fn test_tx_builder() -> TransactionBuilder {
+fn test_v1_tx_builder() -> TransactionBuilder {
     let coefficient = BigNum::from_str("44").unwrap();
     let constant = BigNum::from_str("155381").unwrap();
     let linear_fee = LinearFee::new(&coefficient, &constant);
@@ -288,7 +290,7 @@ fn cmlvalue_from_values(values: &[Value]) -> CMLValue {
     cml_value
 }
 
-use crate::schemas::Value;
+use crate::models::Value;
 use serde::Deserialize;
 
 #[allow(non_snake_case)]
@@ -320,7 +322,7 @@ async fn send_to_self() {
         .await
         .unwrap();
 
-    let mut tx_builder = test_tx_builder();
+    let mut tx_builder = test_v1_tx_builder();
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
@@ -365,7 +367,7 @@ async fn init_always_succeeds_contract() {
         .await
         .unwrap();
 
-    let mut tx_builder = test_tx_builder();
+    let mut tx_builder = test_v1_tx_builder();
 
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
@@ -418,18 +420,16 @@ async fn spend_datum() {
         .await
         .unwrap();
 
-    let mut tx_builder = test_tx_builder();
-
+    // 1
+    let mut tx_builder = test_v1_tx_builder();
     let hash_raw = "d5be9549bfb82b5981f6cdf49187b6140bac5f129adbb50281ee0e680c0a411a";
     let index = 0;
     let script_input = always_succeeds_script_input(2_000_000, hash_raw, index);
     tx_builder.add_input(&script_input).unwrap();
-
     for utxo in my_utxos.iter() {
         let input = input_from_utxo(&my_address, utxo);
         tx_builder.add_utxo(&input);
     }
-
     let input_utxo = TransactionOutputBuilder::new()
         .with_address(&my_address)
         .next()
@@ -449,32 +449,24 @@ async fn spend_datum() {
     )
     .payment_key()
     .unwrap();
-
     tx_builder.add_collateral(&collateral_intput).unwrap();
-
     let strat = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
     tx_builder.select_utxos(strat).unwrap();
-
     let algo = ChangeSelectionAlgo::Default;
-    // let signed_tx_builder = tx_builder.build(algo, &change_address).unwrap();
     let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
     let transaction = tx_redeemer_builder.draft_tx();
-
     let bytes = transaction.to_bytes();
-
     let res = bf.execution_units(&bytes).await.unwrap();
-
     let spend = res.get_spend().unwrap();
-
     tx_builder.set_exunits(
         &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(2)), // TODO: How do I know which index?
         &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
     );
-
     let algo = ChangeSelectionAlgo::Default;
+
+    // 2
     let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
     let unchecked_tx = signed_tx_builder.build_unchecked();
-
     let tx_body = unchecked_tx.body();
     let tx_hash = hash_transaction(&tx_body);
     dbg!(tx_hash.to_hex());

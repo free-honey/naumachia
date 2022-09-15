@@ -10,7 +10,7 @@ use naumachia::{
     scripts::ScriptError,
     scripts::ScriptResult,
     scripts::{TxContext, ValidatorCode},
-    transaction::UnBuiltTransaction,
+    transaction::TxActions,
     values::Values,
 };
 use serde::{Deserialize, Serialize};
@@ -78,7 +78,7 @@ impl SCLogic for EscrowContract {
     async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
+    ) -> SCLogicResult<TxActions<EscrowDatum, ()>> {
         match endpoint {
             EscrowEndpoint::Escrow { amount, receiver } => escrow(amount, receiver),
             EscrowEndpoint::Claim { output_id } => claim(&output_id, txo_record).await,
@@ -97,23 +97,23 @@ impl SCLogic for EscrowContract {
     }
 }
 
-fn escrow(amount: u64, receiver: Address) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
+fn escrow(amount: u64, receiver: Address) -> SCLogicResult<TxActions<EscrowDatum, ()>> {
     let script = EscrowValidatorScript;
     let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
     let datum = EscrowDatum { receiver };
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
-    let u_tx = UnBuiltTransaction::default().with_script_init(datum, values, address);
+    let u_tx = TxActions::default().with_script_init(datum, values, address);
     Ok(u_tx)
 }
 
 async fn claim<Record: LedgerClient<EscrowDatum, ()>>(
     output_id: &OutputId,
     txo_record: &Record,
-) -> SCLogicResult<UnBuiltTransaction<EscrowDatum, ()>> {
+) -> SCLogicResult<TxActions<EscrowDatum, ()>> {
     let script = Box::new(EscrowValidatorScript);
     let output = lookup_output(output_id, txo_record).await?;
-    let u_tx = UnBuiltTransaction::default().with_script_redeem(output, (), script);
+    let u_tx = TxActions::default().with_script_redeem(output, (), script);
     Ok(u_tx)
 }
 
@@ -167,7 +167,7 @@ mod tests {
         let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
         let expected = escrow_amount;
         let actual = backend
-            .txo_record
+            .ledger_client
             .balance_at_address(&script.address(), &PolicyId::ADA)
             .await
             .unwrap();
@@ -175,14 +175,14 @@ mod tests {
 
         let expected = start_amount - escrow_amount;
         let actual = backend
-            .txo_record
+            .ledger_client
             .balance_at_address(&me, &PolicyId::ADA)
             .await
             .unwrap();
         assert_eq!(expected, actual);
 
         let instance = backend
-            .txo_record
+            .ledger_client
             .outputs_at_address(&script.address())
             .await
             .unwrap()
@@ -198,19 +198,19 @@ mod tests {
         assert!(attempt.is_err());
 
         // The recipient tries to spend and succeeds
-        backend.txo_record.signer = alice.clone();
+        backend.ledger_client.signer = alice.clone();
         let contract = SmartContract::new(&EscrowContract, &backend);
         contract.hit_endpoint(call).await.unwrap();
 
         let alice_balance = backend
-            .txo_record
+            .ledger_client
             .balance_at_address(&alice, &PolicyId::ADA)
             .await
             .unwrap();
         assert_eq!(alice_balance, escrow_amount);
 
         let script_balance = backend
-            .txo_record
+            .ledger_client
             .balance_at_address(&escrow_address, &PolicyId::ADA)
             .await
             .unwrap();

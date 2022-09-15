@@ -10,7 +10,7 @@ use naumachia::{
     scripts::{MintingPolicy, ScriptResult, TxContext},
     smart_contract::SmartContract,
     smart_contract::SmartContractTrait,
-    transaction::UnBuiltTransaction,
+    transaction::TxActions,
 };
 
 struct AlwaysMintsPolicy;
@@ -47,7 +47,7 @@ impl SCLogic for AlwaysMintsSmartContract {
     async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
         txo_record: &Record,
-    ) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
+    ) -> SCLogicResult<TxActions<(), ()>> {
         match endpoint {
             Endpoint::Mint { amount } => {
                 let recipient = txo_record
@@ -68,9 +68,9 @@ impl SCLogic for AlwaysMintsSmartContract {
     }
 }
 
-fn mint(amount: u64, recipient: Address) -> SCLogicResult<UnBuiltTransaction<(), ()>> {
+fn mint(amount: u64, recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
     let policy = Box::new(AlwaysMintsPolicy);
-    let utx = UnBuiltTransaction::default().with_mint(amount, &recipient, policy);
+    let utx = TxActions::default().with_mint(amount, &recipient, policy);
     Ok(utx)
 }
 
@@ -88,7 +88,7 @@ async fn can_mint_from_always_true_minting_policy() {
     // Check my balance for minted tokens
     let expected = amount;
     let actual = <InMemoryLedgerClient<(), ()> as LedgerClient<(), ()>>::balance_at_address(
-        &backend.txo_record,
+        &backend.ledger_client,
         &me,
         &policy,
     )

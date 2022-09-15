@@ -113,7 +113,7 @@ where
         Ok(outputs)
     }
 
-    fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         let mut my_outputs = self.get_data().outputs;
         for tx_i in tx.inputs() {
             let index = my_outputs.iter().position(|x| x == tx_i).ok_or_else(|| {
@@ -192,14 +192,14 @@ mod tests {
         let new_output =
             Output::new_wallet(tx_hash, index, owner.clone(), first_output.values().clone());
         let tx: Transaction<(), ()> = Transaction {
-            inputs: vec![first_output],
+            script_inputs: vec![first_output],
             outputs: vec![new_output],
             redeemers: vec![],
             validators: Default::default(),
             minting: Default::default(),
             policies: Default::default(),
         };
-        record.issue(tx).unwrap();
+        record.issue(tx).await.unwrap();
         let expected = starting_amount;
         let actual = record
             .balance_at_address(&owner, &PolicyId::ADA)

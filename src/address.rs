@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 // TODO: Continue to hone this into a good API. I tried to make the Address generic, but it
 //   made for bad ergonomics. Instead, I want to make this as stable as possible.
-#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Address {
     Base(String),
     Raw(String), // This is a placeholder for now to make tests work
