@@ -155,35 +155,6 @@ where
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         match address {
             Address::Base(addr_string) => {
-                // let cml_address =
-                //     CMLAddress::from_bech32(addr_string).map_err(output_cml_err(address))?;
-                // let base_addr = BaseAddress::from_address(&cml_address)
-                //     .ok_or_else(|| invalid_base_addr(address))?;
-                // let staking_cred = base_addr.stake_cred();
-                //
-                // let reward_addr = RewardAddress::new(TESTNET, &staking_cred)
-                //     .to_address()
-                //     .to_bech32(None)
-                //     .map_err(output_cml_err(address))?;
-                //
-                // let addresses = self
-                //     .client
-                //     .assoc_addresses(&reward_addr)
-                //     .await
-                //     .map_err(output_http_err(address))?;
-                //
-                // let nested_utxos_futs: Vec<_> = addresses
-                //     .iter()
-                //     .map(|addr| {
-                //         dbg!(&addr);
-                //         self.client
-                //             .utxos(addr.as_string())
-                //             .map(|utxos| (addr.to_owned(), utxos))
-                //     })
-                //     .collect();
-                //
-                // let nested_utxos: Vec<_> = join_all(nested_utxos_futs).await;
-
                 let base_addr = self
                     .keys
                     .addr_from_bech_32(addr_string)
@@ -200,19 +171,6 @@ where
                     .iter()
                     .map(|utxo| bf_utxo_to_utxo(utxo, address))
                     .collect();
-
-                // let mut outputs_for_all_addresses = Vec::new();
-                //
-                // for (addr, utxos_res) in nested_utxos {
-                //     let utxos = utxos_res.map_err(output_http_err(address))?;
-                //     let nau_addr = convert_address(addr);
-                //     let nau_outputs: Vec<_> = utxos
-                //         .iter()
-                //         .map(|utxo| into_nau_output(utxo, &nau_addr))
-                //         .collect();
-                //     outputs_for_all_addresses.extend(nau_outputs);
-                // }
-                // Ok(outputs_for_all_addresses)
                 Ok(utxos)
             }
             Address::Raw(_) => unimplemented!("Doesn't make sense here"),

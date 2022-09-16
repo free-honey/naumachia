@@ -13,6 +13,9 @@ use crate::values::Values;
 use std::error;
 use uuid::Uuid;
 
+// TODO: Having this bound to a specific Datum/Redeemer doesn't really make sense at this scope.
+//   It's convenient from the backend's perspective, but it's constricting else-wise.
+//   https://github.com/MitchTurner/naumachia/issues/38
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
     async fn signer(&self) -> LedgerClientResult<&Address>;
