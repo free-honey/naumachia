@@ -109,6 +109,8 @@ enum InMemoryLCError {
     Mutex(String),
     #[error("Not enough input value available for outputs")]
     NotEnoughInputs,
+    #[error("The same input is listed twice")]
+    DuplicateInput, // TODO: WE don't need this once we dedupe
 }
 
 #[derive(Debug)]
@@ -180,7 +182,10 @@ where
                 .iter()
                 .position(|(_, x)| x == &input)
                 .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(input.id().clone())
+                    LedgerClientError::FailedToRetrieveOutputWithId(
+                        input.id().clone(),
+                        Box::new(InMemoryLCError::DuplicateInput),
+                    )
                 })?;
             ledger_utxos.remove(index);
         }

@@ -18,7 +18,7 @@ const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
 //   project_id = <INSERT API KEY HERE>
 const CONFIG_PATH: &str = ".blockfrost.toml";
 
-fn load_key_from_file(key_path: &str) -> Result<String> {
+pub fn load_key_from_file(key_path: &str) -> Result<String> {
     let path = Path::new(key_path);
     let text = fs::read_to_string(&path).map_err(Error::FileRead)?;
     let config: toml::Value = toml::from_str(&text).map_err(Error::Toml)?;

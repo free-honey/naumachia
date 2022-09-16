@@ -33,6 +33,8 @@ struct Data<Datum> {
 enum LocalPersistedLCError {
     #[error("Not enough input value available for outputs")]
     NotEnoughInputs,
+    #[error("The same input is listed twice")]
+    DuplicateInput, // TODO: WE don't need this once we dedupe
 }
 
 impl<Datum> Data<Datum> {
@@ -153,7 +155,10 @@ where
                 .iter()
                 .position(|x| x == &inputs)
                 .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(inputs.id().clone())
+                    LedgerClientError::FailedToRetrieveOutputWithId(
+                        inputs.id().clone(),
+                        Box::new(LocalPersistedLCError::DuplicateInput),
+                    )
                 })?;
             ledger_utxos.remove(index);
         }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-pub mod blockfrost_client;
+pub mod cml_client;
 pub mod in_memory_ledger;
 pub mod local_persisted_ledger;
 use async_trait::async_trait;
@@ -44,7 +44,7 @@ pub enum LedgerClientError {
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error + Send>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
-    FailedToRetrieveOutputWithId(OutputId),
+    FailedToRetrieveOutputWithId(OutputId, Box<dyn error::Error + Send>),
     #[error("Failed to issue transaction: {0:?}")]
     TransactionIssuance(Box<dyn error::Error + Send>),
 }
