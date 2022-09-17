@@ -6,7 +6,8 @@ use std::{
 };
 use uuid::Uuid;
 
-use crate::ledger_client::new_output;
+use crate::ledger_client::{build_outputs, new_wallet_output};
+use crate::output::UnbuiltOutput;
 use crate::{
     backend::Backend,
     ledger_client::minting_to_outputs,
@@ -14,7 +15,7 @@ use crate::{
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
     values::Values,
-    Address, PolicyId, Transaction,
+    Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use thiserror::Error;
@@ -148,7 +149,7 @@ where
         Ok(outputs)
     }
 
-    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
         let mut combined_inputs = self.outputs_at_address(signer).await?;
@@ -160,6 +161,10 @@ where
                 acc.add_values(utxo.values());
                 acc
             });
+
+        let mut inputs_with_mints = total_input_value.clone();
+        inputs_with_mints.add_values(&tx.minting);
+
         let total_output_value = tx
             .outputs()
             .iter()
@@ -167,7 +172,7 @@ where
                 acc.add_values(utxo.values());
                 acc
             });
-        let maybe_remainder = total_input_value
+        let maybe_remainder = inputs_with_mints
             .try_subtract(&total_output_value)
             .map_err(|_| InMemoryLCError::NotEnoughInputs)
             .map_err(|e| TransactionIssuance(Box::new(e)))?;
@@ -192,13 +197,12 @@ where
 
         let mut combined_outputs = Vec::new();
         if let Some(remainder) = maybe_remainder {
-            combined_outputs.push(new_output(signer, &remainder));
+            combined_outputs.push(new_wallet_output(signer, &remainder));
         }
 
-        let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
+        let built_outputs = build_outputs(tx.outputs);
 
-        combined_outputs.extend(tx.outputs);
-        combined_outputs.extend(minting_outputs);
+        combined_outputs.extend(built_outputs);
 
         for output in combined_outputs {
             ledger_utxos.push((output.owner().clone(), output.clone()))

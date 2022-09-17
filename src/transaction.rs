@@ -4,6 +4,7 @@ use crate::{
     scripts::{MintingPolicy, ValidatorCode},
 };
 
+use crate::output::UnbuiltOutput;
 use crate::values::Values;
 use std::collections::HashMap;
 
@@ -96,17 +97,17 @@ impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
     }
 }
 
-pub struct Transaction<Datum, Redeemer> {
+pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_inputs: Vec<Output<Datum>>,
-    pub outputs: Vec<Output<Datum>>,
+    pub outputs: Vec<UnbuiltOutput<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
     pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
-    pub minting: HashMap<Address, Values>,
+    pub minting: Values,
     pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
 }
 
-impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {
-    pub fn outputs(&self) -> &Vec<Output<Datum>> {
+impl<Datum, Redeemer: Clone + PartialEq + Eq> UnbuiltTransaction<Datum, Redeemer> {
+    pub fn outputs(&self) -> &Vec<UnbuiltOutput<Datum>> {
         &self.outputs
     }
 

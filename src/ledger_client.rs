@@ -1,4 +1,4 @@
-use crate::{address::Address, output::Output, transaction::Transaction, PolicyId};
+use crate::{address::Address, output::Output, transaction::UnbuiltTransaction, PolicyId};
 use std::collections::HashMap;
 
 use thiserror::Error;
@@ -8,7 +8,7 @@ pub mod in_memory_ledger;
 pub mod local_persisted_ledger;
 use async_trait::async_trait;
 
-use crate::output::OutputId;
+use crate::output::{OutputId, UnbuiltOutput};
 use crate::values::Values;
 use std::error;
 use uuid::Uuid;
@@ -39,7 +39,7 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
             });
         Ok(bal)
     }
-    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()>; // TODO: Move to other trait
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<()>; // TODO: Move to other trait
 }
 
 #[derive(Debug, Error)]
@@ -57,13 +57,38 @@ pub type LedgerClientResult<T> = Result<T, LedgerClientError>;
 pub(crate) fn minting_to_outputs<Datum>(minting: &HashMap<Address, Values>) -> Vec<Output<Datum>> {
     minting
         .iter()
-        .map(|(addr, vals)| new_output(addr, vals))
+        .map(|(addr, vals)| new_wallet_output(addr, vals))
         .collect()
 }
 
-pub(crate) fn new_output<Datum>(addr: &Address, vals: &Values) -> Output<Datum> {
+pub(crate) fn new_wallet_output<Datum>(addr: &Address, vals: &Values) -> Output<Datum> {
     // TODO: Fix to not do tx_hash here maybe
     let tx_hash = Uuid::new_v4().to_string();
     let index = 0;
     Output::new_wallet(tx_hash, index, addr.clone(), vals.clone())
+}
+
+pub(crate) fn new_validator_output<Datum>(
+    addr: &Address,
+    vals: &Values,
+    datum: Datum,
+) -> Output<Datum> {
+    // TODO: Fix to not do tx_hash here maybe
+    let tx_hash = Uuid::new_v4().to_string();
+    let index = 0;
+    Output::new_validator(tx_hash, index, addr.clone(), vals.clone(), datum)
+}
+
+fn build_outputs<Datum>(unbuilt_outputs: Vec<UnbuiltOutput<Datum>>) -> Vec<Output<Datum>> {
+    unbuilt_outputs
+        .into_iter()
+        .map(|output| match output {
+            UnbuiltOutput::Wallet { owner, values } => new_wallet_output(&owner, &values),
+            UnbuiltOutput::Validator {
+                owner,
+                values,
+                datum,
+            } => new_validator_output(&owner, &values, datum),
+        })
+        .collect()
 }

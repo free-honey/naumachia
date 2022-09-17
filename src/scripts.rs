@@ -2,7 +2,7 @@ use crate::address::Address;
 use crate::PolicyId;
 use thiserror::Error;
 
-// TODO: Move
+// TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
 #[derive(Clone)]
 pub struct TxContext {
     pub signer: Address,

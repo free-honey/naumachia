@@ -4,7 +4,7 @@ use crate::{
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
     values::Values,
-    Address, PolicyId, Transaction,
+    Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use blockfrost_http_client::{
@@ -177,7 +177,7 @@ where
         }
     }
 
-    async fn issue(&self, _tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+    async fn issue(&self, _tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<()> {
         todo!()
     }
 }

@@ -68,7 +68,7 @@ async fn get_my_native_token_balance() {
 
 #[ignore]
 #[tokio::test]
-async fn transfer_tx() {
+async fn transfer_self_tx() {
     // let base_addr = my_base_addr();
     // let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     // let my_addr = Address::Base(addr_string);

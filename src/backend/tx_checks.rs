@@ -3,7 +3,7 @@ use crate::{
     error::{Error, Result},
     output::Output,
     scripts::TxContext,
-    Address, PolicyId, Transaction,
+    Address, PolicyId, UnbuiltTransaction,
 };
 use std::{fmt::Debug, hash::Hash};
 
@@ -11,7 +11,7 @@ pub fn can_spend_inputs<
     Datum: Clone + PartialEq + Debug,
     Redeemer: Clone + PartialEq + Eq + Hash,
 >(
-    tx: &Transaction<Datum, Redeemer>,
+    tx: &UnbuiltTransaction<Datum, Redeemer>,
     signer: Address,
 ) -> Result<()> {
     let ctx = TxContext { signer };
@@ -37,20 +37,13 @@ pub fn can_spend_inputs<
 }
 
 pub fn can_mint_tokens<Datum, Redeemer>(
-    tx: &Transaction<Datum, Redeemer>,
+    tx: &UnbuiltTransaction<Datum, Redeemer>,
     signer: &Address,
 ) -> Result<()> {
     let ctx = TxContext {
         signer: signer.clone(),
     };
-    let vals = tx
-        .minting
-        .iter()
-        .fold(Values::default(), |mut acc, (_recp, vals)| {
-            acc.add_values(vals);
-            acc
-        });
-    for (id, _) in vals.as_iter() {
+    for (id, _) in tx.minting.as_iter() {
         match id {
             PolicyId::NativeToken(_) => {
                 if let Some(policy) = tx.policies.get(id) {
