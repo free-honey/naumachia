@@ -1,4 +1,4 @@
-use crate::output::{OutputId, UnbuiltOutput};
+use crate::output::UnbuiltOutput;
 use crate::{
     address::{Address, PolicyId},
     backend::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs},
@@ -12,7 +12,6 @@ use crate::{
     TxActions, UnbuiltTransaction,
 };
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData};
-use uuid::Uuid;
 
 mod nested_value_map;
 pub mod selection;

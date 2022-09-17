@@ -12,7 +12,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::ledger_client::LedgerClientError::TransactionIssuance;
-use crate::ledger_client::{build_outputs, minting_to_outputs, new_wallet_output};
+use crate::ledger_client::{build_outputs, new_wallet_output};
 use crate::values::Values;
 use crate::{
     address::Address,

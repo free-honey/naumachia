@@ -7,10 +7,8 @@ use std::{
 use uuid::Uuid;
 
 use crate::ledger_client::{build_outputs, new_wallet_output};
-use crate::output::UnbuiltOutput;
 use crate::{
     backend::Backend,
-    ledger_client::minting_to_outputs,
     ledger_client::LedgerClientError::TransactionIssuance,
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,

@@ -1,6 +1,4 @@
 use crate::{address::Address, output::Output, transaction::UnbuiltTransaction, PolicyId};
-use std::collections::HashMap;
-
 use thiserror::Error;
 
 pub mod cml_client;
@@ -53,13 +51,6 @@ pub enum LedgerClientError {
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;
-
-pub(crate) fn minting_to_outputs<Datum>(minting: &HashMap<Address, Values>) -> Vec<Output<Datum>> {
-    minting
-        .iter()
-        .map(|(addr, vals)| new_wallet_output(addr, vals))
-        .collect()
-}
 
 pub(crate) fn new_wallet_output<Datum>(addr: &Address, vals: &Values) -> Output<Datum> {
     // TODO: Fix to not do tx_hash here maybe

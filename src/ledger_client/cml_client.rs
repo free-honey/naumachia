@@ -1,24 +1,19 @@
 use crate::ledger_client::cml_client::error::CMLLCError::JsError;
 use crate::{
-    address,
-    ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
+    ledger_client::{LedgerClient, LedgerClientResult},
     output::Output,
     values::Values,
     Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use blockfrost_http_client::{
-    keys::TESTNET,
     models::{UTxO as BFUTxO, Value},
     BlockFrostHttp, BlockFrostHttpTrait,
 };
-use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, RewardAddress};
+use cardano_multiplatform_lib::address::Address as CMLAddress;
 use cardano_multiplatform_lib::crypto::PrivateKey;
 use error::*;
-use futures::{future::join_all, FutureExt};
 use std::marker::PhantomData;
-use std::path::Path;
-use thiserror::Error;
 
 mod error;
 #[cfg(test)]
@@ -43,12 +38,12 @@ pub trait Keys {
 }
 
 pub struct KeyManager {
-    config_path: String,
+    _config_path: String,
 }
 
 impl KeyManager {
-    pub fn new(config_path: String) -> Self {
-        KeyManager { config_path }
+    pub fn new(_config_path: String) -> Self {
+        KeyManager { _config_path }
     }
 }
 
@@ -111,30 +106,6 @@ where
             _redeemer: Default::default(),
         }
     }
-}
-
-fn output_cml_err(
-    address: &Address,
-) -> impl Fn(cardano_multiplatform_lib::error::JsError) -> LedgerClientError + '_ {
-    move |e| {
-        LedgerClientError::FailedToRetrieveOutputsAt(
-            address.to_owned(),
-            Box::new(CMLLCError::JsError(format!("{:?}", e))),
-        )
-    }
-}
-
-fn output_http_err(
-    address: &Address,
-) -> impl Fn(blockfrost_http_client::error::Error) -> LedgerClientError + '_ {
-    move |e| LedgerClientError::FailedToRetrieveOutputsAt(address.to_owned(), Box::new(e))
-}
-
-fn invalid_base_addr(address: &Address) -> LedgerClientError {
-    LedgerClientError::FailedToRetrieveOutputsAt(
-        address.to_owned(),
-        Box::new(CMLLCError::InvalidBaseAddr),
-    )
 }
 
 #[async_trait]
@@ -203,8 +174,4 @@ fn as_nau_value(value: &Value) -> (PolicyId, u64) {
     };
     let amount = value.quantity().parse().unwrap(); // TODO: unwrap
     (policy_id, amount)
-}
-
-fn convert_address(bf_addr: blockfrost_http_client::models::Address) -> Address {
-    Address::new(bf_addr.as_string())
 }
