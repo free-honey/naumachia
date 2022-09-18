@@ -5,11 +5,11 @@ use crate::{
     },
     output::{Output, UnbuiltOutput},
     transaction::TxId,
-    values::Values,
     Address, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use blockfrost_http_client::models::UTxO as BFUTxO;
+use cardano_multiplatform_lib::builders::tx_builder::TransactionBuilder;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::{
@@ -71,6 +71,36 @@ where
             _datum: Default::default(),
             _redeemer: Default::default(),
         }
+    }
+
+    async fn add_outputs_for_tx<Datum, Redeemer>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<()> {
+        for unbuilt_output in tx.unbuilt_outputs().iter() {
+            let cml_values: CMLValue = unbuilt_output
+                .values()
+                .to_owned()
+                .try_into()
+                .map_err(as_failed_to_issue_tx)?;
+            let recipient = unbuilt_output.owner();
+            let recp_addr = self
+                .keys
+                .addr_from_bech_32(recipient.to_str())
+                .await
+                .map_err(as_failed_to_issue_tx)?;
+            let output = TransactionOutput::new(&recp_addr, &cml_values);
+            let res = SingleOutputBuilderResult::new(&output);
+            if let UnbuiltOutput::Validator { .. } = unbuilt_output {
+                todo!("Can't build outputs with datums and stuff yet");
+            }
+            tx_builder
+                .add_output(&res)
+                .map_err(|e| CMLLCError::JsError(e.to_string()))
+                .map_err(as_failed_to_issue_tx)?;
+        }
+        Ok(())
     }
 }
 
@@ -135,39 +165,34 @@ where
             tx_builder.add_utxo(&input);
         }
 
-        for unbuilt_output in tx.unbuilt_outputs().iter() {
-            let cml_values: CMLValue = unbuilt_output.values().to_owned().try_into().unwrap(); // TODO
-            let recipient = unbuilt_output.owner();
-            let recp_addr = self
-                .keys
-                .addr_from_bech_32(recipient.to_str())
-                .await
-                .map_err(as_failed_to_issue_tx)?;
-            let output = TransactionOutput::new(&recp_addr, &cml_values);
-            let res = SingleOutputBuilderResult::new(&output);
-            if let UnbuiltOutput::Validator { .. } = unbuilt_output {
-                todo!();
-            }
-            tx_builder.add_output(&res).unwrap(); // TODO
-        }
+        self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
 
         // Hardcode for now. I'm choosing this strat because it helps atomize my wallet a
         // little more which makes testing a bit safer 🦺
         let strategy = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
-        tx_builder.select_utxos(strategy).unwrap(); // TODO
+        tx_builder
+            .select_utxos(strategy)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
         let algo = ChangeSelectionAlgo::Default;
-        let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
+        let mut signed_tx_builder = tx_builder
+            .build(algo, &my_address)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
         let unchecked_tx = signed_tx_builder.build_unchecked();
         let tx_body = unchecked_tx.body();
         let tx_hash = hash_transaction(&tx_body);
         let vkey_witness = make_vkey_witness(&tx_hash, &priv_key);
         signed_tx_builder.add_vkey(&vkey_witness);
-        let tx = signed_tx_builder.build_checked().unwrap(); // TODO
+        let tx = signed_tx_builder
+            .build_checked()
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
         let submit_res = self
             .ledger
             .submit_transaction(&tx)
             .await
             .map_err(as_failed_to_issue_tx)?;
-        Ok(TxId::from_str(&submit_res))
+        Ok(TxId::new(&submit_res))
     }
 }

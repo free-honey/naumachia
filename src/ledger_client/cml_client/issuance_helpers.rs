@@ -75,8 +75,8 @@ pub(crate) fn input_from_utxo(my_address: &CMLAddress, utxo: &BFUTxO) -> InputBu
         &tx_hash, // tx hash
         &index,   // index
     );
-    let value = cmlvalue_from_values(&utxo.amount());
-    let utxo_info = TransactionOutput::new(&my_address, &value);
+    let value = cmlvalue_from_values(utxo.amount());
+    let utxo_info = TransactionOutput::new(my_address, &value);
     let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
 
     input_builder.payment_key().unwrap()
@@ -94,7 +94,7 @@ fn cmlvalue_from_values(values: &[BFValue]) -> CMLValue {
                 let policy_id = PolicyID::from_hex(policy_id_hex).unwrap();
                 let asset_name_hex = &unit[56..];
                 let asset_name_bytes = hex::decode(asset_name_hex).unwrap();
-                let asset_name = AssetName::new(asset_name_bytes.into()).unwrap();
+                let asset_name = AssetName::new(asset_name_bytes).unwrap();
                 let mut assets = Assets::new();
                 assets.insert(&asset_name, &BigNum::from_str(quantity).unwrap());
                 let mut multi_assets = MultiAsset::new();

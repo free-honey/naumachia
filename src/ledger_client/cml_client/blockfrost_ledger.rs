@@ -14,7 +14,7 @@ pub struct BlockFrostLedger {
 
 impl BlockFrostLedger {
     pub fn new(url: &str, key: &str) -> Self {
-        let client = BlockFrostHttp::new(url, &key);
+        let client = BlockFrostHttp::new(url, key);
         BlockFrostLedger { client }
     }
 }

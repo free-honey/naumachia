@@ -1,11 +1,9 @@
 use crate::{
     address::{Address, PolicyId},
-    output::Output,
+    output::{Output, UnbuiltOutput},
     scripts::{MintingPolicy, ValidatorCode},
+    values::Values,
 };
-
-use crate::output::UnbuiltOutput;
-use crate::values::Values;
 use std::collections::HashMap;
 
 pub enum Action<Datum, Redeemer> {
@@ -120,11 +118,11 @@ impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {
 pub struct TxId(String);
 
 impl TxId {
-    pub fn from_str(id_str: &str) -> Self {
+    pub fn new(id_str: &str) -> Self {
         TxId(id_str.to_string())
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn as_str(&self) -> String {
         self.0.clone()
     }
 }

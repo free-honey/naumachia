@@ -154,15 +154,15 @@ where
         let mut combined_inputs = self.outputs_at_address(signer).await?;
         combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
 
-        let total_input_value = combined_inputs
-            .iter()
-            .fold(Values::default(), |mut acc, utxo| {
-                acc.add_values(utxo.values());
-                acc
-            });
+        let mut total_input_value =
+            combined_inputs
+                .iter()
+                .fold(Values::default(), |mut acc, utxo| {
+                    acc.add_values(utxo.values());
+                    acc
+                });
 
-        let mut inputs_with_mints = total_input_value.clone();
-        inputs_with_mints.add_values(&tx.minting);
+        total_input_value.add_values(&tx.minting);
 
         let total_output_value =
             tx.unbuilt_outputs()
@@ -171,7 +171,7 @@ where
                     acc.add_values(utxo.values());
                     acc
                 });
-        let maybe_remainder = inputs_with_mints
+        let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| InMemoryLCError::NotEnoughInputs)
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
@@ -206,6 +206,6 @@ where
         for output in combined_outputs {
             ledger_utxos.push((output.owner().clone(), output.clone()))
         }
-        Ok(TxId::from_str("Not a real id"))
+        Ok(TxId::new("Not a real id"))
     }
 }
