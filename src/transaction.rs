@@ -1,10 +1,9 @@
 use crate::{
     address::{Address, PolicyId},
-    output::Output,
+    output::{Output, UnbuiltOutput},
     scripts::{MintingPolicy, ValidatorCode},
+    values::Values,
 };
-
-use crate::values::Values;
 use std::collections::HashMap;
 
 pub enum Action<Datum, Redeemer> {
@@ -96,21 +95,34 @@ impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
     }
 }
 
-pub struct Transaction<Datum, Redeemer> {
+pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_inputs: Vec<Output<Datum>>,
-    pub outputs: Vec<Output<Datum>>,
+    pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
     pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
-    pub minting: HashMap<Address, Values>,
+    pub minting: Values,
     pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
 }
 
-impl<Datum, Redeemer: Clone + PartialEq + Eq> Transaction<Datum, Redeemer> {
-    pub fn outputs(&self) -> &Vec<Output<Datum>> {
-        &self.outputs
+impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {
+    pub fn unbuilt_outputs(&self) -> &Vec<UnbuiltOutput<Datum>> {
+        &self.unbuilt_outputs
     }
 
     pub fn inputs(&self) -> &Vec<Output<Datum>> {
         &self.script_inputs
+    }
+}
+
+#[derive(Debug)]
+pub struct TxId(String);
+
+impl TxId {
+    pub fn new(id_str: &str) -> Self {
+        TxId(id_str.to_string())
+    }
+
+    pub fn as_str(&self) -> String {
+        self.0.clone()
     }
 }

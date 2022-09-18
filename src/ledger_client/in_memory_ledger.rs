@@ -6,15 +6,15 @@ use std::{
 };
 use uuid::Uuid;
 
-use crate::ledger_client::new_output;
+use crate::ledger_client::{build_outputs, new_wallet_output};
+use crate::transaction::TxId;
 use crate::{
     backend::Backend,
-    ledger_client::minting_to_outputs,
-    ledger_client::LedgerClientError::TransactionIssuance,
+    ledger_client::LedgerClientError::FailedToIssueTx,
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
     values::Values,
-    Address, PolicyId, Transaction,
+    Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use thiserror::Error;
@@ -109,6 +109,8 @@ enum InMemoryLCError {
     Mutex(String),
     #[error("Not enough input value available for outputs")]
     NotEnoughInputs,
+    #[error("The same input is listed twice")]
+    DuplicateInput, // TODO: WE don't need this once we dedupe
 }
 
 #[derive(Debug)]
@@ -146,58 +148,64 @@ where
         Ok(outputs)
     }
 
-    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
         let mut combined_inputs = self.outputs_at_address(signer).await?;
         combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
 
-        let total_input_value = combined_inputs
-            .iter()
-            .fold(Values::default(), |mut acc, utxo| {
-                acc.add_values(utxo.values());
-                acc
-            });
-        let total_output_value = tx
-            .outputs()
-            .iter()
-            .fold(Values::default(), |mut acc, utxo| {
-                acc.add_values(utxo.values());
-                acc
-            });
+        let mut total_input_value =
+            combined_inputs
+                .iter()
+                .fold(Values::default(), |mut acc, utxo| {
+                    acc.add_values(utxo.values());
+                    acc
+                });
+
+        total_input_value.add_values(&tx.minting);
+
+        let total_output_value =
+            tx.unbuilt_outputs()
+                .iter()
+                .fold(Values::default(), |mut acc, utxo| {
+                    acc.add_values(utxo.values());
+                    acc
+                });
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| InMemoryLCError::NotEnoughInputs)
-            .map_err(|e| TransactionIssuance(Box::new(e)))?;
+            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
 
         let mut ledger_utxos = self
             .outputs
             .lock()
             .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
-            .map_err(|e| TransactionIssuance(Box::new(e)))?;
+            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
         for input in combined_inputs {
             let index = ledger_utxos
                 .iter()
                 .position(|(_, x)| x == &input)
                 .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(input.id().clone())
+                    LedgerClientError::FailedToRetrieveOutputWithId(
+                        input.id().clone(),
+                        Box::new(InMemoryLCError::DuplicateInput),
+                    )
                 })?;
             ledger_utxos.remove(index);
         }
 
         let mut combined_outputs = Vec::new();
         if let Some(remainder) = maybe_remainder {
-            combined_outputs.push(new_output(signer, &remainder));
+            combined_outputs.push(new_wallet_output(signer, &remainder));
         }
 
-        let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
+        let built_outputs = build_outputs(tx.unbuilt_outputs);
 
-        combined_outputs.extend(tx.outputs);
-        combined_outputs.extend(minting_outputs);
+        combined_outputs.extend(built_outputs);
 
         for output in combined_outputs {
             ledger_utxos.push((output.owner().clone(), output.clone()))
         }
-        Ok(())
+        Ok(TxId::new("Not a real id"))
     }
 }

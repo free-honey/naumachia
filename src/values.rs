@@ -82,6 +82,10 @@ impl Values {
         self.values.get(policy).copied()
     }
 
+    pub fn take(&mut self, policy: &PolicyId) -> Option<u64> {
+        self.values.remove(policy)
+    }
+
     pub fn len(&self) -> usize {
         self.values.len()
     }

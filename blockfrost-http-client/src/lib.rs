@@ -1,4 +1,6 @@
-use crate::models::{Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, UTxO};
+use crate::models::{
+    Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, TxSubmitResult, UTxO,
+};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::{fs, path::Path};
@@ -18,7 +20,7 @@ const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
 //   project_id = <INSERT API KEY HERE>
 const CONFIG_PATH: &str = ".blockfrost.toml";
 
-fn load_key_from_file(key_path: &str) -> Result<String> {
+pub fn load_key_from_file(key_path: &str) -> Result<String> {
     let path = Path::new(key_path);
     let text = fs::read_to_string(&path).map_err(Error::FileRead)?;
     let config: toml::Value = toml::from_str(&text).map_err(Error::Toml)?;
@@ -59,7 +61,7 @@ pub trait BlockFrostHttpTrait {
 
     async fn execution_units(&self, bytes: &[u8]) -> Result<EvaluateTxResult>;
 
-    async fn submit_tx(&self, bytes: &[u8]) -> Result<serde_json::Value>;
+    async fn submit_tx(&self, bytes: &[u8]) -> Result<TxSubmitResult>;
 }
 
 #[async_trait]
@@ -120,7 +122,7 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
         Ok(res.json().await?)
     }
 
-    async fn submit_tx(&self, bytes: &[u8]) -> Result<serde_json::Value> {
+    async fn submit_tx(&self, bytes: &[u8]) -> Result<TxSubmitResult> {
         let ext = "./tx/submit".to_string();
         let url = Url::parse(&self.parent_url)?.join(&ext)?;
         let client = reqwest::Client::new();

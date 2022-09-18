@@ -11,15 +11,16 @@ use std::{
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::ledger_client::LedgerClientError::TransactionIssuance;
-use crate::ledger_client::{minting_to_outputs, new_output};
+use crate::ledger_client::LedgerClientError::FailedToIssueTx;
+use crate::ledger_client::{build_outputs, new_wallet_output};
+use crate::transaction::TxId;
 use crate::values::Values;
 use crate::{
     address::Address,
     error::Result,
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::Output,
-    transaction::Transaction,
+    transaction::UnbuiltTransaction,
     PolicyId,
 };
 
@@ -33,6 +34,8 @@ struct Data<Datum> {
 enum LocalPersistedLCError {
     #[error("Not enough input value available for outputs")]
     NotEnoughInputs,
+    #[error("The same input is listed twice")]
+    DuplicateInput, // TODO: WE don't need this once we dedupe
 }
 
 impl<Datum> Data<Datum> {
@@ -122,29 +125,33 @@ where
         Ok(outputs)
     }
 
-    async fn issue(&self, tx: Transaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
         let mut combined_inputs = self.outputs_at_address(signer).await?;
         combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
 
-        let total_input_value = combined_inputs
-            .iter()
-            .fold(Values::default(), |mut acc, utxo| {
-                acc.add_values(utxo.values());
-                acc
-            });
-        let total_output_value = tx
-            .outputs()
-            .iter()
-            .fold(Values::default(), |mut acc, utxo| {
-                acc.add_values(utxo.values());
-                acc
-            });
+        let mut total_input_value =
+            combined_inputs
+                .iter()
+                .fold(Values::default(), |mut acc, utxo| {
+                    acc.add_values(utxo.values());
+                    acc
+                });
+
+        total_input_value.add_values(&tx.minting);
+
+        let total_output_value =
+            tx.unbuilt_outputs()
+                .iter()
+                .fold(Values::default(), |mut acc, utxo| {
+                    acc.add_values(utxo.values());
+                    acc
+                });
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| LocalPersistedLCError::NotEnoughInputs)
-            .map_err(|e| TransactionIssuance(Box::new(e)))?;
+            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
 
         let mut ledger_utxos = self.get_data().outputs;
 
@@ -153,26 +160,28 @@ where
                 .iter()
                 .position(|x| x == &inputs)
                 .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(inputs.id().clone())
+                    LedgerClientError::FailedToRetrieveOutputWithId(
+                        inputs.id().clone(),
+                        Box::new(LocalPersistedLCError::DuplicateInput),
+                    )
                 })?;
             ledger_utxos.remove(index);
         }
 
         let mut combined_outputs = Vec::new();
         if let Some(remainder) = maybe_remainder {
-            combined_outputs.push(new_output(signer, &remainder));
+            combined_outputs.push(new_wallet_output(signer, &remainder));
         }
 
-        let minting_outputs = minting_to_outputs::<Datum>(&tx.minting);
+        let built_outputs = build_outputs(tx.unbuilt_outputs);
 
-        combined_outputs.extend(tx.outputs().clone());
-        combined_outputs.extend(minting_outputs);
+        combined_outputs.extend(built_outputs);
 
         for output in combined_outputs {
             ledger_utxos.push(output.clone())
         }
         self.update_outputs(ledger_utxos);
-        Ok(())
+        Ok(TxId::new("Not a real id"))
     }
 }
 
@@ -180,6 +189,7 @@ where
 mod tests {
     #![allow(non_snake_case)]
     use super::*;
+    use crate::output::UnbuiltOutput;
     use tempfile::TempDir;
 
     #[tokio::test]
@@ -231,14 +241,11 @@ mod tests {
             .unwrap()
             .pop()
             .unwrap();
-        let tx_hash = Uuid::new_v4().to_string();
-        let index = 0;
         let owner = Address::new("bob");
-        let new_output =
-            Output::new_wallet(tx_hash, index, owner.clone(), first_output.values().clone());
-        let tx: Transaction<(), ()> = Transaction {
+        let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
+        let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
             script_inputs: vec![],
-            outputs: vec![new_output],
+            unbuilt_outputs: vec![new_output],
             redeemers: vec![],
             validators: Default::default(),
             minting: Default::default(),

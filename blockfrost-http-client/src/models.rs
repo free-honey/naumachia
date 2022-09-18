@@ -242,3 +242,12 @@ impl Spend {
         self.steps
     }
 }
+
+#[derive(Deserialize, Debug)]
+pub struct TxSubmitResult(String);
+
+impl TxSubmitResult {
+    pub fn tx_id(&self) -> &str {
+        &self.0
+    }
+}
