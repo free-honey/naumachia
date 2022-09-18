@@ -131,7 +131,7 @@ where
 
         let tx = UnbuiltTransaction {
             script_inputs,
-            outputs,
+            unbuilt_outputs: outputs,
             redeemers,
             validators,
             minting,

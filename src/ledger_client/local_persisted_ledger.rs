@@ -11,8 +11,9 @@ use std::{
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::ledger_client::LedgerClientError::TransactionIssuance;
+use crate::ledger_client::LedgerClientError::FailedToIssueTx;
 use crate::ledger_client::{build_outputs, new_wallet_output};
+use crate::transaction::TxId;
 use crate::values::Values;
 use crate::{
     address::Address,
@@ -124,7 +125,7 @@ where
         Ok(outputs)
     }
 
-    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<()> {
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
         let mut combined_inputs = self.outputs_at_address(signer).await?;
@@ -140,17 +141,17 @@ where
         let mut inputs_with_mints = total_input_value.clone();
         inputs_with_mints.add_values(&tx.minting);
 
-        let total_output_value = tx
-            .outputs()
-            .iter()
-            .fold(Values::default(), |mut acc, utxo| {
-                acc.add_values(utxo.values());
-                acc
-            });
+        let total_output_value =
+            tx.unbuilt_outputs()
+                .iter()
+                .fold(Values::default(), |mut acc, utxo| {
+                    acc.add_values(utxo.values());
+                    acc
+                });
         let maybe_remainder = inputs_with_mints
             .try_subtract(&total_output_value)
             .map_err(|_| LocalPersistedLCError::NotEnoughInputs)
-            .map_err(|e| TransactionIssuance(Box::new(e)))?;
+            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
 
         let mut ledger_utxos = self.get_data().outputs;
 
@@ -172,7 +173,7 @@ where
             combined_outputs.push(new_wallet_output(signer, &remainder));
         }
 
-        let built_outputs = build_outputs(tx.outputs);
+        let built_outputs = build_outputs(tx.unbuilt_outputs);
 
         combined_outputs.extend(built_outputs);
 
@@ -180,7 +181,7 @@ where
             ledger_utxos.push(output.clone())
         }
         self.update_outputs(ledger_utxos);
-        Ok(())
+        Ok(TxId::from_str("Not a real id"))
     }
 }
 
@@ -240,13 +241,11 @@ mod tests {
             .unwrap()
             .pop()
             .unwrap();
-        let tx_hash = Uuid::new_v4().to_string();
-        let index = 0;
         let owner = Address::new("bob");
         let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
         let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
             script_inputs: vec![],
-            outputs: vec![new_output],
+            unbuilt_outputs: vec![new_output],
             redeemers: vec![],
             validators: Default::default(),
             minting: Default::default(),

@@ -5,8 +5,7 @@ use cardano_multiplatform_lib::crypto::{Bip32PrivateKey, PrivateKey};
 use std::fs;
 use std::path::Path;
 
-pub const TESTNET: u8 = 0;
-pub const MAINNET: u8 = 1;
+pub(crate) const TESTNET: u8 = 0;
 
 pub fn my_base_addr() -> BaseAddress {
     let phrase = load_phrase_from_file(CONFIG_PATH);
@@ -37,7 +36,7 @@ fn harden(index: u32) -> u32 {
     index | 0x80_00_00_00
 }
 
-pub fn base_address_from_entropy(entropy: &[u8], network: u8) -> BaseAddress {
+fn base_address_from_entropy(entropy: &[u8], network: u8) -> BaseAddress {
     let root_key = Bip32PrivateKey::from_bip39_entropy(entropy, &[]);
 
     let account_key = root_key
@@ -54,7 +53,7 @@ pub fn base_address_from_entropy(entropy: &[u8], network: u8) -> BaseAddress {
     BaseAddress::new(network, &pub_key_creds, &stake_key_creds)
 }
 
-pub fn load_phrase_from_file(config_path: &str) -> String {
+fn load_phrase_from_file(config_path: &str) -> String {
     let path = Path::new(config_path);
     let text = fs::read_to_string(&path).unwrap();
     let config: toml::Value = toml::from_str(&text).unwrap();

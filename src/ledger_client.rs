@@ -7,6 +7,7 @@ pub mod local_persisted_ledger;
 use async_trait::async_trait;
 
 use crate::output::{OutputId, UnbuiltOutput};
+use crate::transaction::TxId;
 use crate::values::Values;
 use std::error;
 use uuid::Uuid;
@@ -37,7 +38,7 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
             });
         Ok(bal)
     }
-    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<()>; // TODO: Move to other trait
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId>; // TODO: Move to other trait
 }
 
 #[derive(Debug, Error)]
@@ -47,7 +48,7 @@ pub enum LedgerClientError {
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
     FailedToRetrieveOutputWithId(OutputId, Box<dyn error::Error + Send>),
     #[error("Failed to issue transaction: {0:?}")]
-    TransactionIssuance(Box<dyn error::Error + Send>),
+    FailedToIssueTx(Box<dyn error::Error + Send>),
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

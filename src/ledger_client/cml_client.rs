@@ -1,24 +1,40 @@
-use crate::ledger_client::cml_client::error::CMLLCError::JsError;
 use crate::{
-    ledger_client::{LedgerClient, LedgerClientResult},
-    output::Output,
+    ledger_client::{
+        cml_client::issuance_helpers::{bf_utxo_to_utxo, input_from_utxo, test_v1_tx_builder},
+        LedgerClient, LedgerClientResult,
+    },
+    output::{Output, UnbuiltOutput},
+    transaction::TxId,
     values::Values,
-    Address, PolicyId, UnbuiltTransaction,
+    Address, UnbuiltTransaction,
 };
 use async_trait::async_trait;
-use blockfrost_http_client::{
-    models::{UTxO as BFUTxO, Value},
-    BlockFrostHttp, BlockFrostHttpTrait,
+use blockfrost_http_client::models::UTxO as BFUTxO;
+use cardano_multiplatform_lib::{
+    address::Address as CMLAddress,
+    builders::{
+        output_builder::SingleOutputBuilderResult,
+        tx_builder::{ChangeSelectionAlgo, CoinSelectionStrategyCIP2},
+    },
+    crypto::PrivateKey,
+    ledger::{
+        common::hash::hash_transaction, common::value::Value as CMLValue,
+        shelley::witness::make_vkey_witness,
+    },
+    Transaction as CMLTransaction, TransactionOutput,
 };
-use cardano_multiplatform_lib::address::Address as CMLAddress;
-use cardano_multiplatform_lib::crypto::PrivateKey;
 use error::*;
 use std::marker::PhantomData;
 
+pub mod blockfrost_ledger;
 mod error;
+mod issuance_helpers;
+pub mod key_manager;
+
 #[cfg(test)]
 mod tests;
 
+// TODO: Add minimum ADA https://github.com/MitchTurner/naumachia/issues/41
 pub struct CMLLedgerCLient<L, K, Datum, Redeemer>
 where
     L: Ledger,
@@ -37,60 +53,10 @@ pub trait Keys {
     async fn addr_from_bech_32(&self, addr: &str) -> Result<CMLAddress>;
 }
 
-pub struct KeyManager {
-    _config_path: String,
-}
-
-impl KeyManager {
-    pub fn new(_config_path: String) -> Self {
-        KeyManager { _config_path }
-    }
-}
-
-#[async_trait]
-impl Keys for KeyManager {
-    async fn base_addr(&self) -> Result<CMLAddress> {
-        todo!()
-    }
-
-    async fn private_key(&self) -> Result<PrivateKey> {
-        todo!()
-    }
-
-    async fn addr_from_bech_32(&self, addr: &str) -> Result<CMLAddress> {
-        let cml_address =
-            CMLAddress::from_bech32(addr).map_err(|e| CMLLCError::JsError(e.to_string()))?;
-        Ok(cml_address)
-    }
-}
-
 #[async_trait]
 pub trait Ledger {
     async fn get_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<BFUTxO>>; // TODO: Don't take dep on BF UTxO
-}
-
-pub struct BlockFrostLedger {
-    client: BlockFrostHttp,
-}
-
-impl BlockFrostLedger {
-    pub fn new(url: &str, key: &str) -> Self {
-        let client = BlockFrostHttp::new(url, &key);
-        BlockFrostLedger { client }
-    }
-}
-
-#[async_trait]
-impl Ledger for BlockFrostLedger {
-    async fn get_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<BFUTxO>> {
-        let addr_string = addr.to_bech32(None).map_err(|e| JsError(e.to_string()))?;
-        let utxos = self
-            .client
-            .utxos(&addr_string)
-            .await
-            .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
-        Ok(utxos)
-    }
+    async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String>;
 }
 
 impl<L, K, D, R> CMLLedgerCLient<L, K, D, R>
@@ -148,30 +114,60 @@ where
         }
     }
 
-    async fn issue(&self, _tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<()> {
-        todo!()
-    }
-}
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
+        let my_address = self.keys.base_addr().await.map_err(as_failed_to_issue_tx)?;
+        let priv_key = self
+            .keys
+            .private_key()
+            .await
+            .map_err(as_failed_to_issue_tx)?;
 
-fn bf_utxo_to_utxo<Datum>(utxo: &BFUTxO, owner: &Address) -> Output<Datum> {
-    let tx_hash = utxo.tx_hash().to_owned();
-    let index = utxo.output_index().to_owned();
-    let mut values = Values::default();
-    utxo.amount()
-        .iter()
-        .map(as_nau_value)
-        .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
-    Output::new_wallet(tx_hash, index, owner.to_owned(), values)
-}
+        let my_utxos = self
+            .ledger
+            .get_utxos_for_addr(&my_address)
+            .await
+            .map_err(as_failed_to_issue_tx)?;
 
-fn as_nau_value(value: &Value) -> (PolicyId, u64) {
-    let policy_id = match value.unit() {
-        "lovelace" => PolicyId::ADA,
-        native_token => {
-            let policy = &native_token[..56]; // TODO: Use the rest as asset info
-            PolicyId::native_token(policy)
+        let mut tx_builder = test_v1_tx_builder();
+
+        for utxo in my_utxos.iter() {
+            let input = input_from_utxo(&my_address, utxo);
+            tx_builder.add_utxo(&input);
         }
-    };
-    let amount = value.quantity().parse().unwrap(); // TODO: unwrap
-    (policy_id, amount)
+
+        for unbuilt_output in tx.unbuilt_outputs().iter() {
+            let cml_values: CMLValue = unbuilt_output.values().to_owned().try_into().unwrap(); // TODO
+            let recipient = unbuilt_output.owner();
+            let recp_addr = self
+                .keys
+                .addr_from_bech_32(recipient.to_str())
+                .await
+                .map_err(as_failed_to_issue_tx)?;
+            let output = TransactionOutput::new(&recp_addr, &cml_values);
+            let res = SingleOutputBuilderResult::new(&output);
+            if let UnbuiltOutput::Validator { .. } = unbuilt_output {
+                todo!();
+            }
+            tx_builder.add_output(&res).unwrap(); // TODO
+        }
+
+        // Hardcode for now. I'm choosing this strat because it helps atomize my wallet a
+        // little more which makes testing a bit safer 🦺
+        let strategy = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
+        tx_builder.select_utxos(strategy).unwrap(); // TODO
+        let algo = ChangeSelectionAlgo::Default;
+        let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
+        let unchecked_tx = signed_tx_builder.build_unchecked();
+        let tx_body = unchecked_tx.body();
+        let tx_hash = hash_transaction(&tx_body);
+        let vkey_witness = make_vkey_witness(&tx_hash, &priv_key);
+        signed_tx_builder.add_vkey(&vkey_witness);
+        let tx = signed_tx_builder.build_checked().unwrap(); // TODO
+        let submit_res = self
+            .ledger
+            .submit_transaction(&tx)
+            .await
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(TxId::from_str(&submit_res))
+    }
 }

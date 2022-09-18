@@ -39,4 +39,11 @@ impl PolicyId {
     pub fn native_token(id: &str) -> PolicyId {
         PolicyId::NativeToken(id.to_string())
     }
+
+    pub fn to_str(&self) -> Option<&str> {
+        match self {
+            PolicyId::ADA => None,
+            PolicyId::NativeToken(my_str) => Some(my_str),
+        }
+    }
 }

@@ -1,4 +1,6 @@
-use crate::models::{Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, UTxO};
+use crate::models::{
+    Address, AddressInfo, EvaluateTxResult, Genesis, ProtocolParams, TxSubmitResult, UTxO,
+};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::{fs, path::Path};
@@ -59,7 +61,7 @@ pub trait BlockFrostHttpTrait {
 
     async fn execution_units(&self, bytes: &[u8]) -> Result<EvaluateTxResult>;
 
-    async fn submit_tx(&self, bytes: &[u8]) -> Result<serde_json::Value>;
+    async fn submit_tx(&self, bytes: &[u8]) -> Result<TxSubmitResult>;
 }
 
 #[async_trait]
@@ -120,7 +122,7 @@ impl BlockFrostHttpTrait for BlockFrostHttp {
         Ok(res.json().await?)
     }
 
-    async fn submit_tx(&self, bytes: &[u8]) -> Result<serde_json::Value> {
+    async fn submit_tx(&self, bytes: &[u8]) -> Result<TxSubmitResult> {
         let ext = "./tx/submit".to_string();
         let url = Url::parse(&self.parent_url)?.join(&ext)?;
         let client = reqwest::Client::new();

@@ -99,19 +99,32 @@ impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_inputs: Vec<Output<Datum>>,
-    pub outputs: Vec<UnbuiltOutput<Datum>>,
+    pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
     pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
     pub minting: Values,
     pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
 }
 
-impl<Datum, Redeemer: Clone + PartialEq + Eq> UnbuiltTransaction<Datum, Redeemer> {
-    pub fn outputs(&self) -> &Vec<UnbuiltOutput<Datum>> {
-        &self.outputs
+impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {
+    pub fn unbuilt_outputs(&self) -> &Vec<UnbuiltOutput<Datum>> {
+        &self.unbuilt_outputs
     }
 
     pub fn inputs(&self) -> &Vec<Output<Datum>> {
         &self.script_inputs
+    }
+}
+
+#[derive(Debug)]
+pub struct TxId(String);
+
+impl TxId {
+    pub fn from_str(id_str: &str) -> Self {
+        TxId(id_str.to_string())
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.clone()
     }
 }

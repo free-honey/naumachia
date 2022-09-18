@@ -329,7 +329,7 @@ async fn send_to_self() {
         tx_builder.add_utxo(&input);
     }
 
-    let coin = 150_000_000.into();
+    let coin = 2_000_000.into();
     let value = CMLValue::new(&coin);
     let output = TransactionOutput::new(&my_address, &value);
     let res = SingleOutputBuilderResult::new(&output);
