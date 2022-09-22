@@ -75,14 +75,14 @@ pub(crate) fn input_from_utxo(my_address: &CMLAddress, utxo: &BFUTxO) -> InputBu
         &tx_hash, // tx hash
         &index,   // index
     );
-    let value = cmlvalue_from_values(utxo.amount());
+    let value = cmlvalue_from_bfvalues(utxo.amount());
     let utxo_info = TransactionOutput::new(my_address, &value);
     let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
 
     input_builder.payment_key().unwrap()
 }
 
-fn cmlvalue_from_values(values: &[BFValue]) -> CMLValue {
+fn cmlvalue_from_bfvalues(values: &[BFValue]) -> CMLValue {
     let mut cml_value = CMLValue::zero();
     for value in values.iter() {
         let unit = value.unit();

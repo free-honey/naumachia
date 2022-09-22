@@ -14,6 +14,8 @@ pub enum CMLLCError {
     KeyError(Box<dyn std::error::Error + Send>),
     #[error("Unbuilt output does not have sufficient ADA")]
     InsufficientADA,
+    #[error("Error while deserializing: {0:?}")]
+    Deserialize(String),
 }
 
 pub fn as_failed_to_retrieve_by_address(
@@ -22,7 +24,7 @@ pub fn as_failed_to_retrieve_by_address(
     move |e| LedgerClientError::FailedToRetrieveOutputsAt(addr.to_owned(), Box::new(e))
 }
 
-pub fn as_failed_to_issue_tx(error: CMLLCError) -> LedgerClientError {
+pub fn as_failed_to_issue_tx<E: std::error::Error + Send + 'static>(error: E) -> LedgerClientError {
     LedgerClientError::FailedToIssueTx(Box::new(error))
 }
 

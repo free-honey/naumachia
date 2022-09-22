@@ -420,7 +420,6 @@ async fn spend_datum() {
         .await
         .unwrap();
 
-    // 1
     let mut tx_builder = test_v1_tx_builder();
     let hash_raw = "d5be9549bfb82b5981f6cdf49187b6140bac5f129adbb50281ee0e680c0a411a";
     let index = 0;
@@ -462,9 +461,8 @@ async fn spend_datum() {
         &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(2)), // TODO: How do I know which index?
         &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
     );
-    let algo = ChangeSelectionAlgo::Default;
 
-    // 2
+    let algo = ChangeSelectionAlgo::Default;
     let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
     let unchecked_tx = signed_tx_builder.build_unchecked();
     let tx_body = unchecked_tx.body();

@@ -1,4 +1,5 @@
 use crate::output::UnbuiltOutput;
+use crate::scripts::ValidatorCode;
 use crate::{
     address::{Address, PolicyId},
     backend::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs},
@@ -69,11 +70,11 @@ where
     ) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
         let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
         let mut minting = Values::default();
-        let mut script_inputs: Vec<Output<Datum>> = Vec::new();
+        let mut script_inputs: Vec<(Output<Datum>, Box<dyn ValidatorCode<Datum, Redeemer>>)> =
+            Vec::new();
         let mut specific_outputs: Vec<UnbuiltOutput<Datum>> = Vec::new();
 
         let mut redeemers = Vec::new();
-        let mut validators = HashMap::new();
         let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();
         for action in actions {
             match action {
@@ -106,7 +107,7 @@ where
                 } => {
                     let owner = address;
                     let output = UnbuiltOutput::Validator {
-                        owner,
+                        script_address: owner,
                         values,
                         datum,
                     };
@@ -117,10 +118,8 @@ where
                     redeemer,
                     script,
                 } => {
-                    script_inputs.push(output.clone());
-                    let script_address = script.address();
+                    script_inputs.push((output.clone(), script));
                     redeemers.push((output, redeemer));
-                    validators.insert(script_address, script);
                 }
             }
         }
@@ -133,7 +132,6 @@ where
             script_inputs,
             unbuilt_outputs: outputs,
             redeemers,
-            validators,
             minting,
             policies,
         };

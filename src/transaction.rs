@@ -96,10 +96,9 @@ impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
 }
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {
-    pub script_inputs: Vec<Output<Datum>>,
+    pub script_inputs: Vec<(Output<Datum>, Box<dyn ValidatorCode<Datum, Redeemer>>)>,
     pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
     pub redeemers: Vec<(Output<Datum>, Redeemer)>,
-    pub validators: HashMap<Address, Box<dyn ValidatorCode<Datum, Redeemer>>>,
     pub minting: Values,
     pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
 }
@@ -109,7 +108,7 @@ impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {
         &self.unbuilt_outputs
     }
 
-    pub fn inputs(&self) -> &Vec<Output<Datum>> {
+    pub fn script_inputs(&self) -> &Vec<(Output<Datum>, Box<dyn ValidatorCode<Datum, Redeemer>>)> {
         &self.script_inputs
     }
 }

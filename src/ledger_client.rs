@@ -81,7 +81,7 @@ fn build_outputs<Datum>(unbuilt_outputs: Vec<UnbuiltOutput<Datum>>) -> Vec<Outpu
         .map(|output| match output {
             UnbuiltOutput::Wallet { owner, values } => new_wallet_output(&owner, &values),
             UnbuiltOutput::Validator {
-                owner,
+                script_address: owner,
                 values,
                 datum,
             } => new_validator_output(&owner, &values, datum),

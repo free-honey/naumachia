@@ -10,7 +10,7 @@ pub enum UnbuiltOutput<Datum> {
         values: Values,
     },
     Validator {
-        owner: Address,
+        script_address: Address,
         values: Values,
         datum: Datum,
     },
@@ -21,10 +21,18 @@ impl<Datum> UnbuiltOutput<Datum> {
         UnbuiltOutput::Wallet { owner, values }
     }
 
+    pub fn new_validator(script_address: Address, values: Values, datum: Datum) -> Self {
+        UnbuiltOutput::Validator {
+            script_address,
+            values,
+            datum,
+        }
+    }
+
     pub fn owner(&self) -> &Address {
         match self {
             UnbuiltOutput::Wallet { owner, .. } => owner,
-            UnbuiltOutput::Validator { owner, .. } => owner,
+            UnbuiltOutput::Validator { script_address, .. } => script_address,
         }
     }
 
@@ -68,6 +76,14 @@ pub struct OutputId {
 impl OutputId {
     pub fn new(tx_hash: String, index: u64) -> Self {
         OutputId { tx_hash, index }
+    }
+
+    pub fn tx_hash(&self) -> &str {
+        &self.tx_hash
+    }
+
+    pub fn index(&self) -> u64 {
+        self.index
     }
 }
 

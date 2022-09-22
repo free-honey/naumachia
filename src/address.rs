@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Address {
     Base(String),
+    Script(String),
     Raw(String), // This is a placeholder for now to make tests work
 }
 
@@ -21,6 +22,7 @@ impl Address {
         match self {
             Address::Base(inner) => inner,
             Address::Raw(inner) => inner,
+            Address::Script(inner) => inner,
         }
     }
 }
