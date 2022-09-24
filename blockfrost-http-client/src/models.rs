@@ -73,6 +73,8 @@ pub struct UTxO {
     amount: Vec<Value>,
     block: String,
     data_hash: Option<String>,
+    inline_datum: Option<serde_json::Value>,
+    reference_script_hash: Option<String>,
 }
 
 impl UTxO {

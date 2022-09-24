@@ -1,4 +1,5 @@
 use super::error::*;
+use crate::ledger_client::cml_client::UTxO;
 use crate::output::Output;
 use crate::values::Values;
 use crate::{Address, PolicyId};
@@ -67,22 +68,21 @@ pub fn test_v1_tx_builder() -> TransactionBuilder {
     TransactionBuilder::new(&tx_builder_cfg)
 }
 
-pub(crate) fn input_from_utxo(my_address: &CMLAddress, utxo: &BFUTxO) -> InputBuilderResult {
-    let index = utxo.output_index().into();
-    let hash_raw = utxo.tx_hash();
-    let tx_hash = TransactionHash::from_hex(hash_raw).unwrap();
+pub(crate) fn input_from_utxo(my_address: &CMLAddress, utxo: &UTxO) -> InputBuilderResult {
+    let index = utxo.output_index();
+    let tx_hash = utxo.tx_hash();
     let payment_input = TransactionInput::new(
         &tx_hash, // tx hash
         &index,   // index
     );
-    let value = cmlvalue_from_bfvalues(utxo.amount());
+    let value = utxo.amount();
     let utxo_info = TransactionOutput::new(my_address, &value);
     let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
 
     input_builder.payment_key().unwrap()
 }
 
-fn cmlvalue_from_bfvalues(values: &[BFValue]) -> CMLValue {
+pub fn cmlvalue_from_bfvalues(values: &[BFValue]) -> CMLValue {
     let mut cml_value = CMLValue::zero();
     for value in values.iter() {
         let unit = value.unit();
@@ -131,7 +131,7 @@ impl TryFrom<Values> for CMLValue {
     }
 }
 
-pub(crate) fn bf_utxo_to_utxo<Datum>(utxo: &BFUTxO, owner: &Address) -> Output<Datum> {
+pub(crate) fn bf_utxo_to_wallet_utxo<Datum>(utxo: &BFUTxO, owner: &Address) -> Output<Datum> {
     let tx_hash = utxo.tx_hash().to_owned();
     let index = utxo.output_index().to_owned();
     let mut values = Values::default();
@@ -140,6 +140,21 @@ pub(crate) fn bf_utxo_to_utxo<Datum>(utxo: &BFUTxO, owner: &Address) -> Output<D
         .map(as_nau_value)
         .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
     Output::new_wallet(tx_hash, index, owner.to_owned(), values)
+}
+
+pub(crate) fn bf_utxo_to_validator_utxo<Datum>(
+    utxo: &BFUTxO,
+    owner: &Address,
+    datum: Datum,
+) -> Output<Datum> {
+    let tx_hash = utxo.tx_hash().to_owned();
+    let index = utxo.output_index().to_owned();
+    let mut values = Values::default();
+    utxo.amount()
+        .iter()
+        .map(as_nau_value)
+        .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
+    Output::new_validator(tx_hash, index, owner.to_owned(), values, datum)
 }
 
 fn as_nau_value(value: &BFValue) -> (PolicyId, u64) {

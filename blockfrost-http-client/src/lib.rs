@@ -167,6 +167,7 @@ impl BlockFrostHttp {
             .header("project_id", project_id)
             .send()
             .await?;
+
         let res = res.json().await?;
         Ok(res)
     }

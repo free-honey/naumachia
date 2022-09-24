@@ -1,8 +1,11 @@
+use crate::ledger_client::cml_client::issuance_helpers::bf_utxo_to_validator_utxo;
 use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::values::Values;
 use crate::{
     ledger_client::{
-        cml_client::issuance_helpers::{bf_utxo_to_utxo, input_from_utxo, test_v1_tx_builder},
+        cml_client::issuance_helpers::{
+            bf_utxo_to_wallet_utxo, input_from_utxo, test_v1_tx_builder,
+        },
         LedgerClient, LedgerClientResult,
     },
     output::{Output, UnbuiltOutput},
@@ -17,8 +20,9 @@ use cardano_multiplatform_lib::builders::tx_builder::TransactionBuilder;
 use cardano_multiplatform_lib::builders::witness_builder::{
     PartialPlutusWitness, PlutusScriptWitness,
 };
-use cardano_multiplatform_lib::crypto::TransactionHash;
+use cardano_multiplatform_lib::crypto::{DataHash, TransactionHash};
 use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
+use cardano_multiplatform_lib::ledger::common::value::{BigInt, BigNum};
 use cardano_multiplatform_lib::plutus::{PlutusData, PlutusScript, PlutusV1Script};
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
@@ -68,9 +72,51 @@ pub trait Keys {
     async fn addr_from_bech_32(&self, addr: &str) -> Result<CMLAddress>;
 }
 
+pub struct UTxO {
+    tx_hash: TransactionHash,
+    output_index: BigNum,
+    amount: CMLValue,
+    block: String, // TODO: Find the CML type
+    datum: Option<PlutusData>,
+}
+
+impl UTxO {
+    pub fn new(
+        tx_hash: TransactionHash,
+        output_index: BigNum,
+        amount: CMLValue,
+        block: String,
+        datum: Option<PlutusData>,
+    ) -> Self {
+        UTxO {
+            tx_hash,
+            output_index,
+            amount,
+            block,
+            datum,
+        }
+    }
+
+    pub fn tx_hash(&self) -> &TransactionHash {
+        &self.tx_hash
+    }
+
+    pub fn output_index(&self) -> BigNum {
+        self.output_index
+    }
+
+    pub fn amount(&self) -> &CMLValue {
+        &self.amount
+    }
+
+    pub fn datum(&self) -> &Option<PlutusData> {
+        &self.datum
+    }
+}
+
 #[async_trait]
 pub trait Ledger {
-    async fn get_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<BFUTxO>>; // TODO: Don't take dep on BF UTxO
+    async fn get_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String>;
 }
 
@@ -159,10 +205,11 @@ where
                     .await
                     .map_err(as_failed_to_retrieve_by_address(address))?;
 
-                let utxos = bf_utxos
-                    .iter()
-                    .map(|utxo| bf_utxo_to_utxo(utxo, address))
-                    .collect();
+                let utxos = todo!();
+                // let utxos = bf_utxos
+                //     .iter()
+                //     .map(|utxo| bf_utxo_to_wallet_utxo(utxo, address))
+                //     .collect();
                 Ok(utxos)
             }
             Address::Script(addr_string) => {
@@ -178,10 +225,11 @@ where
                     .await
                     .map_err(as_failed_to_retrieve_by_address(address))?;
 
-                let utxos = bf_utxos
-                    .iter()
-                    .map(|utxo| bf_utxo_to_utxo(utxo, address))
-                    .collect();
+                let utxos = todo!();
+                // let utxos = bf_utxos
+                //     .iter()
+                //     .map(|utxo| bf_utxo_to_validator_utxo(utxo, address))
+                //     .collect();
                 Ok(utxos)
             }
             Address::Raw(_) => unimplemented!("Doesn't make sense here"),
