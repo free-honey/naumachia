@@ -14,7 +14,6 @@
 Naumachia is a framework for writing Smart Contracts on the Cardano Blockchain.
 The Cardano Smart Contract scheme was designed in a way to minimize data and processing that happens on-chain.
 This means a lot of the logic is actually off-chain and the on-chain code just ensures you don't do anything bad.
-You can even run your on-chain code deterministically off-chain to save on fees!
 Naumachia is designed to make the development of off-chain code as easy as possible. 
 
 Included in the library are the tools for declaratively orchestrating interactions with validator scripts, 
