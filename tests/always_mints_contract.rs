@@ -21,7 +21,7 @@ impl MintingPolicy for AlwaysMintsPolicy {
     }
 
     fn id(&self) -> PolicyId {
-        PolicyId::native_token(MINT_POLICY_ID)
+        PolicyId::native_token(MINT_POLICY_ID, &None)
     }
 }
 
@@ -77,7 +77,7 @@ fn mint(amount: u64, recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
 #[tokio::test]
 async fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
-    let policy = PolicyId::native_token(MINT_POLICY_ID);
+    let policy = PolicyId::native_token(MINT_POLICY_ID, &None);
     let backend = TestBackendsBuilder::new(&me).build();
     // Call mint endpoint
     let amount = 69;

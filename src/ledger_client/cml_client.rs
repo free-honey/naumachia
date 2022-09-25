@@ -1,14 +1,14 @@
-use crate::ledger_client::cml_client::issuance_helpers::{
-    add_all_possible_utxos_for_selection, add_collateral, build_tx_for_signing,
-    select_inputs_from_utxos, sign_tx, utxo_to_nau_utxo,
-};
-use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
-use crate::scripts::ValidatorCode;
 use crate::{
+    ledger_client::cml_client::issuance_helpers::{
+        add_all_possible_utxos_for_selection, add_collateral, build_tx_for_signing,
+        select_inputs_from_utxos, sign_tx, utxo_to_nau_utxo,
+    },
+    ledger_client::cml_client::plutus_data_interop::PlutusDataInterop,
     ledger_client::{
         cml_client::issuance_helpers::vasil_v1_tx_builder, LedgerClient, LedgerClientResult,
     },
     output::{Output, UnbuiltOutput},
+    scripts::ValidatorCode,
     transaction::TxId,
     Address, UnbuiltTransaction,
 };
@@ -21,15 +21,11 @@ use cardano_multiplatform_lib::{
         input_builder::SingleInputBuilder,
         output_builder::SingleOutputBuilderResult,
         redeemer_builder::RedeemerWitnessKey,
-        tx_builder::ChangeSelectionAlgo,
-        tx_builder::TransactionBuilder,
+        tx_builder::{ChangeSelectionAlgo, TransactionBuilder},
         witness_builder::{PartialPlutusWitness, PlutusScriptWitness},
     },
-    crypto::PrivateKey,
-    crypto::TransactionHash,
-    ledger::common::hash::hash_plutus_data,
-    ledger::common::value::BigNum,
-    ledger::common::value::Value as CMLValue,
+    crypto::{PrivateKey, TransactionHash},
+    ledger::common::{hash::hash_plutus_data, value::BigNum, value::Value as CMLValue},
     plutus::{ExUnits, PlutusData, PlutusScript, PlutusV1Script, RedeemerTag},
     Datum as CMLDatum, RequiredSigners, Transaction as CMLTransaction, TransactionInput,
     TransactionOutput,

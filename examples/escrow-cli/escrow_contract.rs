@@ -27,6 +27,10 @@ impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
     fn address(&self) -> Address {
         Address::new("escrow validator")
     }
+
+    fn script_hex(&self) -> &str {
+        todo!()
+    }
 }
 
 fn signer_is_recipient(datum: &EscrowDatum, ctx: &TxContext) -> ScriptResult<()> {

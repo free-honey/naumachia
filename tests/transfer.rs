@@ -48,7 +48,7 @@ async fn can_transfer_and_keep_remainder() {
     let alice = Address::new("alice");
 
     let input_amount = 666;
-    let extra_policy = PolicyId::native_token("arcade token");
+    let extra_policy = PolicyId::native_token("arcade token", &None);
     let extra_amount = 50;
 
     let amount = 590;
