@@ -77,7 +77,10 @@ async fn get_my_native_token_balance() {
 
     let client = get_test_client::<(), ()>();
 
-    let policy = PolicyId::native_token("57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522");
+    let policy = PolicyId::native_token(
+        "57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522",
+        &None,
+    );
     let my_balance = client.balance_at_address(&my_addr, &policy).await.unwrap();
 
     println!();
@@ -91,7 +94,6 @@ fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()> {
     UnbuiltTransaction {
         script_inputs: vec![],
         unbuilt_outputs: vec![output],
-        redeemers: vec![],
         minting: Default::default(),
         policies: Default::default(),
     }
@@ -103,7 +105,7 @@ async fn transfer_self_tx() {
     let base_addr = my_base_addr();
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::Base(addr_string);
-    let transfer_amount = 2_000_000;
+    let transfer_amount = 6_000_000;
     let unbuilt_tx = transfer_tx(my_addr, transfer_amount);
     let client = get_test_client::<(), ()>();
     let res = client.issue(unbuilt_tx).await.unwrap();
@@ -119,7 +121,6 @@ fn lock_at_always_succeeds_tx(amount: u64) -> UnbuiltTransaction<(), ()> {
     UnbuiltTransaction {
         script_inputs: vec![],
         unbuilt_outputs: vec![output],
-        redeemers: vec![],
         minting: Default::default(),
         policies: Default::default(),
     }
@@ -171,7 +172,7 @@ struct PlutusScriptFile {
 #[ignore]
 #[tokio::test]
 async fn init_always_succeeds_script_tx() {
-    let lock_amount = 2_000_000;
+    let lock_amount = 6_000_000;
     let unbuilt_tx = lock_at_always_succeeds_tx(lock_amount);
     let client = get_test_client::<(), ()>();
     let res = client.issue(unbuilt_tx).await.unwrap();
@@ -219,9 +220,8 @@ fn claim_always_succeeds_datum_tx(script_input: Output<()>) -> UnbuiltTransactio
     let script = CMLValidator::new_v1(always_succeeds_hex());
     let script = Box::new(script) as Box<dyn ValidatorCode<(), ()>>;
     UnbuiltTransaction {
-        script_inputs: vec![(script_input.clone(), script)],
+        script_inputs: vec![(script_input.clone(), (), script)],
         unbuilt_outputs: vec![],
-        redeemers: vec![(script_input, ())],
         minting: Default::default(),
         policies: Default::default(),
     }

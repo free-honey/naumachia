@@ -154,7 +154,7 @@ where
         let mut combined_inputs = self.outputs_at_address(signer).await?;
         tx.script_inputs()
             .iter()
-            .for_each(|(input, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
+            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
 
         let mut total_input_value =
             combined_inputs

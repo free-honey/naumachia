@@ -20,7 +20,7 @@ impl MintingPolicy for AliceCanMintPolicy {
     }
 
     fn id(&self) -> PolicyId {
-        PolicyId::native_token("OnlyAliceCanMint")
+        PolicyId::native_token("OnlyAliceCanMint", &None)
     }
 }
 

@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use crate::error::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -182,10 +183,31 @@ pub struct EvaluateTxResult {
 }
 
 impl EvaluateTxResult {
-    pub fn get_spend(&self) -> Option<Spend> {
-        self.result
-            .as_ref()
-            .map(|res| res.evalutation_result.spend.clone())
+    pub fn get_spends(&self) -> Result<HashMap<u64, Spend>> {
+        dbg!(&self);
+        let mut spends = HashMap::new();
+        if let Some(result) = &self.result {
+            if let Some(inner) = result.evalutation_result.as_object() {
+                let keys = inner.keys();
+                for key in keys {
+                    if key.contains("spend:") {
+                        if let Some(val) = inner.get(key) {
+                            let index_str = key
+                                .split(":")
+                                .collect::<Vec<_>>()
+                                .get(1)
+                                .unwrap()
+                                .to_owned();
+                            let index = index_str.parse::<u64>().unwrap(); // TODO
+                            let serialized = serde_json::to_string(val).unwrap(); // TODO
+                            let deserialized = serde_json::from_str(&serialized).unwrap();
+                            spends.insert(index, deserialized);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(spends)
     }
 }
 
@@ -206,7 +228,7 @@ impl EvaluateTxResult {
 #[derive(Deserialize, Debug)]
 pub struct Success {
     #[serde(rename = "EvaluationResult")]
-    evalutation_result: EvaluationResult,
+    evalutation_result: serde_json::Value,
 }
 
 //"result": Object({
@@ -224,11 +246,11 @@ pub struct Success {
 //             }),
 //         }),
 //     }),
-#[derive(Deserialize, Debug)]
-pub struct EvaluationResult {
-    #[serde(rename = "spend:2")]
-    spend: Spend,
-}
+// #[derive(Deserialize, Debug)]
+// pub struct EvaluationResult {
+//     #[serde(rename = "spend:2")]
+//     spend2: Option<Spend>,
+// }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Spend {

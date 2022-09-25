@@ -1,15 +1,14 @@
 use super::error::*;
 use crate::ledger_client::cml_client::issuance_helpers::cmlvalue_from_bfvalues;
-use crate::ledger_client::cml_client::{cmlvalues_from_values, UTxO};
+use crate::ledger_client::cml_client::UTxO;
 use crate::{
     ledger_client::cml_client::error::CMLLCError::JsError, ledger_client::cml_client::Ledger,
 };
 use async_trait::async_trait;
-use blockfrost_http_client::models::UTxO as BFUTxO;
+use blockfrost_http_client::models::{EvaluateTxResult, UTxO as BFUTxO};
 use blockfrost_http_client::{BlockFrostHttp, BlockFrostHttpTrait};
 use cardano_multiplatform_lib::address::Address as CMLAddress;
 use cardano_multiplatform_lib::crypto::TransactionHash;
-use cardano_multiplatform_lib::error::JsError;
 use cardano_multiplatform_lib::plutus::{
     encode_json_value_to_plutus_datum, PlutusData, PlutusDatumSchema,
 };
@@ -26,6 +25,7 @@ impl BlockFrostLedger {
         BlockFrostLedger { client }
     }
 
+    // TODO: Handle V2 outputs (with inline datums)
     async fn bfutxo_to_utxo(&self, bf_utxo: &BFUTxO) -> Result<UTxO> {
         let tx_hash =
             TransactionHash::from_hex(bf_utxo.tx_hash()).map_err(|e| JsError(e.to_string()))?;
@@ -44,7 +44,7 @@ impl BlockFrostLedger {
                         json_datum["json_value"].clone(), // TODO: Make this safer!
                         PlutusDatumSchema::DetailedSchema,
                     )
-                    .map_err(|e| JsError(e.to_string()));
+                    .map_err(|e| JsError(e.to_string()))?;
                     Some(plutus_data)
                 } else {
                     None // TODO: Add debug msg
@@ -79,6 +79,16 @@ impl Ledger for BlockFrostLedger {
         .into_iter()
         .collect::<Result<Vec<_>>>()?;
         Ok(utxos)
+    }
+
+    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<EvaluateTxResult> {
+        let bytes = tx.to_bytes();
+        let res = self
+            .client
+            .execution_units(&bytes)
+            .await
+            .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
+        Ok(res)
     }
 
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String> {

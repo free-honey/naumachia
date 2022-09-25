@@ -1,4 +1,5 @@
 use super::error::*;
+use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::ledger_client::cml_client::UTxO;
 use crate::output::Output;
 use crate::values::Values;
@@ -131,40 +132,53 @@ impl TryFrom<Values> for CMLValue {
     }
 }
 
-pub(crate) fn bf_utxo_to_wallet_utxo<Datum>(utxo: &BFUTxO, owner: &Address) -> Output<Datum> {
-    let tx_hash = utxo.tx_hash().to_owned();
-    let index = utxo.output_index().to_owned();
-    let mut values = Values::default();
-    utxo.amount()
-        .iter()
-        .map(as_nau_value)
-        .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
-    Output::new_wallet(tx_hash, index, owner.to_owned(), values)
-}
-
-pub(crate) fn bf_utxo_to_validator_utxo<Datum>(
-    utxo: &BFUTxO,
+pub(crate) fn utxo_to_nau_utxo<Datum: PlutusDataInterop>(
+    utxo: &UTxO,
     owner: &Address,
-    datum: Datum,
 ) -> Output<Datum> {
-    let tx_hash = utxo.tx_hash().to_owned();
-    let index = utxo.output_index().to_owned();
-    let mut values = Values::default();
-    utxo.amount()
-        .iter()
-        .map(as_nau_value)
-        .for_each(|(policy_id, amount)| values.add_one_value(&policy_id, amount));
-    Output::new_validator(tx_hash, index, owner.to_owned(), values, datum)
+    let tx_hash = utxo.tx_hash().to_string();
+    let index = utxo.output_index().into();
+    let mut values = as_nau_values(utxo.amount());
+
+    // TODO: Add debug msg in the case that this can't convert from PlutusData?
+    if let Some(datum) = utxo
+        .datum()
+        .to_owned()
+        .and_then(|data| Datum::from_plutus_data(&data).ok())
+    {
+        Output::new_validator(tx_hash, index, owner.to_owned(), values, datum)
+    } else {
+        Output::new_wallet(tx_hash, index, owner.to_owned(), values)
+    }
 }
 
-fn as_nau_value(value: &BFValue) -> (PolicyId, u64) {
-    let policy_id = match value.unit() {
-        "lovelace" => PolicyId::ADA,
-        native_token => {
-            let policy = &native_token[..56]; // TODO: Use the rest as asset info
-            PolicyId::native_token(policy)
+fn as_nau_values(cml_value: &CMLValue) -> Values {
+    let mut values = Values::default();
+    let ada = cml_value.coin().into();
+    values.add_one_value(&PolicyId::ADA, ada);
+    if let Some(multiasset) = cml_value.multiasset() {
+        let ids = multiasset.keys();
+        let len = multiasset.len();
+        for i in 0..len {
+            let id = ids.get(i);
+            if let Some(assets) = multiasset.get(&id) {
+                let assets_names = assets.keys();
+                let len = assets_names.len();
+                for i in 0..len {
+                    let asset = assets_names.get(i);
+                    if let Some(amt) = assets.get(&asset) {
+                        let asset_bytes = asset.to_bytes();
+                        let asset_text = std::str::from_utf8(&asset_bytes).unwrap(); // TODO
+                        let policy_id = PolicyId::native_token(
+                            &id.to_string(),
+                            &Some(asset_text.to_string()), // TODO: What if there is no assetname?
+                        );
+                        values.add_one_value(&policy_id, amt.into());
+                    }
+                }
+            }
         }
-    };
-    let amount = value.quantity().parse().unwrap(); // TODO: unwrap
-    (policy_id, amount)
+    }
+
+    values
 }

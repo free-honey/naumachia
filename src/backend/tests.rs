@@ -21,9 +21,9 @@ prop_compose! {
 
 prop_compose! {
     fn arb_policy_id()(
-        id: String
+        id: String,
     ) -> PolicyId {
-        PolicyId::native_token(&id)
+        PolicyId::native_token(&id, &None)
     }
 }
 

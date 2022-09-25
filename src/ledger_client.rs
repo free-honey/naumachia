@@ -53,6 +53,8 @@ pub enum LedgerClientError {
     FailedToRetrieveOutputWithId(OutputId, Box<dyn error::Error + Send>),
     #[error("Failed to issue transaction: {0:?}")]
     FailedToIssueTx(Box<dyn error::Error + Send>),
+    #[error("There isn't a single utxo big enough for collateral")]
+    NoBigEnoughCollateralUTxO,
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

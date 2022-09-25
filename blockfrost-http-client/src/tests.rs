@@ -240,7 +240,7 @@ fn always_succeeds_script_input(amt: u64, hash_raw: &str, index: u64) -> InputBu
     let utxo_info = TransactionOutput::new(&script_addr, &value);
     let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
 
-    let data = PlutusData::new_bytes(Vec::new());
+    let data = PlutusData::new_bytes(vec![1, 2, 3, 4, 5]);
     let script_witness = PlutusScriptWitness::from_script(script);
     let partial_witness = PartialPlutusWitness::new(&script_witness, &data);
 
@@ -421,7 +421,7 @@ async fn spend_datum() {
         .unwrap();
 
     let mut tx_builder = test_v1_tx_builder();
-    let hash_raw = "d5be9549bfb82b5981f6cdf49187b6140bac5f129adbb50281ee0e680c0a411a";
+    let hash_raw = "abe7732220fe2fd0c0be8212b94b7197d72d4cc4d05203fbb3c8d3fd1113f3da";
     let index = 0;
     let script_input = always_succeeds_script_input(2_000_000, hash_raw, index);
     tx_builder.add_input(&script_input).unwrap();
@@ -436,7 +436,7 @@ async fn spend_datum() {
         .with_coin(&1_000_000u64.into())
         .build()
         .unwrap();
-    let collateral_intput = SingleInputBuilder::new(
+    let collateral_input = SingleInputBuilder::new(
         &TransactionInput::new(
             &TransactionHash::from_hex(
                 "862cc35a4a90059a2c5d55c3890961a368707bca66eaf27ea2a4862883f80df2",
@@ -448,7 +448,7 @@ async fn spend_datum() {
     )
     .payment_key()
     .unwrap();
-    tx_builder.add_collateral(&collateral_intput).unwrap();
+    tx_builder.add_collateral(&collateral_input).unwrap();
     let strat = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
     tx_builder.select_utxos(strat).unwrap();
     let algo = ChangeSelectionAlgo::Default;
@@ -456,11 +456,12 @@ async fn spend_datum() {
     let transaction = tx_redeemer_builder.draft_tx();
     let bytes = transaction.to_bytes();
     let res = bf.execution_units(&bytes).await.unwrap();
-    let spend = res.get_spend().unwrap();
-    tx_builder.set_exunits(
-        &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(2)), // TODO: How do I know which index?
-        &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
-    );
+    for (index, spend) in res.get_spends().unwrap() {
+        tx_builder.set_exunits(
+            &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(index)), // TODO: How do I know which index?
+            &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
+        );
+    }
 
     let algo = ChangeSelectionAlgo::Default;
     let mut signed_tx_builder = tx_builder.build(algo, &my_address).unwrap();
@@ -472,6 +473,6 @@ async fn spend_datum() {
     signed_tx_builder.add_vkey(&vkey_witness);
     let tx = signed_tx_builder.build_checked().unwrap();
     println!("{}", tx.to_json().unwrap());
-    let submit_res = bf.submit_tx(&tx.to_bytes()).await.unwrap();
-    dbg!(&submit_res);
+    // let submit_res = bf.submit_tx(&tx.to_bytes()).await.unwrap();
+    // dbg!(&submit_res);
 }

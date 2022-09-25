@@ -14,16 +14,10 @@ pub fn can_spend_inputs<
     signer: Address,
 ) -> Result<()> {
     let ctx = TxContext { signer };
-    for (input, script) in &tx.script_inputs {
+    for (input, redeemer, script) in &tx.script_inputs {
         match input {
             Output::Wallet { .. } => {} // TODO: Make sure not spending other's outputs
-            Output::Validator { owner, datum, .. } => {
-                let (_, redeemer) = tx
-                    .redeemers
-                    .iter()
-                    .find(|(utxo, _)| utxo == input)
-                    .ok_or_else(|| Error::FailedToRetrieveRedeemerFor(owner.to_owned()))?;
-
+            Output::Validator { datum, .. } => {
                 script.execute(datum.clone(), redeemer.clone(), ctx.clone())?;
             }
         }
@@ -40,7 +34,7 @@ pub fn can_mint_tokens<Datum, Redeemer>(
     };
     for (id, _) in tx.minting.as_iter() {
         match id {
-            PolicyId::NativeToken(_) => {
+            PolicyId::NativeToken(_, _) => {
                 if let Some(policy) = tx.policies.get(id) {
                     policy.execute(ctx.clone())?;
                 } else {

@@ -70,11 +70,13 @@ where
     ) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
         let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
         let mut minting = Values::default();
-        let mut script_inputs: Vec<(Output<Datum>, Box<dyn ValidatorCode<Datum, Redeemer>>)> =
-            Vec::new();
+        let mut script_inputs: Vec<(
+            Output<Datum>,
+            Redeemer,
+            Box<dyn ValidatorCode<Datum, Redeemer>>,
+        )> = Vec::new();
         let mut specific_outputs: Vec<UnbuiltOutput<Datum>> = Vec::new();
 
-        let mut redeemers = Vec::new();
         let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();
         for action in actions {
             match action {
@@ -118,8 +120,7 @@ where
                     redeemer,
                     script,
                 } => {
-                    script_inputs.push((output.clone(), script));
-                    redeemers.push((output, redeemer));
+                    script_inputs.push((output.clone(), redeemer, script));
                 }
             }
         }
@@ -131,7 +132,6 @@ where
         let tx = UnbuiltTransaction {
             script_inputs,
             unbuilt_outputs: outputs,
-            redeemers,
             minting,
             policies,
         };
