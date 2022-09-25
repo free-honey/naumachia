@@ -21,6 +21,8 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::time::Duration;
+use tokio::time::sleep;
 
 // const MAINNET_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
 const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
@@ -161,22 +163,11 @@ fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
 }
 
 #[allow(non_snake_case)]
-#[allow(unused)]
 #[derive(Deserialize, Debug)]
 struct PlutusScriptFile {
     r#type: String,
     description: String,
     cborHex: String,
-}
-
-#[ignore]
-#[tokio::test]
-async fn init_always_succeeds_script_tx() {
-    let lock_amount = 6_000_000;
-    let unbuilt_tx = lock_at_always_succeeds_tx(lock_amount);
-    let client = get_test_client::<(), ()>();
-    let res = client.issue(unbuilt_tx).await.unwrap();
-    println!("{:?}", res);
 }
 
 struct CMLValidator {
@@ -216,7 +207,7 @@ impl ValidatorCode<(), ()> for CMLValidator {
     }
 }
 
-fn claim_always_succeeds_datum_tx(script_input: Output<()>) -> UnbuiltTransaction<(), ()> {
+fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTransaction<(), ()> {
     let script = CMLValidator::new_v1(always_succeeds_hex());
     let script = Box::new(script) as Box<dyn ValidatorCode<(), ()>>;
     UnbuiltTransaction {
@@ -227,7 +218,7 @@ fn claim_always_succeeds_datum_tx(script_input: Output<()>) -> UnbuiltTransactio
     }
 }
 
-fn output_from_tx<D>(tx_id: &str, outputs: Vec<Output<D>>) -> Option<Output<D>> {
+fn output_from_tx<'a, D>(tx_id: &'a str, outputs: &'a Vec<Output<D>>) -> Option<&'a Output<D>> {
     for output in outputs {
         let id = output.id();
         let tx_hash = id.tx_hash();
@@ -240,14 +231,32 @@ fn output_from_tx<D>(tx_id: &str, outputs: Vec<Output<D>>) -> Option<Output<D>> 
 
 #[ignore]
 #[tokio::test]
-async fn spend_datum_tx() {
+async fn create_datum_wait_and_then_redeem_same_datum() {
+    let lock_amount = 6_000_000;
+    let unbuilt_tx = lock_at_always_succeeds_tx(lock_amount);
     let client = get_test_client::<(), ()>();
+    let tx_id = client.issue(unbuilt_tx).await.unwrap();
+    println!("{:?}", &tx_id);
     let script_addr = always_succeeds_script_address(TESTNET);
-    let script_outputs = client.outputs_at_address(&script_addr).await.unwrap();
-    let tx_id = "abe7732220fe2fd0c0be8212b94b7197d72d4cc4d05203fbb3c8d3fd1113f3da";
-    let my_output = output_from_tx::<()>(tx_id, script_outputs).unwrap();
 
-    let unbuilt_tx = claim_always_succeeds_datum_tx(my_output);
-    let res = client.issue(unbuilt_tx).await.unwrap();
-    println!("{:?}", res);
+    let mut tries = 30;
+    println!("Attempting to find and spend datum from {:?}", &tx_id);
+    loop {
+        println!("...");
+        sleep(Duration::from_secs(5)).await;
+        let script_outputs = client.outputs_at_address(&script_addr).await.unwrap();
+        if let Some(my_output) = output_from_tx::<()>(&tx_id.as_str(), &script_outputs) {
+            println!("Found UTxO");
+            println!("Issuing redeeming tx");
+            let unbuilt_tx = claim_always_succeeds_datum_tx(my_output);
+            let res = client.issue(unbuilt_tx).await.unwrap();
+            println!("{:?}", res);
+            return;
+        }
+        tries -= 1;
+        if tries < 0 {
+            println!("Failed to find UTxO for {:?}", tx_id);
+            return;
+        }
+    }
 }
