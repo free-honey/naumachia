@@ -1,11 +1,18 @@
 use super::error::*;
 use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::ledger_client::cml_client::UTxO;
-use crate::ledger_client::LedgerClientResult;
+use crate::ledger_client::{LedgerClientError, LedgerClientResult};
 use crate::output::Output;
 use crate::values::Values;
 use crate::{Address, PolicyId};
 use blockfrost_http_client::models::Value as BFValue;
+use cardano_multiplatform_lib::builders::output_builder::TransactionOutputBuilder;
+use cardano_multiplatform_lib::builders::tx_builder::{
+    ChangeSelectionAlgo, CoinSelectionStrategyCIP2, SignedTxBuilder,
+};
+use cardano_multiplatform_lib::crypto::PrivateKey;
+use cardano_multiplatform_lib::ledger::common::hash::hash_transaction;
+use cardano_multiplatform_lib::ledger::shelley::witness::make_vkey_witness;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::input_builder::{InputBuilderResult, SingleInputBuilder},
@@ -13,26 +20,26 @@ use cardano_multiplatform_lib::{
     ledger::alonzo::fees::LinearFee,
     ledger::common::value::{BigNum, Int, Value as CMLValue},
     plutus::{CostModel, Costmdls, ExUnitPrices, Language},
-    AssetName, Assets, MultiAsset, PolicyID, TransactionInput, TransactionOutput, UnitInterval,
+    AssetName, Assets, MultiAsset, PolicyID, Transaction as CMLTransaction, TransactionInput,
+    TransactionOutput, UnitInterval,
 };
 
 // TODO: I think some of these values might be dynamic, in which case we should query them
 //   rather than hard-coding them
-// TODO: unwraps
-pub fn v1_tx_builder() -> LedgerClientResult<TransactionBuilder> {
-    let coefficient = BigNum::from_str("44").unwrap();
-    let constant = BigNum::from_str("155381").unwrap();
+pub fn vasil_v1_tx_builder() -> LedgerClientResult<TransactionBuilder> {
+    let coefficient = 44.into();
+    let constant = 155381.into();
     let linear_fee = LinearFee::new(&coefficient, &constant);
 
-    let pool_deposit = BigNum::from_str("500000000").unwrap();
-    let key_deposit = BigNum::from_str("2000000").unwrap();
+    let pool_deposit = 500000000.into();
+    let key_deposit = 2000000.into();
 
-    let coins_per_utxo_byte = BigNum::from_str("4310").unwrap();
-    let mem_num = BigNum::from_str("577").unwrap();
-    let mem_den = BigNum::from_str("10000").unwrap();
+    let coins_per_utxo_byte = 4310.into();
+    let mem_num = 577.into();
+    let mem_den = 10000.into();
     let mem_price = UnitInterval::new(&mem_num, &mem_den);
-    let step_num = BigNum::from_str("721").unwrap();
-    let step_den = BigNum::from_str("10000000").unwrap();
+    let step_num = 721.into();
+    let step_den = 10000000.into();
     let step_price = UnitInterval::new(&step_num, &step_den);
     let ex_unit_prices = ExUnitPrices::new(&mem_price, &step_price);
     let vasil_v1_cost_models = vec![
@@ -66,11 +73,15 @@ pub fn v1_tx_builder() -> LedgerClientResult<TransactionBuilder> {
         .max_collateral_inputs(3)
         .costmdls(&cost_models)
         .build()
-        .unwrap();
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
     Ok(TransactionBuilder::new(&tx_builder_cfg))
 }
 
-pub(crate) fn input_from_utxo(my_address: &CMLAddress, utxo: &UTxO) -> InputBuilderResult {
+pub(crate) fn input_from_utxo(
+    my_address: &CMLAddress,
+    utxo: &UTxO,
+) -> LedgerClientResult<InputBuilderResult> {
     let index = utxo.output_index();
     let tx_hash = utxo.tx_hash();
     let payment_input = TransactionInput::new(
@@ -81,7 +92,11 @@ pub(crate) fn input_from_utxo(my_address: &CMLAddress, utxo: &UTxO) -> InputBuil
     let utxo_info = TransactionOutput::new(my_address, &value);
     let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
 
-    input_builder.payment_key().unwrap()
+    let res = input_builder
+        .payment_key()
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    Ok(res)
 }
 
 pub fn cmlvalue_from_bfvalues(values: &[BFValue]) -> CMLValue {
@@ -182,4 +197,109 @@ fn as_nau_values(cml_value: &CMLValue) -> Values {
     }
 
     values
+}
+
+pub(crate) async fn add_all_possible_utxos_for_selection(
+    tx_builder: &mut TransactionBuilder,
+    my_address: &CMLAddress,
+    my_utxos: &Vec<UTxO>,
+) -> LedgerClientResult<()> {
+    for utxo in my_utxos.iter() {
+        let input = input_from_utxo(&my_address, utxo)?;
+        tx_builder.add_utxo(&input);
+    }
+    Ok(())
+}
+
+pub(crate) async fn add_collateral(
+    tx_builder: &mut TransactionBuilder,
+    my_address: &CMLAddress,
+    my_utxos: &Vec<UTxO>,
+) -> LedgerClientResult<()> {
+    const MIN_COLLATERAL_AMT: u64 = 5_000_000;
+
+    let collateral_utxo = select_collateral_utxo(&my_address, &my_utxos, MIN_COLLATERAL_AMT)?;
+
+    tx_builder
+        .add_collateral(&collateral_utxo)
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    Ok(())
+}
+
+pub(crate) async fn select_inputs_from_utxos(
+    tx_builder: &mut TransactionBuilder,
+) -> LedgerClientResult<()> {
+    // Hardcode for now. I'm choosing this strat because it helps atomize my wallet a
+    // little more which makes testing a bit safer 🦺
+    let strategy = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
+    tx_builder
+        .select_utxos(strategy)
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    Ok(())
+}
+
+// TODO: This could be less naive (e.g. include multiple UTxOs, etc)
+pub(crate) fn select_collateral_utxo(
+    my_cml_address: &CMLAddress,
+    my_utxos: &Vec<UTxO>,
+    min_amount: u64,
+) -> LedgerClientResult<InputBuilderResult> {
+    let mut smallest_utxo_meets_qual = None;
+    let mut smallest_amount = min_amount;
+    for utxo in my_utxos {
+        let amount: u64 = utxo.amount().coin().into();
+        if amount < smallest_amount {
+            smallest_utxo_meets_qual = Some(utxo);
+            smallest_amount = amount;
+        }
+    }
+    // TODO: Unwraps
+    let res = if let Some(utxo) = smallest_utxo_meets_qual {
+        let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index().into());
+        let input_utxo = TransactionOutputBuilder::new()
+            .with_address(&my_cml_address)
+            .next()
+            .unwrap()
+            .with_coin(&smallest_amount.into())
+            .build()
+            .unwrap()
+            .output();
+        let res = SingleInputBuilder::new(&transaction_input, &input_utxo)
+            .payment_key()
+            .unwrap();
+        Some(res)
+    } else {
+        None
+    };
+    res.ok_or(LedgerClientError::NoBigEnoughCollateralUTxO)
+}
+
+pub(crate) async fn build_tx_for_signing(
+    tx_builder: &mut TransactionBuilder,
+    my_address: &CMLAddress,
+) -> LedgerClientResult<SignedTxBuilder> {
+    let algo = ChangeSelectionAlgo::Default;
+    let signed_tx_builder = tx_builder
+        .build(algo, &my_address)
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    Ok(signed_tx_builder)
+}
+
+pub(crate) async fn sign_tx(
+    signed_tx_builder: &mut SignedTxBuilder,
+    priv_key: &PrivateKey,
+) -> LedgerClientResult<CMLTransaction> {
+    let unchecked_tx = signed_tx_builder.build_unchecked();
+    let tx_body = unchecked_tx.body();
+    let tx_hash = hash_transaction(&tx_body);
+    let vkey_witness = make_vkey_witness(&tx_hash, &priv_key);
+    signed_tx_builder.add_vkey(&vkey_witness);
+    let tx = signed_tx_builder
+        .build_checked()
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    Ok(tx)
 }
