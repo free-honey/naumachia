@@ -1,24 +1,25 @@
 use super::error::*;
 use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::ledger_client::cml_client::UTxO;
+use crate::ledger_client::LedgerClientResult;
 use crate::output::Output;
 use crate::values::Values;
 use crate::{Address, PolicyId};
-use blockfrost_http_client::models::{UTxO as BFUTxO, Value as BFValue};
+use blockfrost_http_client::models::Value as BFValue;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::input_builder::{InputBuilderResult, SingleInputBuilder},
     builders::tx_builder::{TransactionBuilder, TransactionBuilderConfigBuilder},
-    crypto::TransactionHash,
     ledger::alonzo::fees::LinearFee,
     ledger::common::value::{BigNum, Int, Value as CMLValue},
     plutus::{CostModel, Costmdls, ExUnitPrices, Language},
     AssetName, Assets, MultiAsset, PolicyID, TransactionInput, TransactionOutput, UnitInterval,
 };
 
-// TODO: I think some of thise values might be dynamic, in which case we should query them
+// TODO: I think some of these values might be dynamic, in which case we should query them
 //   rather than hard-coding them
-pub fn test_v1_tx_builder() -> TransactionBuilder {
+// TODO: unwraps
+pub fn v1_tx_builder() -> LedgerClientResult<TransactionBuilder> {
     let coefficient = BigNum::from_str("44").unwrap();
     let constant = BigNum::from_str("155381").unwrap();
     let linear_fee = LinearFee::new(&coefficient, &constant);
@@ -66,7 +67,7 @@ pub fn test_v1_tx_builder() -> TransactionBuilder {
         .costmdls(&cost_models)
         .build()
         .unwrap();
-    TransactionBuilder::new(&tx_builder_cfg)
+    Ok(TransactionBuilder::new(&tx_builder_cfg))
 }
 
 pub(crate) fn input_from_utxo(my_address: &CMLAddress, utxo: &UTxO) -> InputBuilderResult {
@@ -138,7 +139,7 @@ pub(crate) fn utxo_to_nau_utxo<Datum: PlutusDataInterop>(
 ) -> Output<Datum> {
     let tx_hash = utxo.tx_hash().to_string();
     let index = utxo.output_index().into();
-    let mut values = as_nau_values(utxo.amount());
+    let values = as_nau_values(utxo.amount());
 
     // TODO: Add debug msg in the case that this can't convert from PlutusData?
     if let Some(datum) = utxo

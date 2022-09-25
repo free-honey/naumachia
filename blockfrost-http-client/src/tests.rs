@@ -31,6 +31,12 @@ use cardano_multiplatform_lib::{
 };
 use std::{fs::File, io::Read};
 
+pub fn get_test_bf_http_client() -> Result<BlockFrostHttp> {
+    let key = load_key_from_file(CONFIG_PATH)?;
+    let bf = BlockFrostHttp::new(TEST_URL, &key);
+    Ok(bf)
+}
+
 #[ignore]
 #[tokio::test]
 async fn genesis() -> Result<()> {

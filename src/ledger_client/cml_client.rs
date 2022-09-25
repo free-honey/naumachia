@@ -1,10 +1,10 @@
 use crate::ledger_client::cml_client::issuance_helpers::utxo_to_nau_utxo;
 use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::ledger_client::LedgerClientError;
-use crate::values::Values;
+use crate::scripts::ValidatorCode;
 use crate::{
     ledger_client::{
-        cml_client::issuance_helpers::{input_from_utxo, test_v1_tx_builder},
+        cml_client::issuance_helpers::{input_from_utxo, v1_tx_builder},
         LedgerClient, LedgerClientResult,
     },
     output::{Output, UnbuiltOutput},
@@ -12,32 +12,28 @@ use crate::{
     Address, UnbuiltTransaction,
 };
 use async_trait::async_trait;
-use blockfrost_http_client::models::{EvaluateTxResult, UTxO as BFUTxO};
-use cardano_multiplatform_lib::address::{EnterpriseAddress, StakeCredential};
-use cardano_multiplatform_lib::builders::input_builder::{InputBuilderResult, SingleInputBuilder};
-use cardano_multiplatform_lib::builders::output_builder::TransactionOutputBuilder;
-use cardano_multiplatform_lib::builders::redeemer_builder::RedeemerWitnessKey;
-use cardano_multiplatform_lib::builders::tx_builder::TransactionBuilder;
-use cardano_multiplatform_lib::builders::witness_builder::{
-    PartialPlutusWitness, PlutusScriptWitness,
-};
-use cardano_multiplatform_lib::crypto::{DataHash, TransactionHash};
-use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
-use cardano_multiplatform_lib::ledger::common::value::{BigInt, BigNum};
-use cardano_multiplatform_lib::plutus::{
-    ExUnits, PlutusData, PlutusScript, PlutusV1Script, RedeemerTag,
-};
+use blockfrost_http_client::models::EvaluateTxResult;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
+    address::{EnterpriseAddress, StakeCredential},
     builders::{
+        input_builder::{InputBuilderResult, SingleInputBuilder},
         output_builder::SingleOutputBuilderResult,
+        output_builder::TransactionOutputBuilder,
+        redeemer_builder::RedeemerWitnessKey,
         tx_builder::{ChangeSelectionAlgo, CoinSelectionStrategyCIP2},
+        tx_builder::{SignedTxBuilder, TransactionBuilder},
+        witness_builder::{PartialPlutusWitness, PlutusScriptWitness},
     },
     crypto::PrivateKey,
+    crypto::TransactionHash,
+    ledger::common::hash::hash_plutus_data,
+    ledger::common::value::BigNum,
     ledger::{
         common::hash::hash_transaction, common::value::Value as CMLValue,
         shelley::witness::make_vkey_witness,
     },
+    plutus::{ExUnits, PlutusData, PlutusScript, PlutusV1Script, RedeemerTag},
     Datum as CMLDatum, RequiredSigners, Transaction as CMLTransaction, TransactionInput,
     TransactionOutput,
 };
@@ -80,7 +76,6 @@ pub struct UTxO {
     tx_hash: TransactionHash,
     output_index: BigNum,
     amount: CMLValue,
-    block: String, // TODO: Find the CML type
     datum: Option<PlutusData>,
 }
 
@@ -89,14 +84,12 @@ impl UTxO {
         tx_hash: TransactionHash,
         output_index: BigNum,
         amount: CMLValue,
-        block: String,
         datum: Option<PlutusData>,
     ) -> Self {
         UTxO {
             tx_hash,
             output_index,
             amount,
-            block,
             datum,
         }
     }
@@ -142,10 +135,10 @@ where
         }
     }
 
-    async fn add_outputs_for_tx(
+    async fn add_outputs_for_tx<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
-        tx: &UnbuiltTransaction<D, R>,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
         for unbuilt_output in tx.unbuilt_outputs().iter() {
             let cml_values: CMLValue = unbuilt_output
@@ -177,6 +170,185 @@ where
                 .map_err(as_failed_to_issue_tx)?;
         }
         Ok(())
+    }
+    async fn add_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        input: &Output<Datum>,
+        redeemer: &Redeemer,
+        script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
+    ) -> LedgerClientResult<()> {
+        let tx_hash_raw = input.id().tx_hash();
+        let tx_hash = TransactionHash::from_hex(tx_hash_raw)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        let script_hex = script.script_hex();
+        let script_bytes = hex::decode(&script_hex).map_err(as_failed_to_issue_tx)?;
+        let v1 = PlutusV1Script::from_bytes(script_bytes)
+            .map_err(|e| CMLLCError::Deserialize(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        let cml_script = PlutusScript::from_v1(&v1);
+        let script_witness = PlutusScriptWitness::from_script(cml_script.clone());
+        let partial_witness =
+            PartialPlutusWitness::new(&script_witness, &redeemer.to_plutus_data());
+
+        let script_hash = cml_script.hash();
+        let stake_cred = StakeCredential::from_scripthash(&script_hash);
+        let enterprise_addr = EnterpriseAddress::new(self.network, &stake_cred);
+        let cml_script_address = enterprise_addr.to_address();
+
+        let required_signers = RequiredSigners::new();
+
+        let script_input = TransactionInput::new(
+            &tx_hash,                   // tx hash
+            &input.id().index().into(), // index
+        );
+        let value = input
+            .values()
+            .clone()
+            .try_into()
+            .map_err(as_failed_to_issue_tx)?;
+        let utxo_info = TransactionOutput::new(&cml_script_address, &value);
+        let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
+        let data = input.datum().unwrap(); // TODO
+        let datum = data.to_plutus_data();
+        let cml_input = input_builder
+            .plutus_script(&partial_witness, &required_signers, &datum)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        tx_builder
+            .add_input(&cml_input)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(())
+    }
+
+    async fn add_script_inputs<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<()> {
+        for (input, redeemer, script) in tx.script_inputs() {
+            self.add_script_input(tx_builder, input, redeemer, script)
+                .await?
+        }
+        Ok(())
+    }
+
+    async fn add_all_possible_utxos_for_selection(
+        tx_builder: &mut TransactionBuilder,
+        my_address: &CMLAddress,
+        my_utxos: &Vec<UTxO>,
+    ) {
+        for utxo in my_utxos.iter() {
+            let input = input_from_utxo(&my_address, utxo);
+            tx_builder.add_utxo(&input);
+        }
+    }
+
+    async fn add_collateral(
+        tx_builder: &mut TransactionBuilder,
+        my_address: &CMLAddress,
+        my_utxos: &Vec<UTxO>,
+    ) -> LedgerClientResult<()> {
+        const MIN_COLLATERAL_AMT: u64 = 5_000_000;
+
+        let collateral_utxo = select_collateral_utxo(&my_address, &my_utxos, MIN_COLLATERAL_AMT)?;
+
+        tx_builder
+            .add_collateral(&collateral_utxo)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(())
+    }
+
+    async fn select_inputs_from_utxos(
+        tx_builder: &mut TransactionBuilder,
+    ) -> LedgerClientResult<()> {
+        // Hardcode for now. I'm choosing this strat because it helps atomize my wallet a
+        // little more which makes testing a bit safer 🦺
+        let strategy = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
+        tx_builder
+            .select_utxos(strategy)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(())
+    }
+
+    async fn update_ex_units(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        my_address: &CMLAddress,
+    ) -> LedgerClientResult<()> {
+        let algo = ChangeSelectionAlgo::Default;
+        let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
+        let transaction = tx_redeemer_builder.draft_tx();
+        let res = self.ledger.calculate_ex_units(&transaction).await.unwrap();
+        for (index, spend) in res.get_spends().map_err(as_failed_to_issue_tx)? {
+            tx_builder.set_exunits(
+                &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(index)), // TODO: How do I know which index?
+                &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
+            );
+        }
+        Ok(())
+    }
+
+    async fn build_tx_for_signing(
+        tx_builder: &mut TransactionBuilder,
+        my_address: &CMLAddress,
+    ) -> LedgerClientResult<SignedTxBuilder> {
+        let algo = ChangeSelectionAlgo::Default;
+        let signed_tx_builder = tx_builder
+            .build(algo, &my_address)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(signed_tx_builder)
+    }
+
+    async fn sign_tx(
+        signed_tx_builder: &mut SignedTxBuilder,
+        priv_key: &PrivateKey,
+    ) -> LedgerClientResult<CMLTransaction> {
+        let unchecked_tx = signed_tx_builder.build_unchecked();
+        let tx_body = unchecked_tx.body();
+        let tx_hash = hash_transaction(&tx_body);
+        let vkey_witness = make_vkey_witness(&tx_hash, &priv_key);
+        signed_tx_builder.add_vkey(&vkey_witness);
+        let tx = signed_tx_builder
+            .build_checked()
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(tx)
+    }
+
+    async fn submit_tx(&self, tx: &CMLTransaction) -> LedgerClientResult<TxId> {
+        let submit_res = self
+            .ledger
+            .submit_transaction(&tx)
+            .await
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(TxId::new(&submit_res))
+    }
+
+    async fn issue_v1_tx<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx: UnbuiltTransaction<Datum, Redeemer>,
+        my_utxos: Vec<UTxO>,
+        my_address: CMLAddress,
+        priv_key: PrivateKey,
+    ) -> LedgerClientResult<TxId> {
+        let mut tx_builder = v1_tx_builder()?;
+        self.add_script_inputs(&mut tx_builder, &tx).await?;
+        Self::add_all_possible_utxos_for_selection(&mut tx_builder, &my_address, &my_utxos).await;
+        self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
+        Self::add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
+        Self::select_inputs_from_utxos(&mut tx_builder).await?;
+        self.update_ex_units(&mut tx_builder, &my_address).await?;
+        let mut signed_tx_builder =
+            Self::build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        let tx = Self::sign_tx(&mut signed_tx_builder, &priv_key).await?;
+        let tx_id = self.submit_tx(&tx).await?;
+        Ok(tx_id)
     }
 }
 
@@ -234,108 +406,7 @@ where
             .await
             .map_err(as_failed_to_issue_tx)?;
 
-        let mut tx_builder = test_v1_tx_builder();
-
-        for (input, redeemer, script) in tx.script_inputs() {
-            let tx_hash_raw = input.id().tx_hash();
-            let tx_hash = TransactionHash::from_hex(tx_hash_raw)
-                .map_err(|e| CMLLCError::JsError(e.to_string()))
-                .map_err(as_failed_to_issue_tx)?;
-            let script_hex = script.script_hex();
-            let script_bytes = hex::decode(&script_hex).map_err(as_failed_to_issue_tx)?;
-            let v1 = PlutusV1Script::from_bytes(script_bytes)
-                .map_err(|e| CMLLCError::Deserialize(e.to_string()))
-                .map_err(as_failed_to_issue_tx)?; // TODO: version
-            let cml_script = PlutusScript::from_v1(&v1);
-            let script_witness = PlutusScriptWitness::from_script(cml_script.clone());
-            let partial_witness =
-                PartialPlutusWitness::new(&script_witness, &redeemer.to_plutus_data());
-
-            let script_hash = cml_script.hash();
-            let stake_cred = StakeCredential::from_scripthash(&script_hash);
-            let enterprise_addr = EnterpriseAddress::new(self.network, &stake_cred);
-            let cml_script_address = enterprise_addr.to_address();
-
-            let required_signers = RequiredSigners::new();
-
-            let script_input = TransactionInput::new(
-                &tx_hash,                   // tx hash
-                &input.id().index().into(), // index
-            );
-            let value = input
-                .values()
-                .clone()
-                .try_into()
-                .map_err(as_failed_to_issue_tx)?;
-            let utxo_info = TransactionOutput::new(&cml_script_address, &value);
-            let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
-            let data = input.datum().unwrap(); // TODO
-            let datum = data.to_plutus_data();
-            let cml_input = input_builder
-                .plutus_script(&partial_witness, &required_signers, &datum)
-                .map_err(|e| CMLLCError::JsError(e.to_string()))
-                .map_err(as_failed_to_issue_tx)?;
-            tx_builder
-                .add_input(&cml_input)
-                .map_err(|e| CMLLCError::JsError(e.to_string()))
-                .map_err(as_failed_to_issue_tx)?;
-        }
-
-        for utxo in my_utxos.iter() {
-            let input = input_from_utxo(&my_address, utxo);
-            tx_builder.add_utxo(&input);
-        }
-
-        self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
-
-        // TODO: Improve
-        let collateral_utxo = select_collateral_utxo(&my_address, &my_utxos, 5_000_000)
-            .ok_or(LedgerClientError::NoBigEnoughCollateralUTxO)?;
-
-        tx_builder
-            .add_collateral(&collateral_utxo)
-            .map_err(|e| CMLLCError::JsError(e.to_string()))
-            .map_err(as_failed_to_issue_tx)?;
-        // Hardcode for now. I'm choosing this strat because it helps atomize my wallet a
-        // little more which makes testing a bit safer 🦺
-        let strategy = CoinSelectionStrategyCIP2::LargestFirstMultiAsset;
-        tx_builder
-            .select_utxos(strategy)
-            .map_err(|e| CMLLCError::JsError(e.to_string()))
-            .map_err(as_failed_to_issue_tx)?;
-
-        let algo = ChangeSelectionAlgo::Default;
-        let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
-        let transaction = tx_redeemer_builder.draft_tx();
-        let res = self.ledger.calculate_ex_units(&transaction).await.unwrap();
-        for (index, spend) in res.get_spends().unwrap() {
-            tx_builder.set_exunits(
-                &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(index)), // TODO: How do I know which index?
-                &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
-            );
-        }
-
-        let algo = ChangeSelectionAlgo::Default;
-        let mut signed_tx_builder = tx_builder
-            .build(algo, &my_address)
-            .map_err(|e| CMLLCError::JsError(e.to_string()))
-            .map_err(as_failed_to_issue_tx)?;
-        let unchecked_tx = signed_tx_builder.build_unchecked();
-        let tx_body = unchecked_tx.body();
-        let tx_hash = hash_transaction(&tx_body);
-        let vkey_witness = make_vkey_witness(&tx_hash, &priv_key);
-        signed_tx_builder.add_vkey(&vkey_witness);
-        let tx = signed_tx_builder
-            .build_checked()
-            .map_err(|e| CMLLCError::JsError(e.to_string()))
-            .map_err(as_failed_to_issue_tx)?;
-        println!("{}", &tx.to_json().unwrap());
-        let submit_res = self
-            .ledger
-            .submit_transaction(&tx)
-            .await
-            .map_err(as_failed_to_issue_tx)?;
-        Ok(TxId::new(&submit_res))
+        self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await
     }
 }
 
@@ -344,7 +415,7 @@ fn select_collateral_utxo(
     my_cml_address: &CMLAddress,
     my_utxos: &Vec<UTxO>,
     min_amount: u64,
-) -> Option<InputBuilderResult> {
+) -> LedgerClientResult<InputBuilderResult> {
     let mut smallest_utxo_meets_qual = None;
     let mut smallest_amount = min_amount;
     for utxo in my_utxos {
@@ -355,7 +426,7 @@ fn select_collateral_utxo(
         }
     }
     // TODO: Unwraps
-    if let Some(utxo) = smallest_utxo_meets_qual {
+    let res = if let Some(utxo) = smallest_utxo_meets_qual {
         let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index().into());
         let input_utxo = TransactionOutputBuilder::new()
             .with_address(&my_cml_address)
@@ -371,5 +442,6 @@ fn select_collateral_utxo(
         Some(res)
     } else {
         None
-    }
+    };
+    res.ok_or(LedgerClientError::NoBigEnoughCollateralUTxO)
 }

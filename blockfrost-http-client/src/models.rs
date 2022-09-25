@@ -184,7 +184,6 @@ pub struct EvaluateTxResult {
 
 impl EvaluateTxResult {
     pub fn get_spends(&self) -> Result<HashMap<u64, Spend>> {
-        dbg!(&self);
         let mut spends = HashMap::new();
         if let Some(result) = &self.result {
             if let Some(inner) = result.evalutation_result.as_object() {

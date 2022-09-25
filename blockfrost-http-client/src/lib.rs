@@ -14,8 +14,9 @@ pub mod models;
 #[cfg(test)]
 pub mod tests;
 
-// const MAINNET_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
-const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
+pub const MAINNET_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
+pub const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
+
 // Must include a TOML file at your project root with the field:
 //   project_id = <INSERT API KEY HERE>
 const CONFIG_PATH: &str = ".blockfrost.toml";
@@ -30,12 +31,6 @@ pub fn load_key_from_file(key_path: &str) -> Result<String> {
         .ok_or_else(|| Error::Config(field.to_string()))?
         .to_string();
     Ok(project_id)
-}
-
-pub fn get_test_bf_http_client() -> Result<BlockFrostHttp> {
-    let key = load_key_from_file(CONFIG_PATH)?;
-    let bf = BlockFrostHttp::new(TEST_URL, &key);
-    Ok(bf)
 }
 
 pub struct BlockFrostHttp {

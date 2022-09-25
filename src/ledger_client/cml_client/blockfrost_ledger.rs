@@ -9,9 +9,7 @@ use blockfrost_http_client::models::{EvaluateTxResult, UTxO as BFUTxO};
 use blockfrost_http_client::{BlockFrostHttp, BlockFrostHttpTrait};
 use cardano_multiplatform_lib::address::Address as CMLAddress;
 use cardano_multiplatform_lib::crypto::TransactionHash;
-use cardano_multiplatform_lib::plutus::{
-    encode_json_value_to_plutus_datum, PlutusData, PlutusDatumSchema,
-};
+use cardano_multiplatform_lib::plutus::{encode_json_value_to_plutus_datum, PlutusDatumSchema};
 use cardano_multiplatform_lib::Transaction as CMLTransaction;
 use futures::future;
 
@@ -31,7 +29,6 @@ impl BlockFrostLedger {
             TransactionHash::from_hex(bf_utxo.tx_hash()).map_err(|e| JsError(e.to_string()))?;
         let output_index = bf_utxo.output_index().into();
         let amount = cmlvalue_from_bfvalues(bf_utxo.amount());
-        let block = bf_utxo.block().to_string();
         let datum = if let Some(data_hash) = bf_utxo.data_hash() {
             let json_datum = self
                 .client
@@ -56,7 +53,7 @@ impl BlockFrostLedger {
             None
         };
 
-        let utxo = UTxO::new(tx_hash, output_index, amount, block, datum);
+        let utxo = UTxO::new(tx_hash, output_index, amount, datum);
         Ok(utxo)
     }
 }
