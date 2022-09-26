@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use crate::error::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -23,12 +24,6 @@ pub struct CostModels {
     PlutusV1: HashMap<String, u64>,
     PlutusV2: HashMap<String, u64>,
 }
-
-// #[derive(Deserialize, Debug)]
-// pub struct CostModel {
-//     addInteger_cpu_arguments_intercept: u32,
-//     addInteger_cpu_arguments_slope: u32,
-// }
 
 #[derive(Deserialize, Debug)]
 pub struct ProtocolParams {
@@ -73,6 +68,8 @@ pub struct UTxO {
     amount: Vec<Value>,
     block: String,
     data_hash: Option<String>,
+    inline_datum: Option<serde_json::Value>,
+    reference_script_hash: Option<String>,
 }
 
 impl UTxO {
@@ -171,7 +168,6 @@ pub struct Fault {
 pub struct EvaluateTxResult {
     methodname: Option<String>,
     reflection: HashMap<String, String>,
-    // pub(crate) result: Option<serde_json::Value>,
     result: Option<Success>,
     fault: Option<HashMap<String, String>>,
     servicename: String,
@@ -180,52 +176,40 @@ pub struct EvaluateTxResult {
 }
 
 impl EvaluateTxResult {
-    pub fn get_spend(&self) -> Option<Spend> {
-        self.result
-            .as_ref()
-            .map(|res| res.evalutation_result.spend.clone())
+    pub fn get_spends(&self) -> Result<HashMap<u64, Spend>> {
+        let mut spends = HashMap::new();
+        if let Some(result) = &self.result {
+            if let Some(inner) = result.evalutation_result.as_object() {
+                let keys = inner.keys();
+                for key in keys {
+                    if key.contains("spend:") {
+                        if let Some(val) = inner.get(key) {
+                            let index_str = key
+                                .split(':')
+                                .collect::<Vec<_>>()
+                                .get(1)
+                                .unwrap()
+                                .to_owned();
+                            let index = index_str
+                                .parse::<u64>()
+                                .map_err(|e| Error::EvaluateTxResult(Box::new(e)))?;
+                            let serialized = serde_json::to_string(val)
+                                .map_err(|e| Error::EvaluateTxResult(Box::new(e)))?;
+                            let deserialized = serde_json::from_str(&serialized).unwrap();
+                            spends.insert(index, deserialized);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(spends)
     }
 }
 
-// result: Some(
-//         Object({
-//             "EvaluationResult": Object({
-//                 "spend:0": Object({
-//                     "memory": Number(
-//                         1700,
-//                     ),
-//                     "steps": Number(
-//                         368100,
-//                     ),
-//                 }),
-//             }),
-//         }),
-//     ),
 #[derive(Deserialize, Debug)]
 pub struct Success {
     #[serde(rename = "EvaluationResult")]
-    evalutation_result: EvaluationResult,
-}
-
-//"result": Object({
-//         "EvaluationFailure": Object({
-//             "ScriptFailures": Object({
-//                 "spend:0": Array([
-//                     Object({
-//                         "extraRedeemers": Array([
-//                             String(
-//                                 "spend:0",
-//                             ),
-//                         ]),
-//                     }),
-//                 ]),
-//             }),
-//         }),
-//     }),
-#[derive(Deserialize, Debug)]
-pub struct EvaluationResult {
-    #[serde(rename = "spend:2")]
-    spend: Spend,
+    evalutation_result: serde_json::Value,
 }
 
 #[derive(Deserialize, Debug, Clone)]

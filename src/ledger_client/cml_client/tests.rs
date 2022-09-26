@@ -4,11 +4,17 @@ use crate::{
         blockfrost_ledger::BlockFrostLedger,
         key_manager::{KeyManager, TESTNET},
     },
-    output::UnbuiltOutput,
-    values::Values,
     PolicyId,
 };
 use blockfrost_http_client::{keys::my_base_addr, load_key_from_file};
+use std::time::Duration;
+use test_helpers::{
+    always_succeeds_script_address, claim_always_succeeds_datum_tx, lock_at_always_succeeds_tx,
+    output_from_tx, transfer_tx,
+};
+use tokio::time::sleep;
+
+mod test_helpers;
 
 // const MAINNET_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
 const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
@@ -16,12 +22,12 @@ const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
 //   project_id = <INSERT API KEY HERE>
 const CONFIG_PATH: &str = ".blockfrost.toml";
 
-fn get_test_client<Datum, Redeemer>(
+fn get_test_client<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
 ) -> CMLLedgerCLient<BlockFrostLedger, KeyManager, Datum, Redeemer> {
     let api_key = load_key_from_file(CONFIG_PATH).unwrap();
     let ledger = BlockFrostLedger::new(TEST_URL, &api_key);
     let keys = KeyManager::new(CONFIG_PATH.to_string(), TESTNET);
-    CMLLedgerCLient::new(ledger, keys)
+    CMLLedgerCLient::new(ledger, keys, TESTNET)
 }
 
 #[ignore]
@@ -65,25 +71,14 @@ async fn get_my_native_token_balance() {
 
     let client = get_test_client::<(), ()>();
 
-    let policy = PolicyId::native_token("57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522");
+    let policy = PolicyId::native_token(
+        "57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522",
+        &None,
+    );
     let my_balance = client.balance_at_address(&my_addr, &policy).await.unwrap();
 
     println!();
     println!("Native Token {:?}: {:?}", policy, my_balance);
-}
-
-fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()> {
-    let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, amount);
-    let output = UnbuiltOutput::new_wallet(recipient, values);
-    UnbuiltTransaction {
-        script_inputs: vec![],
-        unbuilt_outputs: vec![output],
-        redeemers: vec![],
-        validators: Default::default(),
-        minting: Default::default(),
-        policies: Default::default(),
-    }
 }
 
 #[ignore]
@@ -92,9 +87,41 @@ async fn transfer_self_tx() {
     let base_addr = my_base_addr();
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::Base(addr_string);
-    let transfer_amount = 2_000_000;
+    let transfer_amount = 6_000_000;
     let unbuilt_tx = transfer_tx(my_addr, transfer_amount);
     let client = get_test_client::<(), ()>();
     let res = client.issue(unbuilt_tx).await.unwrap();
     println!("{:?}", res);
+}
+
+#[ignore]
+#[tokio::test]
+async fn create_datum_wait_and_then_redeem_same_datum() {
+    let lock_amount = 6_000_000;
+    let unbuilt_tx = lock_at_always_succeeds_tx(lock_amount);
+    let client = get_test_client::<(), ()>();
+    let tx_id = client.issue(unbuilt_tx).await.unwrap();
+    println!("{:?}", &tx_id);
+    let script_addr = always_succeeds_script_address(TESTNET);
+
+    let mut tries = 30;
+    println!("Attempting to find and spend datum from {:?}", &tx_id);
+    loop {
+        println!("...");
+        sleep(Duration::from_secs(5)).await;
+        let script_outputs = client.outputs_at_address(&script_addr).await.unwrap();
+        if let Some(my_output) = output_from_tx::<()>(&tx_id.as_str(), &script_outputs) {
+            println!("Found UTxO");
+            println!("Issuing redeeming tx");
+            let unbuilt_tx = claim_always_succeeds_datum_tx(my_output);
+            let res = client.issue(unbuilt_tx).await.unwrap();
+            println!("{:?}", res);
+            return;
+        }
+        tries -= 1;
+        if tries < 0 {
+            println!("Failed to find UTxO for {:?}", tx_id);
+            return;
+        }
+    }
 }

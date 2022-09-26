@@ -3,6 +3,7 @@ use crate::{error::Result, TxActions};
 
 use thiserror::Error;
 
+use crate::scripts::ScriptError;
 use async_trait::async_trait;
 use std::error;
 use std::fmt::Debug;
@@ -33,6 +34,8 @@ pub enum SCLogicError {
     Endpoint(Box<dyn error::Error>),
     #[error("Error doing lookup: {0:?}")]
     Lookup(Box<dyn error::Error>),
+    #[error("Error from Validator Script: {0:?}")]
+    ValidatorScript(ScriptError),
 }
 
 pub type SCLogicResult<T> = Result<T, SCLogicError>;

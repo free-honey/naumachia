@@ -53,6 +53,10 @@ pub enum LedgerClientError {
     FailedToRetrieveOutputWithId(OutputId, Box<dyn error::Error + Send>),
     #[error("Failed to issue transaction: {0:?}")]
     FailedToIssueTx(Box<dyn error::Error + Send>),
+    #[error("There isn't a single utxo big enough for collateral")]
+    NoBigEnoughCollateralUTxO,
+    #[error("The script input you're trying to spend doesn't have a datum")]
+    NoDatumOnScriptInput,
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;
@@ -81,7 +85,7 @@ fn build_outputs<Datum>(unbuilt_outputs: Vec<UnbuiltOutput<Datum>>) -> Vec<Outpu
         .map(|output| match output {
             UnbuiltOutput::Wallet { owner, values } => new_wallet_output(&owner, &values),
             UnbuiltOutput::Validator {
-                owner,
+                script_address: owner,
                 values,
                 datum,
             } => new_validator_output(&owner, &values, datum),

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Address {
     Base(String),
+    Script(String),
     Raw(String), // This is a placeholder for now to make tests work
 }
 
@@ -21,6 +22,7 @@ impl Address {
         match self {
             Address::Base(inner) => inner,
             Address::Raw(inner) => inner,
+            Address::Script(inner) => inner,
         }
     }
 }
@@ -28,7 +30,7 @@ impl Address {
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
 pub enum PolicyId {
     ADA,
-    NativeToken(String),
+    NativeToken(String, Option<String>),
 }
 
 impl PolicyId {
@@ -36,14 +38,20 @@ impl PolicyId {
         PolicyId::ADA
     }
 
-    pub fn native_token(id: &str) -> PolicyId {
-        PolicyId::NativeToken(id.to_string())
+    pub fn native_token(id: &str, asset: &Option<String>) -> PolicyId {
+        PolicyId::NativeToken(id.to_string(), asset.to_owned())
     }
 
-    pub fn to_str(&self) -> Option<&str> {
+    pub fn to_str(&self) -> Option<String> {
         match self {
             PolicyId::ADA => None,
-            PolicyId::NativeToken(my_str) => Some(my_str),
+            PolicyId::NativeToken(id, maybe_asset) => {
+                if let Some(asset) = maybe_asset {
+                    Some(format!("{}-{}", id, asset))
+                } else {
+                    Some(id.to_string())
+                }
+            }
         }
     }
 }

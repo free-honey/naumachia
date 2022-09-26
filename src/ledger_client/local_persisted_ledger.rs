@@ -129,7 +129,9 @@ where
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
         let mut combined_inputs = self.outputs_at_address(signer).await?;
-        combined_inputs.extend(tx.inputs().clone()); // TODO: Check for dupes
+        tx.script_inputs()
+            .iter()
+            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
 
         let mut total_input_value =
             combined_inputs
@@ -246,8 +248,6 @@ mod tests {
         let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
             script_inputs: vec![],
             unbuilt_outputs: vec![new_output],
-            redeemers: vec![],
-            validators: Default::default(),
             minting: Default::default(),
             policies: Default::default(),
         };
