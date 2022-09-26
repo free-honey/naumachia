@@ -1,3 +1,6 @@
+use crate::ledger_client::cml_client::issuance_helpers::{
+    cml_v1_script_from_nau_script, input_tx_hash, partial_script_witness,
+};
 use crate::{
     ledger_client::cml_client::issuance_helpers::{
         add_all_possible_utxos_for_selection, add_collateral, build_tx_for_signing,
@@ -14,6 +17,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use blockfrost_http_client::models::EvaluateTxResult;
+use cardano_multiplatform_lib::builders::input_builder::InputBuilderResult;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     address::{EnterpriseAddress, StakeCredential},
@@ -22,11 +26,10 @@ use cardano_multiplatform_lib::{
         output_builder::SingleOutputBuilderResult,
         redeemer_builder::RedeemerWitnessKey,
         tx_builder::{ChangeSelectionAlgo, TransactionBuilder},
-        witness_builder::{PartialPlutusWitness, PlutusScriptWitness},
     },
     crypto::{PrivateKey, TransactionHash},
     ledger::common::{hash::hash_plutus_data, value::BigNum, value::Value as CMLValue},
-    plutus::{ExUnits, PlutusData, PlutusScript, PlutusV1Script, RedeemerTag},
+    plutus::{ExUnits, PlutusData, PlutusScript, RedeemerTag},
     Datum as CMLDatum, RequiredSigners, Transaction as CMLTransaction, TransactionInput,
     TransactionOutput,
 };
@@ -164,32 +167,24 @@ where
         }
         Ok(())
     }
-    async fn add_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
-        &self,
-        tx_builder: &mut TransactionBuilder,
-        input: &Output<Datum>,
-        redeemer: &Redeemer,
-        script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
-    ) -> LedgerClientResult<()> {
-        let tx_hash_raw = input.id().tx_hash();
-        let tx_hash = TransactionHash::from_hex(tx_hash_raw)
-            .map_err(|e| CMLLCError::JsError(e.to_string()))
-            .map_err(as_failed_to_issue_tx)?;
-        let script_hex = script.script_hex();
-        let script_bytes = hex::decode(&script_hex).map_err(as_failed_to_issue_tx)?;
-        let v1 = PlutusV1Script::from_bytes(script_bytes)
-            .map_err(|e| CMLLCError::Deserialize(e.to_string()))
-            .map_err(as_failed_to_issue_tx)?;
-        let cml_script = PlutusScript::from_v1(&v1);
-        let script_witness = PlutusScriptWitness::from_script(cml_script.clone());
-        let partial_witness =
-            PartialPlutusWitness::new(&script_witness, &redeemer.to_plutus_data());
 
+    async fn cml_script_address(&self, cml_script: &PlutusScript) -> CMLAddress {
         let script_hash = cml_script.hash();
         let stake_cred = StakeCredential::from_scripthash(&script_hash);
         let enterprise_addr = EnterpriseAddress::new(self.network, &stake_cred);
-        let cml_script_address = enterprise_addr.to_address();
+        enterprise_addr.to_address()
+    }
 
+    async fn build_cml_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        input: &Output<Datum>,
+        redeemer: &Redeemer,
+        script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
+    ) -> LedgerClientResult<InputBuilderResult> {
+        let tx_hash = input_tx_hash(&input).await?;
+        let cml_script = cml_v1_script_from_nau_script(&script).await?;
+        let partial_witness = partial_script_witness(&cml_script, redeemer).await;
+        let cml_script_address = self.cml_script_address(&cml_script).await;
         let required_signers = RequiredSigners::new();
 
         let script_input = TransactionInput::new(
@@ -209,6 +204,17 @@ where
             .plutus_script(&partial_witness, &required_signers, &datum)
             .map_err(|e| CMLLCError::JsError(e.to_string()))
             .map_err(as_failed_to_issue_tx)?;
+        Ok(cml_input)
+    }
+
+    async fn add_v1_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        input: &Output<Datum>,
+        redeemer: &Redeemer,
+        script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
+    ) -> LedgerClientResult<()> {
+        let cml_input = self.build_cml_input(input, redeemer, script).await?;
         tx_builder
             .add_input(&cml_input)
             .map_err(|e| CMLLCError::JsError(e.to_string()))
@@ -222,7 +228,7 @@ where
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
         for (input, redeemer, script) in tx.script_inputs() {
-            self.add_script_input(tx_builder, input, redeemer, script)
+            self.add_v1_script_input(tx_builder, input, redeemer, script)
                 .await?
         }
         Ok(())

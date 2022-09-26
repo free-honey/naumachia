@@ -3,6 +3,7 @@ use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::ledger_client::cml_client::UTxO;
 use crate::ledger_client::{LedgerClientError, LedgerClientResult};
 use crate::output::Output;
+use crate::scripts::ValidatorCode;
 use crate::values::Values;
 use crate::{Address, PolicyId};
 use blockfrost_http_client::models::Value as BFValue;
@@ -10,9 +11,13 @@ use cardano_multiplatform_lib::builders::output_builder::TransactionOutputBuilde
 use cardano_multiplatform_lib::builders::tx_builder::{
     ChangeSelectionAlgo, CoinSelectionStrategyCIP2, SignedTxBuilder,
 };
-use cardano_multiplatform_lib::crypto::PrivateKey;
+use cardano_multiplatform_lib::builders::witness_builder::{
+    PartialPlutusWitness, PlutusScriptWitness,
+};
+use cardano_multiplatform_lib::crypto::{PrivateKey, TransactionHash};
 use cardano_multiplatform_lib::ledger::common::hash::hash_transaction;
 use cardano_multiplatform_lib::ledger::shelley::witness::make_vkey_witness;
+use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script};
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::input_builder::{InputBuilderResult, SingleInputBuilder},
@@ -302,4 +307,34 @@ pub(crate) async fn sign_tx(
         .map_err(|e| CMLLCError::JsError(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
     Ok(tx)
+}
+
+pub(crate) async fn input_tx_hash<Datum>(
+    input: &Output<Datum>,
+) -> LedgerClientResult<TransactionHash> {
+    let tx_hash_raw = input.id().tx_hash();
+    let tx_hash = TransactionHash::from_hex(tx_hash_raw)
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    Ok(tx_hash)
+}
+
+pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
+    script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
+) -> LedgerClientResult<PlutusScript> {
+    let script_hex = script.script_hex();
+    let script_bytes = hex::decode(&script_hex).map_err(as_failed_to_issue_tx)?;
+    let v1 = PlutusV1Script::from_bytes(script_bytes)
+        .map_err(|e| CMLLCError::Deserialize(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    let cml_script = PlutusScript::from_v1(&v1);
+    Ok(cml_script)
+}
+
+pub(crate) async fn partial_script_witness<Redeemer: PlutusDataInterop>(
+    cml_script: &PlutusScript,
+    redeemer: &Redeemer,
+) -> PartialPlutusWitness {
+    let script_witness = PlutusScriptWitness::from_script(cml_script.clone());
+    PartialPlutusWitness::new(&script_witness, &redeemer.to_plutus_data())
 }
