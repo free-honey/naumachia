@@ -34,6 +34,7 @@ use cardano_multiplatform_lib::{
     TransactionOutput,
 };
 use error::*;
+use std::ops::Deref;
 use std::{collections::HashMap, marker::PhantomData};
 
 pub mod blockfrost_ledger;
@@ -199,10 +200,10 @@ where
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
+        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<InputBuilderResult> {
-        let tx_hash = input_tx_hash(&input).await?;
-        let cml_script = cml_v1_script_from_nau_script(&script).await?;
+        let tx_hash = input_tx_hash(input).await?;
+        let cml_script = cml_v1_script_from_nau_script(script).await?;
         let partial_witness = partial_script_witness(&cml_script, redeemer).await;
         let cml_script_address = self.cml_script_address(&cml_script).await;
         let required_signers = RequiredSigners::new();
@@ -234,7 +235,7 @@ where
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
+        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
         let cml_input = self.build_cml_input(input, redeemer, script).await?;
         tx_builder
@@ -250,7 +251,7 @@ where
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
         for (input, redeemer, script) in tx.script_inputs() {
-            self.add_v1_script_input(tx_builder, input, redeemer, script)
+            self.add_v1_script_input(tx_builder, input, redeemer, script.deref())
                 .await?
         }
         Ok(())
@@ -262,7 +263,7 @@ where
         my_address: &CMLAddress,
     ) -> LedgerClientResult<()> {
         let algo = ChangeSelectionAlgo::Default;
-        let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
+        let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, my_address).unwrap();
         let transaction = tx_redeemer_builder.draft_tx();
         let res = self.ledger.calculate_ex_units(&transaction).await.unwrap();
         for (index, spend) in res.iter() {
@@ -277,7 +278,7 @@ where
     async fn submit_tx(&self, tx: &CMLTransaction) -> LedgerClientResult<TxId> {
         let submit_res = self
             .ledger
-            .submit_transaction(&tx)
+            .submit_transaction(tx)
             .await
             .map_err(as_failed_to_issue_tx)?;
         Ok(TxId::new(&submit_res))

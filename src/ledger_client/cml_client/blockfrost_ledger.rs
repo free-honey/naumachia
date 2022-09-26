@@ -90,7 +90,7 @@ impl Ledger for BlockFrostLedger {
             .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
         let spends = bf_spends
             .iter()
-            .map(|(index, bf_spend)| (*index, spend_from_bf_spend(&bf_spend)))
+            .map(|(index, bf_spend)| (*index, spend_from_bf_spend(bf_spend)))
             .collect();
         Ok(spends)
     }

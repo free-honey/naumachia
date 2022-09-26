@@ -33,6 +33,12 @@ where
     pub ledger_client: LC,
 }
 
+pub type RedemptionDetails<Datum, Redeemer> = (
+    Output<Datum>,
+    Redeemer,
+    Box<dyn ValidatorCode<Datum, Redeemer>>,
+);
+
 impl<Datum, Redeemer, LC> Backend<Datum, Redeemer, LC>
 where
     Datum: Clone + Eq + Debug,
@@ -70,11 +76,7 @@ where
     ) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
         let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
         let mut minting = Values::default();
-        let mut script_inputs: Vec<(
-            Output<Datum>,
-            Redeemer,
-            Box<dyn ValidatorCode<Datum, Redeemer>>,
-        )> = Vec::new();
+        let mut script_inputs: Vec<RedemptionDetails<Datum, Redeemer>> = Vec::new();
         let mut specific_outputs: Vec<UnbuiltOutput<Datum>> = Vec::new();
 
         let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();

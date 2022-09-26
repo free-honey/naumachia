@@ -91,11 +91,11 @@ pub(crate) fn input_from_utxo(
     let index = utxo.output_index();
     let tx_hash = utxo.tx_hash();
     let payment_input = TransactionInput::new(
-        &tx_hash, // tx hash
-        &index,   // index
+        tx_hash, // tx hash
+        &index,  // index
     );
     let value = utxo.amount();
-    let utxo_info = TransactionOutput::new(my_address, &value);
+    let utxo_info = TransactionOutput::new(my_address, value);
     let input_builder = SingleInputBuilder::new(&payment_input, &utxo_info);
 
     let res = input_builder
@@ -210,10 +210,10 @@ fn as_nau_values(cml_value: &CMLValue) -> LedgerClientResult<Values> {
 pub(crate) async fn add_all_possible_utxos_for_selection(
     tx_builder: &mut TransactionBuilder,
     my_address: &CMLAddress,
-    my_utxos: &Vec<UTxO>,
+    my_utxos: &[UTxO],
 ) -> LedgerClientResult<()> {
     for utxo in my_utxos.iter() {
-        let input = input_from_utxo(&my_address, utxo)?;
+        let input = input_from_utxo(my_address, utxo)?;
         tx_builder.add_utxo(&input);
     }
     Ok(())
@@ -226,7 +226,7 @@ pub(crate) async fn add_collateral(
 ) -> LedgerClientResult<()> {
     const MIN_COLLATERAL_AMT: u64 = 5_000_000;
 
-    let collateral_utxo = select_collateral_utxo(&my_address, &my_utxos, MIN_COLLATERAL_AMT)?;
+    let collateral_utxo = select_collateral_utxo(my_address, my_utxos, MIN_COLLATERAL_AMT)?;
 
     tx_builder
         .add_collateral(&collateral_utxo)
@@ -264,9 +264,9 @@ pub(crate) fn select_collateral_utxo(
         }
     }
     let res = if let Some(utxo) = smallest_utxo_meets_qual {
-        let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index().into());
+        let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index());
         let input_utxo = TransactionOutputBuilder::new()
-            .with_address(&my_cml_address)
+            .with_address(my_cml_address)
             .next()
             .map_err(|e| JsError(e.to_string()))
             .map_err(as_failed_to_issue_tx)?
@@ -292,7 +292,7 @@ pub(crate) async fn build_tx_for_signing(
 ) -> LedgerClientResult<SignedTxBuilder> {
     let algo = ChangeSelectionAlgo::Default;
     let signed_tx_builder = tx_builder
-        .build(algo, &my_address)
+        .build(algo, my_address)
         .map_err(|e| CMLLCError::JsError(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
     Ok(signed_tx_builder)
@@ -305,7 +305,7 @@ pub(crate) async fn sign_tx(
     let unchecked_tx = signed_tx_builder.build_unchecked();
     let tx_body = unchecked_tx.body();
     let tx_hash = hash_transaction(&tx_body);
-    let vkey_witness = make_vkey_witness(&tx_hash, &priv_key);
+    let vkey_witness = make_vkey_witness(&tx_hash, priv_key);
     signed_tx_builder.add_vkey(&vkey_witness);
     let tx = signed_tx_builder
         .build_checked()
@@ -325,7 +325,7 @@ pub(crate) async fn input_tx_hash<Datum>(
 }
 
 pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
-    script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
+    script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
 ) -> LedgerClientResult<PlutusScript> {
     let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
     let script_bytes = hex::decode(&script_hex).map_err(as_failed_to_issue_tx)?;

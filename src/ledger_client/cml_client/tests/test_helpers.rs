@@ -30,8 +30,7 @@ pub fn lock_at_always_succeeds_tx(amount: u64) -> UnbuiltTransaction<(), ()> {
     let script_address = always_succeeds_script_address(TESTNET);
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
-    let datum = ();
-    let output = UnbuiltOutput::new_validator(script_address, values, datum);
+    let output = UnbuiltOutput::new_validator(script_address, values, ());
     UnbuiltTransaction {
         script_inputs: vec![],
         unbuilt_outputs: vec![output],
