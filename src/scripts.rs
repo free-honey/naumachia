@@ -11,8 +11,8 @@ pub struct TxContext {
 pub trait ValidatorCode<D, R>: Send + Sync {
     fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
     // TODO: Add network param!
-    fn address(&self) -> Address;
-    fn script_hex(&self) -> &str;
+    fn address(&self) -> ScriptResult<Address>;
+    fn script_hex(&self) -> ScriptResult<&str>;
 }
 
 pub trait MintingPolicy: Send + Sync {

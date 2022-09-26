@@ -25,12 +25,6 @@ pub struct CostModels {
     PlutusV2: HashMap<String, u64>,
 }
 
-// #[derive(Deserialize, Debug)]
-// pub struct CostModel {
-//     addInteger_cpu_arguments_intercept: u32,
-//     addInteger_cpu_arguments_slope: u32,
-// }
-
 #[derive(Deserialize, Debug)]
 pub struct ProtocolParams {
     epoch: u32,
@@ -174,7 +168,6 @@ pub struct Fault {
 pub struct EvaluateTxResult {
     methodname: Option<String>,
     reflection: HashMap<String, String>,
-    // pub(crate) result: Option<serde_json::Value>,
     result: Option<Success>,
     fault: Option<HashMap<String, String>>,
     servicename: String,
@@ -199,9 +192,9 @@ impl EvaluateTxResult {
                                 .to_owned();
                             let index = index_str
                                 .parse::<u64>()
-                                .map_err(|e| EvaluateTxResult(Box::new(e)))?;
+                                .map_err(|e| Error::EvaluateTxResult(Box::new(e)))?;
                             let serialized = serde_json::to_string(val)
-                                .map_err(|e| EvaluateTxResult(Box::new(e)))?;
+                                .map_err(|e| Error::EvaluateTxResult(Box::new(e)))?;
                             let deserialized = serde_json::from_str(&serialized).unwrap();
                             spends.insert(index, deserialized);
                         }
@@ -213,46 +206,11 @@ impl EvaluateTxResult {
     }
 }
 
-// result: Some(
-//         Object({
-//             "EvaluationResult": Object({
-//                 "spend:0": Object({
-//                     "memory": Number(
-//                         1700,
-//                     ),
-//                     "steps": Number(
-//                         368100,
-//                     ),
-//                 }),
-//             }),
-//         }),
-//     ),
 #[derive(Deserialize, Debug)]
 pub struct Success {
     #[serde(rename = "EvaluationResult")]
     evalutation_result: serde_json::Value,
 }
-
-//"result": Object({
-//         "EvaluationFailure": Object({
-//             "ScriptFailures": Object({
-//                 "spend:0": Array([
-//                     Object({
-//                         "extraRedeemers": Array([
-//                             String(
-//                                 "spend:0",
-//                             ),
-//                         ]),
-//                     }),
-//                 ]),
-//             }),
-//         }),
-//     }),
-// #[derive(Deserialize, Debug)]
-// pub struct EvaluationResult {
-//     #[serde(rename = "spend:2")]
-//     spend2: Option<Spend>,
-// }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Spend {

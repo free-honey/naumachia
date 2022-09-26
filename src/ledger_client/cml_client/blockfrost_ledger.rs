@@ -1,17 +1,17 @@
 use super::error::*;
-use crate::ledger_client::cml_client::issuance_helpers::cmlvalue_from_bfvalues;
-use crate::ledger_client::cml_client::UTxO;
-use crate::{
-    ledger_client::cml_client::error::CMLLCError::JsError, ledger_client::cml_client::Ledger,
+use crate::ledger_client::cml_client::{
+    error::CMLLCError::JsError, issuance_helpers::cmlvalue_from_bfvalues, Ledger, Spend, UTxO,
 };
 use async_trait::async_trait;
-use blockfrost_http_client::models::{EvaluateTxResult, UTxO as BFUTxO};
-use blockfrost_http_client::{BlockFrostHttp, BlockFrostHttpTrait};
-use cardano_multiplatform_lib::address::Address as CMLAddress;
-use cardano_multiplatform_lib::crypto::TransactionHash;
-use cardano_multiplatform_lib::plutus::{encode_json_value_to_plutus_datum, PlutusDatumSchema};
-use cardano_multiplatform_lib::Transaction as CMLTransaction;
+use blockfrost_http_client::{models::UTxO as BFUTxO, BlockFrostHttp, BlockFrostHttpTrait};
+use cardano_multiplatform_lib::{
+    address::Address as CMLAddress,
+    crypto::TransactionHash,
+    plutus::{encode_json_value_to_plutus_datum, PlutusDatumSchema},
+    Transaction as CMLTransaction,
+};
 use futures::future;
+use std::collections::HashMap;
 
 pub struct BlockFrostLedger {
     client: BlockFrostHttp,
@@ -78,14 +78,21 @@ impl Ledger for BlockFrostLedger {
         Ok(utxos)
     }
 
-    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<EvaluateTxResult> {
+    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, Spend>> {
         let bytes = tx.to_bytes();
         let res = self
             .client
             .execution_units(&bytes)
             .await
             .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
-        Ok(res)
+        let bf_spends = res
+            .get_spends()
+            .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
+        let spends = bf_spends
+            .iter()
+            .map(|(index, bf_spend)| (*index, spend_from_bf_spend(&bf_spend)))
+            .collect();
+        Ok(spends)
     }
 
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String> {
@@ -96,4 +103,10 @@ impl Ledger for BlockFrostLedger {
             .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
         Ok(res.tx_id().to_string())
     }
+}
+
+fn spend_from_bf_spend(bf_spend: &blockfrost_http_client::models::Spend) -> Spend {
+    let memory = bf_spend.memory();
+    let steps = bf_spend.steps();
+    Spend::new(memory, steps)
 }

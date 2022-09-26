@@ -1,4 +1,5 @@
 use super::error::*;
+use crate::ledger_client::cml_client::error::CMLLCError::JsError;
 use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::ledger_client::cml_client::UTxO;
 use crate::ledger_client::{LedgerClientError, LedgerClientResult};
@@ -156,13 +157,13 @@ impl TryFrom<Values> for CMLValue {
 pub(crate) fn utxo_to_nau_utxo<Datum: PlutusDataInterop>(
     utxo: &UTxO,
     owner: &Address,
-) -> Output<Datum> {
+) -> LedgerClientResult<Output<Datum>> {
     let tx_hash = utxo.tx_hash().to_string();
     let index = utxo.output_index().into();
-    let values = as_nau_values(utxo.amount());
+    let values = as_nau_values(utxo.amount())?;
 
     // TODO: Add debug msg in the case that this can't convert from PlutusData?
-    if let Some(datum) = utxo
+    let output = if let Some(datum) = utxo
         .datum()
         .to_owned()
         .and_then(|data| Datum::from_plutus_data(&data).ok())
@@ -170,10 +171,11 @@ pub(crate) fn utxo_to_nau_utxo<Datum: PlutusDataInterop>(
         Output::new_validator(tx_hash, index, owner.to_owned(), values, datum)
     } else {
         Output::new_wallet(tx_hash, index, owner.to_owned(), values)
-    }
+    };
+    Ok(output)
 }
 
-fn as_nau_values(cml_value: &CMLValue) -> Values {
+fn as_nau_values(cml_value: &CMLValue) -> LedgerClientResult<Values> {
     let mut values = Values::default();
     let ada = cml_value.coin().into();
     values.add_one_value(&PolicyId::ADA, ada);
@@ -189,7 +191,8 @@ fn as_nau_values(cml_value: &CMLValue) -> Values {
                     let asset = assets_names.get(i);
                     if let Some(amt) = assets.get(&asset) {
                         let asset_bytes = asset.to_bytes();
-                        let asset_text = std::str::from_utf8(&asset_bytes).unwrap(); // TODO
+                        let asset_text =
+                            std::str::from_utf8(&asset_bytes).map_err(as_failed_to_issue_tx)?;
                         let policy_id = PolicyId::native_token(
                             &id.to_string(),
                             &Some(asset_text.to_string()), // TODO: What if there is no assetname?
@@ -201,7 +204,7 @@ fn as_nau_values(cml_value: &CMLValue) -> Values {
         }
     }
 
-    values
+    Ok(values)
 }
 
 pub(crate) async fn add_all_possible_utxos_for_selection(
@@ -260,20 +263,22 @@ pub(crate) fn select_collateral_utxo(
             smallest_amount = amount;
         }
     }
-    // TODO: Unwraps
     let res = if let Some(utxo) = smallest_utxo_meets_qual {
         let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index().into());
         let input_utxo = TransactionOutputBuilder::new()
             .with_address(&my_cml_address)
             .next()
-            .unwrap()
+            .map_err(|e| JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?
             .with_coin(&smallest_amount.into())
             .build()
-            .unwrap()
+            .map_err(|e| JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?
             .output();
         let res = SingleInputBuilder::new(&transaction_input, &input_utxo)
             .payment_key()
-            .unwrap();
+            .map_err(|e| JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
         Some(res)
     } else {
         None
@@ -322,7 +327,7 @@ pub(crate) async fn input_tx_hash<Datum>(
 pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
     script: &Box<dyn ValidatorCode<Datum, Redeemer> + '_>,
 ) -> LedgerClientResult<PlutusScript> {
-    let script_hex = script.script_hex();
+    let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
     let script_bytes = hex::decode(&script_hex).map_err(as_failed_to_issue_tx)?;
     let v1 = PlutusV1Script::from_bytes(script_bytes)
         .map_err(|e| CMLLCError::Deserialize(e.to_string()))

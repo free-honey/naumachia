@@ -24,11 +24,11 @@ impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
         Ok(())
     }
 
-    fn address(&self) -> Address {
-        Address::new("escrow validator")
+    fn address(&self) -> ScriptResult<Address> {
+        Ok(Address::new("escrow validator"))
     }
 
-    fn script_hex(&self) -> &str {
+    fn script_hex(&self) -> ScriptResult<&str> {
         todo!()
     }
 }
@@ -93,8 +93,11 @@ impl SCLogic for EscrowContract {
         _endpoint: Self::Lookup,
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
+        let address = EscrowValidatorScript
+            .address()
+            .map_err(SCLogicError::ValidatorScript)?;
         let outputs = txo_record
-            .outputs_at_address(&EscrowValidatorScript.address())
+            .outputs_at_address(&address)
             .await
             .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
         Ok(outputs)
@@ -103,7 +106,8 @@ impl SCLogic for EscrowContract {
 
 fn escrow(amount: u64, receiver: Address) -> SCLogicResult<TxActions<EscrowDatum, ()>> {
     let script = EscrowValidatorScript;
-    let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script);
+    let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script)
+        .map_err(SCLogicError::ValidatorScript)?;
     let datum = EscrowDatum { receiver };
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
@@ -125,7 +129,9 @@ async fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
     id: &OutputId,
     txo_record: &Record,
 ) -> SCLogicResult<Output<EscrowDatum>> {
-    let script_address = EscrowValidatorScript.address();
+    let script_address = EscrowValidatorScript
+        .address()
+        .map_err(SCLogicError::ValidatorScript)?;
     let outputs = txo_record
         .outputs_at_address(&script_address)
         .await

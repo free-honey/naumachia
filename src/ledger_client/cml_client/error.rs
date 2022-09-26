@@ -16,6 +16,8 @@ pub enum CMLLCError {
     InsufficientADA,
     #[error("Error while deserializing: {0:?}")]
     Deserialize(String),
+    #[error("Failed to parse Hex")]
+    Hex(Box<dyn std::error::Error + Send>),
 }
 
 pub fn as_failed_to_retrieve_by_address(

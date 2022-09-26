@@ -1,14 +1,16 @@
-use crate::ledger_client::cml_client::issuance_helpers::{
-    cml_v1_script_from_nau_script, input_tx_hash, partial_script_witness,
-};
+use crate::ledger_client::LedgerClientError;
 use crate::{
-    ledger_client::cml_client::issuance_helpers::{
-        add_all_possible_utxos_for_selection, add_collateral, build_tx_for_signing,
-        select_inputs_from_utxos, sign_tx, utxo_to_nau_utxo,
-    },
-    ledger_client::cml_client::plutus_data_interop::PlutusDataInterop,
     ledger_client::{
-        cml_client::issuance_helpers::vasil_v1_tx_builder, LedgerClient, LedgerClientResult,
+        cml_client::issuance_helpers::vasil_v1_tx_builder,
+        cml_client::issuance_helpers::{
+            add_all_possible_utxos_for_selection, add_collateral, build_tx_for_signing,
+            select_inputs_from_utxos, sign_tx, utxo_to_nau_utxo,
+        },
+        cml_client::issuance_helpers::{
+            cml_v1_script_from_nau_script, input_tx_hash, partial_script_witness,
+        },
+        cml_client::plutus_data_interop::PlutusDataInterop,
+        LedgerClient, LedgerClientResult,
     },
     output::{Output, UnbuiltOutput},
     scripts::ValidatorCode,
@@ -16,11 +18,9 @@ use crate::{
     Address, UnbuiltTransaction,
 };
 use async_trait::async_trait;
-use blockfrost_http_client::models::EvaluateTxResult;
-use cardano_multiplatform_lib::builders::input_builder::InputBuilderResult;
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress,
-    address::{EnterpriseAddress, StakeCredential},
+    address::{Address as CMLAddress, EnterpriseAddress, StakeCredential},
+    builders::input_builder::InputBuilderResult,
     builders::{
         input_builder::SingleInputBuilder,
         output_builder::SingleOutputBuilderResult,
@@ -34,13 +34,15 @@ use cardano_multiplatform_lib::{
     TransactionOutput,
 };
 use error::*;
-use std::marker::PhantomData;
+use std::{collections::HashMap, marker::PhantomData};
 
 pub mod blockfrost_ledger;
 mod error;
 mod issuance_helpers;
 pub mod key_manager;
 pub mod plutus_data_interop;
+
+pub mod validator_script;
 
 #[cfg(test)]
 mod tests;
@@ -107,10 +109,28 @@ impl UTxO {
     }
 }
 
+pub struct Spend {
+    memory: u64,
+    steps: u64,
+}
+
+impl Spend {
+    pub fn new(memory: u64, steps: u64) -> Self {
+        Spend { memory, steps }
+    }
+
+    pub fn memory(&self) -> u64 {
+        self.memory
+    }
+    pub fn steps(&self) -> u64 {
+        self.steps
+    }
+}
+
 #[async_trait]
 pub trait Ledger {
     async fn get_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
-    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<EvaluateTxResult>; // TODO: don't use bf types
+    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, Spend>>;
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String>;
 }
 
@@ -198,7 +218,9 @@ where
             .map_err(as_failed_to_issue_tx)?;
         let utxo_info = TransactionOutput::new(&cml_script_address, &value);
         let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
-        let data = input.datum().unwrap(); // TODO
+        let data = input
+            .datum()
+            .ok_or(LedgerClientError::NoDatumOnScriptInput)?;
         let datum = data.to_plutus_data();
         let cml_input = input_builder
             .plutus_script(&partial_witness, &required_signers, &datum)
@@ -243,9 +265,9 @@ where
         let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, &my_address).unwrap();
         let transaction = tx_redeemer_builder.draft_tx();
         let res = self.ledger.calculate_ex_units(&transaction).await.unwrap();
-        for (index, spend) in res.get_spends().map_err(as_failed_to_issue_tx)? {
+        for (index, spend) in res.iter() {
             tx_builder.set_exunits(
-                &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(index)), // TODO: How do I know which index?
+                &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(*index)),
                 &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
             );
         }
@@ -318,7 +340,8 @@ where
         let utxos = bf_utxos
             .iter()
             .map(|utxo| utxo_to_nau_utxo(utxo, address))
-            .collect();
+            .collect::<LedgerClientResult<Vec<_>>>()?;
+
         Ok(utxos)
     }
 

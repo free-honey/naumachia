@@ -55,6 +55,8 @@ pub enum LedgerClientError {
     FailedToIssueTx(Box<dyn error::Error + Send>),
     #[error("There isn't a single utxo big enough for collateral")]
     NoBigEnoughCollateralUTxO,
+    #[error("The script input you're trying to spend doesn't have a datum")]
+    NoDatumOnScriptInput,
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

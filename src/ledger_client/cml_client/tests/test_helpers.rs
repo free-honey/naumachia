@@ -1,7 +1,8 @@
+use crate::ledger_client::cml_client::validator_script::CMLValidator;
 use crate::{
     ledger_client::cml_client::key_manager::TESTNET,
     output::{Output, UnbuiltOutput},
-    scripts::{ScriptResult, TxContext, ValidatorCode},
+    scripts::ValidatorCode,
     values::Values,
     Address, PolicyId, UnbuiltTransaction,
 };
@@ -82,45 +83,8 @@ pub struct PlutusScriptFile {
     cborHex: String,
 }
 
-pub struct CMLValidator {
-    script_hex: String,
-    cml_script: PlutusScript,
-}
-
-impl CMLValidator {
-    pub fn new_v1(script_hex: String) -> Self {
-        let script_bytes = hex::decode(&script_hex).unwrap(); // TODO
-        let v1 = PlutusV1Script::from_bytes(script_bytes).unwrap(); // TODO
-        let cml_script = PlutusScript::from_v1(&v1);
-        CMLValidator {
-            script_hex,
-            cml_script,
-        }
-    }
-}
-
-impl ValidatorCode<(), ()> for CMLValidator {
-    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
-        todo!()
-    }
-
-    fn address(&self) -> Address {
-        let network = TESTNET;
-        let script_hash = self.cml_script.hash();
-        let stake_cred = StakeCredential::from_scripthash(&script_hash);
-        let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);
-        let cml_script_address = enterprise_addr.to_address();
-        let script_address_str = cml_script_address.to_bech32(None).unwrap();
-        Address::Script(script_address_str)
-    }
-
-    fn script_hex(&self) -> &str {
-        &self.script_hex
-    }
-}
-
 pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTransaction<(), ()> {
-    let script = CMLValidator::new_v1(always_succeeds_hex());
+    let script = CMLValidator::new_v1(always_succeeds_hex()).unwrap();
     let script = Box::new(script) as Box<dyn ValidatorCode<(), ()>>;
     UnbuiltTransaction {
         script_inputs: vec![(script_input.clone(), (), script)],
