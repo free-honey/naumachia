@@ -192,13 +192,16 @@ impl EvaluateTxResult {
                     if key.contains("spend:") {
                         if let Some(val) = inner.get(key) {
                             let index_str = key
-                                .split(":")
+                                .split(':')
                                 .collect::<Vec<_>>()
                                 .get(1)
                                 .unwrap()
                                 .to_owned();
-                            let index = index_str.parse::<u64>().unwrap(); // TODO
-                            let serialized = serde_json::to_string(val).unwrap(); // TODO
+                            let index = index_str
+                                .parse::<u64>()
+                                .map_err(|e| EvaluateTxResult(Box::new(e)))?;
+                            let serialized = serde_json::to_string(val)
+                                .map_err(|e| EvaluateTxResult(Box::new(e)))?;
                             let deserialized = serde_json::from_str(&serialized).unwrap();
                             spends.insert(index, deserialized);
                         }
