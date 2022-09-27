@@ -18,6 +18,7 @@ use crate::{
     Address, UnbuiltTransaction,
 };
 use async_trait::async_trait;
+use cardano_multiplatform_lib::address::BaseAddress;
 use cardano_multiplatform_lib::{
     address::{Address as CMLAddress, EnterpriseAddress, StakeCredential},
     builders::input_builder::InputBuilderResult,
@@ -65,7 +66,7 @@ where
 
 #[async_trait]
 pub trait Keys {
-    async fn base_addr(&self) -> Result<CMLAddress>;
+    async fn base_addr(&self) -> Result<BaseAddress>;
     async fn private_key(&self) -> Result<PrivateKey>;
     async fn addr_from_bech_32(&self, addr: &str) -> Result<CMLAddress>;
 }
@@ -347,7 +348,12 @@ where
     }
 
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
-        let my_address = self.keys.base_addr().await.map_err(as_failed_to_issue_tx)?;
+        let my_address = self
+            .keys
+            .base_addr()
+            .await
+            .map_err(as_failed_to_issue_tx)?
+            .to_address();
         let priv_key = self
             .keys
             .private_key()

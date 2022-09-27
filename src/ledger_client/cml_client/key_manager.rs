@@ -33,9 +33,9 @@ pub enum KeyManagerError {
 
 #[async_trait]
 impl Keys for KeyManager {
-    async fn base_addr(&self) -> Result<CMLAddress> {
+    async fn base_addr(&self) -> Result<BaseAddress> {
         let base_addr = self.get_base_address()?;
-        Ok(base_addr.to_address())
+        Ok(base_addr)
     }
 
     async fn private_key(&self) -> Result<PrivateKey> {

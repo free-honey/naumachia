@@ -6,7 +6,8 @@ use crate::{
     },
     PolicyId,
 };
-use blockfrost_http_client::{keys::my_base_addr, load_key_from_file};
+use blockfrost_http_client::load_key_from_file;
+use cardano_multiplatform_lib::address::BaseAddress;
 use std::time::Duration;
 use test_helpers::{
     always_succeeds_script_address, claim_always_succeeds_datum_tx, lock_at_always_succeeds_tx,
@@ -22,23 +23,23 @@ const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
 //   project_id = <INSERT API KEY HERE>
 const CONFIG_PATH: &str = ".blockfrost.toml";
 
-fn get_test_client<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
-) -> CMLLedgerCLient<BlockFrostLedger, KeyManager, Datum, Redeemer> {
+async fn get_test_client<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>() -> (
+    CMLLedgerCLient<BlockFrostLedger, KeyManager, Datum, Redeemer>,
+    BaseAddress,
+) {
     let api_key = load_key_from_file(CONFIG_PATH).unwrap();
     let ledger = BlockFrostLedger::new(TEST_URL, &api_key);
     let keys = KeyManager::new(CONFIG_PATH.to_string(), TESTNET);
-    CMLLedgerCLient::new(ledger, keys, TESTNET)
+    let base_addr = keys.base_addr().await.unwrap();
+    (CMLLedgerCLient::new(ledger, keys, TESTNET), base_addr)
 }
 
 #[ignore]
 #[tokio::test]
 async fn get_all_my_utxos() {
-    let base_addr = my_base_addr();
+    let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::Base(addr_string);
-
-    let client = get_test_client::<(), ()>();
-
     let my_utxos = client.outputs_at_address(&my_addr).await.unwrap();
 
     dbg!(my_utxos);
@@ -47,12 +48,9 @@ async fn get_all_my_utxos() {
 #[ignore]
 #[tokio::test]
 async fn get_my_lovelace_balance() {
-    let base_addr = my_base_addr();
+    let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::Base(addr_string);
-
-    let client = get_test_client::<(), ()>();
-
     let my_balance = client
         .balance_at_address(&my_addr, &PolicyId::ADA)
         .await
@@ -65,12 +63,9 @@ async fn get_my_lovelace_balance() {
 #[ignore]
 #[tokio::test]
 async fn get_my_native_token_balance() {
-    let base_addr = my_base_addr();
+    let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::Base(addr_string);
-
-    let client = get_test_client::<(), ()>();
-
     let policy = PolicyId::native_token(
         "57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522",
         &None,
@@ -84,12 +79,11 @@ async fn get_my_native_token_balance() {
 #[ignore]
 #[tokio::test]
 async fn transfer_self_tx() {
-    let base_addr = my_base_addr();
+    let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::Base(addr_string);
     let transfer_amount = 6_000_000;
     let unbuilt_tx = transfer_tx(my_addr, transfer_amount);
-    let client = get_test_client::<(), ()>();
     let res = client.issue(unbuilt_tx).await.unwrap();
     println!("{:?}", res);
 }
@@ -99,7 +93,7 @@ async fn transfer_self_tx() {
 async fn create_datum_wait_and_then_redeem_same_datum() {
     let lock_amount = 6_000_000;
     let unbuilt_tx = lock_at_always_succeeds_tx(lock_amount);
-    let client = get_test_client::<(), ()>();
+    let (client, _) = get_test_client::<(), ()>().await;
     let tx_id = client.issue(unbuilt_tx).await.unwrap();
     println!("{:?}", &tx_id);
     let script_addr = always_succeeds_script_address(TESTNET);
