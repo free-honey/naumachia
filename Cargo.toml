@@ -1,7 +1,7 @@
 [package]
 name = "naumachia"
-description = "PAB but Rusty"
-version = "0.0.3"
+description = "Cardano Smart-Contract Framework"
+version = "0.0.4"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Mitchell Turner"]
@@ -22,9 +22,7 @@ tiny-bip39 = "1.0.0"
 futures = "0.3.23"
 async-trait = "0.1.57"
 hex = "0.4.3"
-
-# 1st Party
-blockfrost-http-client = {path = "./blockfrost-http-client"}
+blockfrost-http-client = "0.0.3"
 
 [dependencies.uuid]
 version = "1.1.2"
@@ -39,10 +37,3 @@ clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
 tempfile = "3.3.0"
-
-[workspace]
-
-members = [
-    "blockfrost-http-client"
-]
-
