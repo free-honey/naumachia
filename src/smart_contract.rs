@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
+use crate::transaction::TxId;
 use crate::{backend::Backend, error::Result, ledger_client::LedgerClient, logic::SCLogic};
 
 #[async_trait]

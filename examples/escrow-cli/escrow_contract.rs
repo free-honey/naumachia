@@ -16,6 +16,8 @@ use naumachia::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+const SOME_NETWORK: u8 = 99;
+
 pub struct EscrowValidatorScript;
 
 impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
@@ -24,7 +26,7 @@ impl ValidatorCode<EscrowDatum, ()> for EscrowValidatorScript {
         Ok(())
     }
 
-    fn address(&self) -> ScriptResult<Address> {
+    fn address(&self, _network: u8) -> ScriptResult<Address> {
         Ok(Address::new("escrow validator"))
     }
 
@@ -94,7 +96,7 @@ impl SCLogic for EscrowContract {
         txo_record: &Record,
     ) -> SCLogicResult<Self::LookupResponse> {
         let address = EscrowValidatorScript
-            .address()
+            .address(SOME_NETWORK)
             .map_err(SCLogicError::ValidatorScript)?;
         let outputs = txo_record
             .outputs_at_address(&address)
@@ -106,7 +108,7 @@ impl SCLogic for EscrowContract {
 
 fn escrow(amount: u64, receiver: Address) -> SCLogicResult<TxActions<EscrowDatum, ()>> {
     let script = EscrowValidatorScript;
-    let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script)
+    let address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script, SOME_NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let datum = EscrowDatum { receiver };
     let mut values = Values::default();
@@ -130,7 +132,7 @@ async fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
     txo_record: &Record,
 ) -> SCLogicResult<Output<EscrowDatum>> {
     let script_address = EscrowValidatorScript
-        .address()
+        .address(SOME_NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let outputs = txo_record
         .outputs_at_address(&script_address)

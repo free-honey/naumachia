@@ -11,7 +11,7 @@ pub struct TxContext {
 pub trait ValidatorCode<D, R>: Send + Sync {
     fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
     // TODO: Add network param!
-    fn address(&self) -> ScriptResult<Address>;
+    fn address(&self, network: u8) -> ScriptResult<Address>;
     fn script_hex(&self) -> ScriptResult<&str>;
 }
 
@@ -25,6 +25,8 @@ pub trait MintingPolicy: Send + Sync {
 pub enum ScriptError {
     #[error("Failed to execute: {0:?}")]
     FailedToExecute(String),
+    #[error("Failed to construct: {0:?}")]
+    FailedToConstruct(String),
 }
 
 pub type ScriptResult<T> = Result<T, ScriptError>;

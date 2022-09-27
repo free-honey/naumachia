@@ -1,4 +1,4 @@
-use crate::ledger_client::cml_client::validator_script::CMLValidator;
+use crate::ledger_client::cml_client::validator_script::{CMLValidator, PlutusScriptFile};
 use crate::{
     ledger_client::cml_client::key_manager::TESTNET,
     output::{Output, UnbuiltOutput},
@@ -11,7 +11,6 @@ use cardano_multiplatform_lib::{
     address::{EnterpriseAddress, StakeCredential},
     plutus::{PlutusScript, PlutusV1Script},
 };
-use serde::Deserialize;
 use std::{fs::File, io::Read};
 
 pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()> {
@@ -71,15 +70,6 @@ pub fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
     serde_json::from_str(&data).unwrap()
-}
-
-#[allow(non_snake_case)]
-#[allow(unused)]
-#[derive(Deserialize, Debug)]
-pub struct PlutusScriptFile {
-    r#type: String,
-    description: String,
-    cborHex: String,
 }
 
 pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTransaction<(), ()> {
