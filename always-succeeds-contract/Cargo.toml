@@ -16,8 +16,10 @@ path = "src/main.rs"
 [dependencies]
 async-trait = "0.1.57"
 cardano-multiplatform-lib = "3.0.1"
+clap = { version = "3.2.16", features = ["derive"] }
 hex = "0.4.3"
 naumachia = {path = ".."}
 serde = { version = "1.0.143", features = ["derive"] }
 serde_with = {version = "2.0.0", features = ["json"]}
 serde_json = "1.0"
+tokio = { version = "1.20.1", features = ["full"] }

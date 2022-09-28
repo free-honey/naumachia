@@ -19,12 +19,12 @@ pub trait SCLogic: Send + Sync {
 
     async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Endpoint,
-        txo_record: &Record,
+        ledger_client: &Record,
     ) -> SCLogicResult<TxActions<Self::Datum, Self::Redeemer>>;
 
     async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
         endpoint: Self::Lookup,
-        txo_record: &Record,
+        ledger_client: &Record,
     ) -> SCLogicResult<Self::LookupResponse>;
 }
 

@@ -13,7 +13,7 @@ pub struct AlwaysSucceedsScript {
 }
 
 impl AlwaysSucceedsScript {
-    pub fn new() -> ScriptResult<Self> {
+    pub fn try_new() -> ScriptResult<Self> {
         let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
             .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
         let script_hex = script_file.cborHex;
