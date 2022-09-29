@@ -1,6 +1,10 @@
-use always::logic::{AlwaysSucceedsEndpoints, AlwaysSucceedsLogic};
+use always::logic::{
+    AlwaysSucceedsEndpoints, AlwaysSucceedsLogic, AlwaysSucceedsLookupResponses,
+    AlwaysSucceedsLookups,
+};
 use blockfrost_http_client::load_key_from_file;
 use clap::Parser;
+use naumachia::output::OutputId;
 use naumachia::{
     backend::Backend,
     ledger_client::cml_client::{
@@ -21,7 +25,16 @@ struct Args {
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
     /// Create escrow contract for amount that only receiver can retrieve
-    Lock { amount: f64 },
+    Lock {
+        amount: f64,
+    },
+    Claim {
+        tx_hash: String,
+        index: u64,
+    },
+    List {
+        count: usize,
+    },
 }
 
 const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
@@ -39,12 +52,35 @@ async fn main() {
     let contract = SmartContract::new(&logic, &backend);
 
     match args.action {
-        ActionParams::Lock { amount } => contract.hit_endpoint(AlwaysSucceedsEndpoints::Lock {
-            amount: (amount * 1_000_000.) as u64,
-        }),
+        ActionParams::Lock { amount } => contract
+            .hit_endpoint(AlwaysSucceedsEndpoints::Lock {
+                amount: (amount * 1_000_000.) as u64,
+            })
+            .await
+            .unwrap(),
+        ActionParams::Claim { tx_hash, index } => {
+            let output_id = OutputId::new(tx_hash, index);
+            let endpoint = AlwaysSucceedsEndpoints::Claim { output_id };
+            contract.hit_endpoint(endpoint).await.unwrap()
+        }
+        ActionParams::List { count } => {
+            let res = contract
+                .lookup(AlwaysSucceedsLookups::ListActiveContracts { count })
+                .await
+                .unwrap();
+            match res {
+                AlwaysSucceedsLookupResponses::ActiveContracts(outputs) => {
+                    println!("Active contracts:");
+                    for output in outputs {
+                        println!("-------------------------------------");
+                        println!("{:?}", output.id());
+                        println!("{:?}", output.values());
+                        println!("{:?}", output.datum());
+                    }
+                }
+            }
+        }
     }
-    .await
-    .unwrap();
 }
 
 async fn get_cml_client() -> CMLLedgerCLient<BlockFrostLedger, KeyManager, (), ()> {

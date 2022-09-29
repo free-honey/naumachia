@@ -302,7 +302,7 @@ where
         let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
         let tx_id = self.submit_tx(&tx).await?;
-        println!("{:?}", &tx_id);
+        println!("{:?}", &tx_id); // TODO: https://github.com/MitchTurner/naumachia/issues/44
         Ok(tx_id)
     }
 }
