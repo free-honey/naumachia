@@ -126,8 +126,8 @@ where
     Datum: Clone + PartialEq + Debug + Send + Sync,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
-    async fn signer(&self) -> LedgerClientResult<&Address> {
-        Ok(&self.signer)
+    async fn signer(&self) -> LedgerClientResult<Address> {
+        Ok(self.signer.clone())
     }
 
     async fn outputs_at_address(
@@ -151,7 +151,7 @@ where
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
-        let mut combined_inputs = self.outputs_at_address(signer).await?;
+        let mut combined_inputs = self.outputs_at_address(&signer).await?;
         tx.script_inputs()
             .iter()
             .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
@@ -198,7 +198,7 @@ where
 
         let mut combined_outputs = Vec::new();
         if let Some(remainder) = maybe_remainder {
-            combined_outputs.push(new_wallet_output(signer, &remainder));
+            combined_outputs.push(new_wallet_output(&signer, &remainder));
         }
 
         let built_outputs = build_outputs(tx.unbuilt_outputs);

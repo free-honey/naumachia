@@ -56,7 +56,7 @@ where
     pub async fn process(&self, u_tx: TxActions<Datum, Redeemer>) -> Result<()> {
         let tx = self.build(u_tx).await?;
         can_spend_inputs(&tx, self.signer().await?.clone())?;
-        can_mint_tokens(&tx, self.ledger_client.signer().await?)?;
+        can_mint_tokens(&tx, &self.ledger_client.signer().await?)?;
         self.ledger_client.issue(tx).await?;
         Ok(())
     }
@@ -65,9 +65,9 @@ where
         &self.ledger_client
     }
 
-    pub async fn signer(&self) -> Result<&Address> {
+    pub async fn signer(&self) -> Result<Address> {
         let addr = self.ledger_client.signer().await?;
-        Ok(addr)
+        Ok(addr.clone())
     }
 
     async fn handle_actions(

@@ -1,4 +1,5 @@
 use always::logic::{AlwaysSucceedsEndpoints, AlwaysSucceedsLogic};
+use blockfrost_http_client::load_key_from_file;
 use clap::Parser;
 use naumachia::{
     backend::Backend,
@@ -20,8 +21,11 @@ struct Args {
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
     /// Create escrow contract for amount that only receiver can retrieve
-    Lock { amount: u64 },
+    Lock { amount: f64 },
 }
+
+const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
+const CONFIG_FILE: &str = ".blockfrost.toml";
 
 #[tokio::main]
 async fn main() {
@@ -29,20 +33,23 @@ async fn main() {
 
     let logic = AlwaysSucceedsLogic;
 
-    let url = "";
-    let key = "";
-    let ledger = BlockFrostLedger::new(url, key);
-    let keys = KeyManager::new("".to_string(), TESTNET);
-    let ledger_client = CMLLedgerCLient::new(ledger, keys, TESTNET);
+    let ledger_client = get_cml_client().await;
     let backend = Backend::new(ledger_client);
 
     let contract = SmartContract::new(&logic, &backend);
 
     match args.action {
-        ActionParams::Lock { amount } => {
-            contract.hit_endpoint(AlwaysSucceedsEndpoints::Lock { amount })
-        }
+        ActionParams::Lock { amount } => contract.hit_endpoint(AlwaysSucceedsEndpoints::Lock {
+            amount: (amount * 1_000_000.) as u64,
+        }),
     }
     .await
     .unwrap();
+}
+
+async fn get_cml_client() -> CMLLedgerCLient<BlockFrostLedger, KeyManager, (), ()> {
+    let api_key = load_key_from_file(CONFIG_FILE).unwrap();
+    let ledger = BlockFrostLedger::new(TEST_URL, &api_key);
+    let keys = KeyManager::new(CONFIG_FILE.to_string(), TESTNET);
+    CMLLedgerCLient::<_, _, (), ()>::new(ledger, keys, TESTNET)
 }

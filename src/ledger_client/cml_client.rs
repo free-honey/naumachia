@@ -302,6 +302,7 @@ where
         let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
         let tx_id = self.submit_tx(&tx).await?;
+        println!("{:?}", &tx_id);
         Ok(tx_id)
     }
 }
@@ -314,8 +315,19 @@ where
     Datum: PlutusDataInterop + Send + Sync,
     Redeemer: PlutusDataInterop + Send + Sync,
 {
-    async fn signer(&self) -> LedgerClientResult<&Address> {
-        todo!()
+    async fn signer(&self) -> LedgerClientResult<Address> {
+        let base_addr = self
+            .keys
+            .base_addr()
+            .await
+            .map_err(|e| LedgerClientError::BaseAddress(Box::new(e)))?;
+        let addr_string = base_addr
+            .to_address()
+            .to_bech32(None)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(|e| LedgerClientError::BaseAddress(Box::new(e)))?;
+        let signer_addr = Address::Base(addr_string);
+        Ok(signer_addr)
     }
 
     async fn outputs_at_address(

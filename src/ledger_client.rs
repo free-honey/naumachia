@@ -21,7 +21,7 @@ use uuid::Uuid;
 //   https://github.com/MitchTurner/naumachia/issues/38
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
-    async fn signer(&self) -> LedgerClientResult<&Address>;
+    async fn signer(&self) -> LedgerClientResult<Address>;
     async fn outputs_at_address(&self, address: &Address)
         -> LedgerClientResult<Vec<Output<Datum>>>;
     async fn balance_at_address(
@@ -47,6 +47,8 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 
 #[derive(Debug, Error)]
 pub enum LedgerClientError {
+    #[error("Couldn't retrieve base address")]
+    BaseAddress(Box<dyn error::Error + Send>),
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error + Send>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
