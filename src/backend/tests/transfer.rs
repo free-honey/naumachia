@@ -1,5 +1,7 @@
 use super::*;
 use crate::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
+use crate::PolicyId;
+use std::collections::HashMap;
 use tokio::runtime::Runtime;
 
 prop_compose! {

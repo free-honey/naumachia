@@ -62,7 +62,7 @@ async fn main() {
         ActionParams::Balance => {
             let balance = backend
                 .ledger_client
-                .balance_at_address(signer, &PolicyId::ADA)
+                .balance_at_address(&signer, &PolicyId::ADA)
                 .await
                 .expect("Can't get balance");
             println!();

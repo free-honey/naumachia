@@ -29,9 +29,7 @@ impl MintingPolicy for AlwaysMintsPolicy {
 struct AlwaysMintsSmartContract;
 
 enum Endpoint {
-    Mint {
-        amount: u64, // TODO: Too big?
-    },
+    Mint { amount: u64 },
 }
 
 const MINT_POLICY_ID: &str = "mint_policy";
@@ -53,8 +51,7 @@ impl SCLogic for AlwaysMintsSmartContract {
                 let recipient = txo_record
                     .signer()
                     .await
-                    .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-                    .clone();
+                    .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
                 mint(amount, recipient)
             }
         }

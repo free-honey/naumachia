@@ -1,11 +1,23 @@
-use crate::ledger_client::cml_client::error::CMLLCError::JsError;
-use crate::ledger_client::cml_client::error::*;
-use crate::ledger_client::cml_client::key_manager::TESTNET;
-use crate::scripts::{ScriptResult, TxContext, ValidatorCode};
-use crate::Address;
-use cardano_multiplatform_lib::address::{EnterpriseAddress, StakeCredential};
-use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script};
+use crate::{
+    ledger_client::{cml_client::error::CMLLCError::JsError, cml_client::error::*},
+    scripts::{ScriptResult, TxContext, ValidatorCode},
+    Address,
+};
+use cardano_multiplatform_lib::{
+    address::{EnterpriseAddress, StakeCredential},
+    plutus::{PlutusScript, PlutusV1Script},
+};
+use serde::Deserialize;
 use std::marker::PhantomData;
+
+#[allow(non_snake_case)]
+#[allow(unused)]
+#[derive(Deserialize, Debug)]
+pub struct PlutusScriptFile {
+    pub r#type: String,
+    pub description: String,
+    pub cborHex: String,
+}
 
 pub struct CMLValidator<Datum, Redeemer> {
     script_hex: String,
@@ -16,7 +28,7 @@ pub struct CMLValidator<Datum, Redeemer> {
 
 impl<D, R> CMLValidator<D, R> {
     pub fn new_v1(script_hex: String) -> Result<Self> {
-        let script_bytes = hex::decode(&script_hex).map_err(|e| CMLLCError::Hex(Box::new(e)))?; // TODO
+        let script_bytes = hex::decode(&script_hex).map_err(|e| CMLLCError::Hex(Box::new(e)))?;
         let v1 = PlutusV1Script::from_bytes(script_bytes).map_err(|e| JsError(e.to_string()))?;
         let cml_script = PlutusScript::from_v1(&v1);
         let v1_val = CMLValidator {
@@ -36,8 +48,7 @@ impl<Datum: Send + Sync, Redeemer: Send + Sync> ValidatorCode<Datum, Redeemer>
         todo!()
     }
 
-    fn address(&self) -> ScriptResult<Address> {
-        let network = TESTNET;
+    fn address(&self, network: u8) -> ScriptResult<Address> {
         let script_hash = self.cml_script.hash();
         let stake_cred = StakeCredential::from_scripthash(&script_hash);
         let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);

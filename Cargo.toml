@@ -37,3 +37,9 @@ clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
 tempfile = "3.3.0"
+
+[workspace]
+
+members = [
+    "always-succeeds-contract"
+]
