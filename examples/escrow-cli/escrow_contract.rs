@@ -176,11 +176,11 @@ mod tests {
         let contract = SmartContract::new(&EscrowContract, &backend);
         contract.hit_endpoint(call).await.unwrap();
 
-        let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script).unwrap();
+        let escrow_address = <dyn ValidatorCode<EscrowDatum, ()>>::address(&script, 0).unwrap();
         let expected = escrow_amount;
         let actual = backend
             .ledger_client
-            .balance_at_address(&script.address().unwrap(), &PolicyId::ADA)
+            .balance_at_address(&script.address(0).unwrap(), &PolicyId::ADA)
             .await
             .unwrap();
         assert_eq!(expected, actual);
@@ -195,7 +195,7 @@ mod tests {
 
         let instance = backend
             .ledger_client
-            .outputs_at_address(&script.address().unwrap())
+            .outputs_at_address(&script.address(0).unwrap())
             .await
             .unwrap()
             .pop()

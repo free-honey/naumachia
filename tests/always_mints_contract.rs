@@ -53,8 +53,7 @@ impl SCLogic for AlwaysMintsSmartContract {
                 let recipient = txo_record
                     .signer()
                     .await
-                    .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-                    .clone();
+                    .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
                 mint(amount, recipient)
             }
         }
