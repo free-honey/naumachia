@@ -15,6 +15,9 @@ pub mod script;
 #[cfg(test)]
 mod tests;
 
+// TODO: Pass through someplace, do not hardcode!
+const NETWORK: u8 = 0;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AlwaysSucceedsLogic;
 
@@ -73,8 +76,9 @@ fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
     let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
-    // TODO: Need to pass through network param
-    let address = script.address(0).map_err(SCLogicError::ValidatorScript)?;
+    let address = script
+        .address(NETWORK)
+        .map_err(SCLogicError::ValidatorScript)?;
     let tx_actions = TxActions::default().with_script_init((), values, address);
     Ok(tx_actions)
 }
@@ -85,7 +89,7 @@ async fn impl_claim<LC: LedgerClient<(), ()>>(
 ) -> SCLogicResult<TxActions<(), ()>> {
     let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(TESTNET)
+        .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let output = ledger_client
         .outputs_at_address(&address)
@@ -107,7 +111,7 @@ async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
 ) -> SCLogicResult<AlwaysSucceedsLookupResponses> {
     let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(TESTNET)
+        .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let outputs = ledger_client
         .outputs_at_address(&address)

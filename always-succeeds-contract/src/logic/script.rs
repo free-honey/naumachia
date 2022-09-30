@@ -1,8 +1,12 @@
-use cardano_multiplatform_lib::address::{EnterpriseAddress, StakeCredential};
-use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script};
-use naumachia::address::Address;
-use naumachia::ledger_client::cml_client::validator_script::PlutusScriptFile;
-use naumachia::scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode};
+use cardano_multiplatform_lib::{
+    address::{EnterpriseAddress, StakeCredential},
+    plutus::{PlutusScript, PlutusV1Script},
+};
+use naumachia::{
+    address::Address,
+    ledger_client::cml_client::validator_script::PlutusScriptFile,
+    scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode},
+};
 
 const SCRIPT_RAW: &str = include_str!("../../plutus/always-succeeds-spending.plutus");
 
