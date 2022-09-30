@@ -4,7 +4,7 @@ use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 
 #[tokio::test]
-async fn create_and_redeem() {
+async fn lock_and_claim() {
     let me = Address::new("me");
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
