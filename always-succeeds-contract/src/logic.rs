@@ -1,13 +1,10 @@
 use crate::logic::script::AlwaysSucceedsScript;
 use async_trait::async_trait;
-use naumachia::ledger_client::cml_client::key_manager::TESTNET;
-use naumachia::output::Output;
 use naumachia::{
     address::PolicyId,
     ledger_client::LedgerClient,
-    logic::SCLogicError,
-    logic::{SCLogic, SCLogicResult},
-    output::OutputId,
+    logic::{SCLogic, SCLogicError, SCLogicResult},
+    output::{Output, OutputId},
     scripts::ValidatorCode,
     transaction::TxActions,
     values::Values,
@@ -15,6 +12,8 @@ use naumachia::{
 use thiserror::Error;
 
 pub mod script;
+#[cfg(test)]
+mod tests;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AlwaysSucceedsLogic;
@@ -75,9 +74,7 @@ fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
     values.add_one_value(&PolicyId::ADA, amount);
     let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
     // TODO: Need to pass through network param
-    let address = script
-        .address(TESTNET)
-        .map_err(SCLogicError::ValidatorScript)?;
+    let address = script.address(0).map_err(SCLogicError::ValidatorScript)?;
     let tx_actions = TxActions::default().with_script_init((), values, address);
     Ok(tx_actions)
 }
@@ -119,9 +116,4 @@ async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
     let subset = outputs.into_iter().take(count).collect();
     let res = AlwaysSucceedsLookupResponses::ActiveContracts(subset);
     Ok(res)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 }

@@ -29,9 +29,7 @@ impl MintingPolicy for AlwaysMintsPolicy {
 struct AlwaysMintsSmartContract;
 
 enum Endpoint {
-    Mint {
-        amount: u64, // TODO: Too big?
-    },
+    Mint { amount: u64 },
 }
 
 const MINT_POLICY_ID: &str = "mint_policy";

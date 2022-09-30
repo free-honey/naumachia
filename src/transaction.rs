@@ -1,11 +1,16 @@
-use crate::backend::RedemptionDetails;
+use crate::transaction::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs};
 use crate::{
     address::{Address, PolicyId},
+    backend::RedemptionDetails,
+    error::*,
     output::{Output, UnbuiltOutput},
     scripts::{MintingPolicy, ValidatorCode},
     values::Values,
 };
+use std::cell::RefCell;
 use std::collections::HashMap;
+
+mod nested_value_map;
 
 pub enum Action<Datum, Redeemer> {
     Transfer {
@@ -43,7 +48,7 @@ impl<Datum, Redeemer> Default for TxActions<Datum, Redeemer> {
     }
 }
 
-impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
+impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
     pub fn with_transfer(mut self, amount: u64, recipient: Address, policy_id: PolicyId) -> Self {
         let action = Action::Transfer {
             amount,
@@ -94,6 +99,92 @@ impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
         self.actions.push(action);
         self
     }
+
+    pub fn to_unbuilt_tx(self) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
+        let TxActions { actions } = self;
+        let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
+        let mut minting = Values::default();
+        let mut script_inputs: Vec<RedemptionDetails<Datum, Redeemer>> = Vec::new();
+        let mut specific_outputs: Vec<UnbuiltOutput<Datum>> = Vec::new();
+
+        let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();
+        for action in actions {
+            match action {
+                Action::Transfer {
+                    amount,
+                    recipient,
+                    policy_id: policy,
+                } => {
+                    add_amount_to_nested_map(&mut min_output_values, amount, &recipient, &policy);
+                }
+                Action::Mint {
+                    amount,
+                    recipient,
+                    policy,
+                } => {
+                    let policy_id = policy.id();
+                    minting.add_one_value(&policy_id, amount);
+                    add_amount_to_nested_map(
+                        &mut min_output_values,
+                        amount,
+                        &recipient,
+                        &policy_id,
+                    );
+                    policies.insert(policy.id(), policy);
+                }
+                Action::InitScript {
+                    datum,
+                    values,
+                    address,
+                } => {
+                    let owner = address;
+                    let output = UnbuiltOutput::Validator {
+                        script_address: owner,
+                        values,
+                        datum,
+                    };
+                    specific_outputs.push(output);
+                }
+                Action::RedeemScriptOutput {
+                    output,
+                    redeemer,
+                    script,
+                } => {
+                    script_inputs.push((output.clone(), redeemer, script));
+                }
+            }
+        }
+
+        let out_vecs = nested_map_to_vecs(min_output_values);
+        let mut outputs = create_outputs_for(out_vecs)?;
+        outputs.extend(specific_outputs);
+
+        let tx = UnbuiltTransaction {
+            script_inputs,
+            unbuilt_outputs: outputs,
+            minting,
+            policies,
+        };
+        Ok(tx)
+    }
+}
+
+fn create_outputs_for<Datum>(
+    values: Vec<(Address, Vec<(PolicyId, u64)>)>,
+) -> Result<Vec<UnbuiltOutput<Datum>>> {
+    let outputs = values
+        .into_iter()
+        .map(|(owner, val_vec)| {
+            let values = val_vec
+                .iter()
+                .fold(Values::default(), |mut acc, (policy, amt)| {
+                    acc.add_one_value(policy, *amt);
+                    acc
+                });
+            UnbuiltOutput::new_wallet(owner, values)
+        })
+        .collect();
+    Ok(outputs)
 }
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {
