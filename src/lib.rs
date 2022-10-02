@@ -13,4 +13,5 @@ pub mod smart_contract;
 pub mod transaction;
 
 pub mod backend;
+pub mod trireme_ledger_client;
 pub mod values;

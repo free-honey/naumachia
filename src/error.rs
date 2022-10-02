@@ -23,4 +23,6 @@ pub enum Error {
     FailedToRetrieveRedeemerFor(Address),
     #[error("Unable to mint ADA/Lovelace")]
     ImpossibleToMintADA,
+    #[error("Error with Trireme integration: {0:?}")]
+    Trireme(String),
 }
