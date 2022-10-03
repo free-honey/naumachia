@@ -1,3 +1,4 @@
+use crate::trireme_ledger_client::blockfrost_ledger::BlockfrostApiKey;
 use crate::{
     error::*,
     ledger_client::{
@@ -13,7 +14,10 @@ use crate::{
     Address, UnbuiltTransaction,
 };
 use async_trait::async_trait;
+use blockfrost_http_client::MAINNET_URL;
+use blockfrost_http_client::TEST_URL;
 use dirs::home_dir;
+use serde::de::DeserializeOwned;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, path::Path, path::PathBuf};
@@ -25,6 +29,7 @@ pub mod blockfrost_ledger;
 pub mod raw_secret_phrase;
 
 pub const TRIREME_CONFIG_FOLDER: &str = ".trireme";
+pub const TRIREME_CONFIG_FILE: &str = "config.toml";
 
 pub fn path_to_trireme_config_dir() -> Result<PathBuf> {
     let mut dir = home_dir().ok_or(Error::Trireme(
@@ -32,6 +37,27 @@ pub fn path_to_trireme_config_dir() -> Result<PathBuf> {
     ))?;
     dir.push(TRIREME_CONFIG_FOLDER);
     Ok(dir)
+}
+
+pub fn path_to_trireme_config_file() -> Result<PathBuf> {
+    let mut dir = path_to_trireme_config_dir()?;
+    dir.push(TRIREME_CONFIG_FILE);
+    Ok(dir)
+}
+
+pub async fn get_trireme_ledger_client_from_file<
+    Datum: PlutusDataInterop,
+    Redeemer: PlutusDataInterop,
+>() -> Result<TriremeLedgerClient<Datum, Redeemer>> {
+    let file_path = path_to_trireme_config_file()?;
+    if let Some(config) = read_toml_struct_from_file::<TriremeConfig>(&file_path).await? {
+        let ledger_client = config.to_client().await?;
+        Ok(ledger_client)
+    } else {
+        Err(Error::Trireme(
+            "Trireme not initialized (config not found)".to_string(),
+        ))
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -53,6 +79,15 @@ pub enum Network {
     Mainnet,
 }
 
+impl From<Network> for u8 {
+    fn from(network: Network) -> Self {
+        match network {
+            Network::Testnet => 0,
+            Network::Mainnet => 1,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct TriremeConfig {
     ledger_source: LedgerSource,
@@ -69,21 +104,34 @@ impl TriremeConfig {
         }
     }
 
-    pub fn to_client<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    pub async fn to_client<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         self,
-        network: u8,
     ) -> Result<TriremeLedgerClient<Datum, Redeemer>> {
+        let network = self.network;
         let ledger = match self.ledger_source {
             LedgerSource::BlockFrost { api_key_file } => {
-                todo!()
+                let blockfrost_key = read_toml_struct_from_file::<BlockfrostApiKey>(&api_key_file)
+                    .await?
+                    .ok_or(Error::Trireme(
+                        "Couldn't find blockfrost config, please try reinitialize Trireme"
+                            .to_string(),
+                    ))?;
+                let key: String = blockfrost_key.into();
+                let url = match network {
+                    Network::Testnet => TEST_URL,
+                    Network::Mainnet => MAINNET_URL,
+                };
+                BlockFrostLedger::new(&url, &key)
             }
         };
+        let network_index = network.into();
         let keys = match self.key_source {
             KeySource::RawSecretPhrase { phrase_file } => {
-                RawSecretPhraseKeys::new(phrase_file, network)
+                RawSecretPhraseKeys::new(phrase_file, network_index)
             }
         };
-        let inner_client = InnerClient::CML(CMLLedgerCLient::new(ledger, keys, network));
+
+        let inner_client = InnerClient::CML(CMLLedgerCLient::new(ledger, keys, network_index));
         let trireme_client = TriremeLedgerClient {
             _datum: Default::default(),
             _redeemer: Default::default(),
@@ -160,4 +208,18 @@ pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
         .await
         .map_err(|e| Error::TOML(Box::new(e)))?;
     Ok(())
+}
+
+pub async fn read_toml_struct_from_file<Toml: DeserializeOwned>(
+    file_path: &PathBuf,
+) -> Result<Option<Toml>> {
+    if file_path.exists() {
+        let contents = fs::read_to_string(file_path)
+            .await
+            .map_err(|e| Error::TOML(Box::new(e)))?;
+        let toml_struct = toml::from_str(&contents).map_err(|e| Error::TOML(Box::new(e)))?;
+        Ok(Some(toml_struct))
+    } else {
+        Ok(None)
+    }
 }

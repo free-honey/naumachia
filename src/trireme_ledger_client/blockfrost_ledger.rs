@@ -1,8 +1,7 @@
-use crate::ledger_client::cml_client::error::CMLLCError;
-use crate::ledger_client::cml_client::error::CMLLCError::JsError;
-use crate::ledger_client::cml_client::error::Result as CMLLCResult;
-use crate::ledger_client::cml_client::issuance_helpers::cmlvalue_from_bfvalues;
-use crate::ledger_client::cml_client::{Ledger, Spend, UTxO};
+use crate::ledger_client::cml_client::{
+    error::CMLLCError, error::CMLLCError::JsError, error::Result as CMLLCResult,
+    issuance_helpers::cmlvalue_from_bfvalues, Ledger, Spend, UTxO,
+};
 use async_trait::async_trait;
 use blockfrost_http_client::{models::UTxO as BFUTxO, BlockFrostHttp, BlockFrostHttpTrait};
 use cardano_multiplatform_lib::{
@@ -13,12 +12,9 @@ use cardano_multiplatform_lib::{
 };
 use futures::future;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use thiserror::Error;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
+use tokio::{fs, io::AsyncWriteExt};
 
 pub struct BlockFrostLedger {
     client: BlockFrostHttp,
@@ -148,33 +144,4 @@ impl FromStr for BlockfrostApiKey {
 pub enum BlockfrostLedgerError {
     #[error("No config directory for raw phrase file: {0:?}")]
     NoConfigDirectory(String),
-}
-
-pub async fn write_blockfrost_api_key_to_file(
-    file_path: &PathBuf,
-    secret_phrase: &BlockfrostApiKey,
-) -> CMLLCResult<()> {
-    let serialized =
-        toml::to_string(&secret_phrase).map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    let parent_dir = file_path
-        .parent()
-        .ok_or(BlockfrostLedgerError::NoConfigDirectory(format!(
-            "{:?}",
-            file_path
-        )))
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    fs::create_dir_all(&parent_dir)
-        .await
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(&file_path)
-        .await
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    file.write_all(&serialized.into_bytes())
-        .await
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-
-    Ok(())
 }

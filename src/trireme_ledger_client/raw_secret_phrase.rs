@@ -115,35 +115,6 @@ pub async fn read_secret_phrase(config_path: &PathBuf) -> CMLLCResult<SecretPhra
     toml::from_str(&text).map_err(|e| CMLLCError::KeyError(Box::new(e)))
 }
 
-pub async fn write_secret_phrase_to_file(
-    file_path: &PathBuf,
-    secret_phrase: &SecretPhrase,
-) -> CMLLCResult<()> {
-    let serialized =
-        toml::to_string(&secret_phrase).map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    let parent_dir = file_path
-        .parent()
-        .ok_or(RawSecretPhraseKeysError::NoConfigDirectory(format!(
-            "{:?}",
-            file_path
-        )))
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    fs::create_dir_all(&parent_dir)
-        .await
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(&file_path)
-        .await
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-    file.write_all(&serialized.into_bytes())
-        .await
-        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-
-    Ok(())
-}
-
 fn harden(index: u32) -> u32 {
     index | 0x80_00_00_00
 }
