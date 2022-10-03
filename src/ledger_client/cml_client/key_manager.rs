@@ -1,11 +1,11 @@
-use super::error::*;
-use super::Keys;
+use super::{error::*, Keys};
 use async_trait::async_trait;
 use bip39::{Language, Mnemonic};
-use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, StakeCredential};
-use cardano_multiplatform_lib::crypto::{Bip32PrivateKey, PrivateKey};
-use std::fs;
-use std::path::Path;
+use cardano_multiplatform_lib::{
+    address::{Address as CMLAddress, BaseAddress, StakeCredential},
+    crypto::{Bip32PrivateKey, PrivateKey},
+};
+use std::{fs, path::Path};
 use thiserror::Error;
 
 pub const TESTNET: u8 = 0;

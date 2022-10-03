@@ -1,12 +1,26 @@
 [package]
 name = "naumachia"
 description = "Cardano Smart-Contract Framework"
-version = "0.0.4"
-edition = "2021"
-license = "Apache-2.0"
-authors = ["Mitchell Turner"]
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Mitchell Turner"]
+license = "Apache-2.0"
+repository = "https://github.com/MitchTurner/naumachia"
+
+[workspace]
+members = [
+    "sample-dApps/always-succeeds-contract",
+    "trireme"
+]
 
 [dependencies]
 serde = { version = "1.0.143", features = ["derive"] }
@@ -22,7 +36,8 @@ tiny-bip39 = "1.0.0"
 futures = "0.3.23"
 async-trait = "0.1.57"
 hex = "0.4.3"
-blockfrost-http-client = "0.0.4"
+blockfrost-http-client = "0.0.5"
+dirs = "4.0.0"
 
 [dependencies.uuid]
 version = "1.1.2"
@@ -38,8 +53,4 @@ proptest = "1.0.0"
 rand = "0.8.5"
 tempfile = "3.3.0"
 
-[workspace]
 
-members = [
-    "always-succeeds-contract"
-]

@@ -1,18 +1,13 @@
-use always::logic::{
+use always_succeeds_contract::logic::{
     AlwaysSucceedsEndpoints, AlwaysSucceedsLogic, AlwaysSucceedsLookupResponses,
     AlwaysSucceedsLookups,
 };
-use blockfrost_http_client::load_key_from_file;
 use clap::Parser;
-use naumachia::output::OutputId;
 use naumachia::{
     backend::Backend,
-    ledger_client::cml_client::{
-        blockfrost_ledger::BlockFrostLedger,
-        key_manager::{KeyManager, TESTNET},
-        CMLLedgerCLient,
-    },
+    output::OutputId,
     smart_contract::{SmartContract, SmartContractTrait},
+    trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 
 #[derive(Parser, Debug)]
@@ -24,21 +19,13 @@ struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
-    /// Create escrow contract for amount that only receiver can retrieve
-    Lock {
-        amount: f64,
-    },
-    Claim {
-        tx_hash: String,
-        index: u64,
-    },
-    List {
-        count: usize,
-    },
+    /// Lock amount at script address
+    Lock { amount: f64 },
+    /// Claim locked Output at script address
+    Claim { tx_hash: String, index: u64 },
+    /// List all outputs locked at script address
+    List { count: usize },
 }
-
-const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
-const CONFIG_FILE: &str = ".blockfrost.toml";
 
 #[tokio::main]
 async fn main() {
@@ -46,7 +33,7 @@ async fn main() {
 
     let logic = AlwaysSucceedsLogic;
 
-    let ledger_client = get_cml_client().await;
+    let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
     let backend = Backend::new(ledger_client);
 
     let contract = SmartContract::new(&logic, &backend);
@@ -81,11 +68,4 @@ async fn main() {
             }
         }
     }
-}
-
-async fn get_cml_client() -> CMLLedgerCLient<BlockFrostLedger, KeyManager, (), ()> {
-    let api_key = load_key_from_file(CONFIG_FILE).unwrap();
-    let ledger = BlockFrostLedger::new(TEST_URL, &api_key);
-    let keys = KeyManager::new(CONFIG_FILE.to_string(), TESTNET);
-    CMLLedgerCLient::<_, _, (), ()>::new(ledger, keys, TESTNET)
 }
