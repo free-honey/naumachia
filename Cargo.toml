@@ -22,7 +22,7 @@ tiny-bip39 = "1.0.0"
 futures = "0.3.23"
 async-trait = "0.1.57"
 hex = "0.4.3"
-blockfrost-http-client = "0.0.4"
+blockfrost-http-client = "0.0.5"
 dirs = "4.0.0"
 
 [dependencies.uuid]

@@ -1,13 +1,17 @@
+use crate::error::*;
 use crate::ledger_client::cml_client::error::{CMLLCError, Result as CMLLCResult};
 use crate::ledger_client::cml_client::Keys;
+use crate::trireme_ledger_client::path_to_trireme_config_dir;
 use async_trait::async_trait;
 use bip39::{Language, Mnemonic};
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, StakeCredential};
 use cardano_multiplatform_lib::crypto::{Bip32PrivateKey, PrivateKey};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::str::FromStr;
 use thiserror::Error;
 use tokio::fs;
+use tokio::io::AsyncWriteExt;
 
 pub struct RawSecretPhraseKeys {
     phrase_file_path: PathBuf,
@@ -27,6 +31,8 @@ impl RawSecretPhraseKeys {
 pub enum RawSecretPhraseKeysError {
     #[error("Some non-StdError 🤮 error from Bip39 lib: {0:?}")]
     Bip39(String),
+    #[error("No config directory for raw phrase file: {0:?}")]
+    NoConfigDirectory(String),
 }
 
 impl RawSecretPhraseKeys {
@@ -77,7 +83,7 @@ impl Keys for RawSecretPhraseKeys {
 }
 
 #[derive(Serialize, Deserialize)]
-struct SecretPhrase {
+pub struct SecretPhrase {
     inner: String,
 }
 
@@ -93,11 +99,49 @@ impl From<&SecretPhrase> for String {
     }
 }
 
+impl FromStr for SecretPhrase {
+    type Err = RawSecretPhraseKeysError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let inner = s.to_string();
+        Ok(SecretPhrase { inner })
+    }
+}
+
 pub async fn read_secret_phrase(config_path: &PathBuf) -> CMLLCResult<SecretPhrase> {
     let text = fs::read_to_string(config_path)
         .await
         .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
     toml::from_str(&text).map_err(|e| CMLLCError::KeyError(Box::new(e)))
+}
+
+pub async fn write_secret_phrase_to_file(
+    file_path: &PathBuf,
+    secret_phrase: &SecretPhrase,
+) -> CMLLCResult<()> {
+    let serialized =
+        toml::to_string(&secret_phrase).map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
+    let parent_dir = file_path
+        .parent()
+        .ok_or(RawSecretPhraseKeysError::NoConfigDirectory(format!(
+            "{:?}",
+            file_path
+        )))
+        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
+    fs::create_dir_all(&parent_dir)
+        .await
+        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(&file_path)
+        .await
+        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
+    file.write_all(&serialized.into_bytes())
+        .await
+        .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
+
+    Ok(())
 }
 
 fn harden(index: u32) -> u32 {

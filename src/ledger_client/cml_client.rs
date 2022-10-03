@@ -40,7 +40,7 @@ use std::{collections::HashMap, marker::PhantomData};
 
 pub mod blockfrost_ledger;
 pub mod error;
-mod issuance_helpers;
+pub mod issuance_helpers;
 pub mod key_manager;
 pub mod plutus_data_interop;
 

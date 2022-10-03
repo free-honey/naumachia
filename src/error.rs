@@ -25,4 +25,6 @@ pub enum Error {
     ImpossibleToMintADA,
     #[error("Error with Trireme integration: {0:?}")]
     Trireme(String),
+    #[error("Error dealing with TOML files: {0:?}")]
+    TOML(Box<dyn std::error::Error + Send + Sync>),
 }

@@ -24,17 +24,12 @@ struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
-    /// Create escrow contract for amount that only receiver can retrieve
-    Lock {
-        amount: f64,
-    },
-    Claim {
-        tx_hash: String,
-        index: u64,
-    },
-    List {
-        count: usize,
-    },
+    /// Lock amount at script address
+    Lock { amount: f64 },
+    /// Claim locked Output at script address
+    Claim { tx_hash: String, index: u64 },
+    /// List all outputs locked at script address
+    List { count: usize },
 }
 
 const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";

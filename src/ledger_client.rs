@@ -48,13 +48,13 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 #[derive(Debug, Error)]
 pub enum LedgerClientError {
     #[error("Couldn't retrieve base address")]
-    BaseAddress(Box<dyn error::Error + Send>),
+    BaseAddress(Box<dyn error::Error + Send + Sync>),
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
-    FailedToRetrieveOutputsAt(Address, Box<dyn error::Error + Send>),
+    FailedToRetrieveOutputsAt(Address, Box<dyn error::Error + Send + Sync>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]
-    FailedToRetrieveOutputWithId(OutputId, Box<dyn error::Error + Send>),
+    FailedToRetrieveOutputWithId(OutputId, Box<dyn error::Error + Send + Sync>),
     #[error("Failed to issue transaction: {0:?}")]
-    FailedToIssueTx(Box<dyn error::Error + Send>),
+    FailedToIssueTx(Box<dyn error::Error + Send + Sync>),
     #[error("There isn't a single utxo big enough for collateral")]
     NoBigEnoughCollateralUTxO,
     #[error("The script input you're trying to spend doesn't have a datum")]

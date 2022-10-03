@@ -31,9 +31,9 @@ pub trait SCLogic: Send + Sync {
 #[derive(Debug, Error)]
 pub enum SCLogicError {
     #[error("Error handling endpoint: {0:?}")]
-    Endpoint(Box<dyn error::Error>),
+    Endpoint(Box<dyn error::Error + Send + Sync>),
     #[error("Error doing lookup: {0:?}")]
-    Lookup(Box<dyn error::Error>),
+    Lookup(Box<dyn error::Error + Send + Sync>),
     #[error("Error from Validator Script: {0:?}")]
     ValidatorScript(ScriptError),
 }
