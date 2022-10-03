@@ -5,6 +5,7 @@ use always::logic::{
 use blockfrost_http_client::load_key_from_file;
 use clap::Parser;
 use naumachia::output::OutputId;
+use naumachia::trireme_ledger_client::get_trireme_ledger_client_from_file;
 use naumachia::{
     backend::Backend,
     ledger_client::cml_client::{
@@ -41,7 +42,7 @@ async fn main() {
 
     let logic = AlwaysSucceedsLogic;
 
-    let ledger_client = get_cml_client().await;
+    let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
     let backend = Backend::new(ledger_client);
 
     let contract = SmartContract::new(&logic, &backend);
