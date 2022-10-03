@@ -1,7 +1,11 @@
 [package]
 name = "trireme"
-version = "0.0.1"
-edition = "2021"
+description = "Manager CLI for Naumachia Cardano dApps"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

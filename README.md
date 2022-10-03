@@ -114,7 +114,7 @@ I love feedback. I want to get the design right.
 
 FYI, CI requires these commands to pass. So, try to run them locally to save yourself some time.
 ```
-cargo build
+cargo build --workspace
 cargo test --workspace
 cargo test --example escrow-cli
 cargo fmt --all -- --check

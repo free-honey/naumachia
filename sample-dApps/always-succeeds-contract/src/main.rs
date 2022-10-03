@@ -1,4 +1,4 @@
-use always::logic::{
+use always_succeeds_contract::logic::{
     AlwaysSucceedsEndpoints, AlwaysSucceedsLogic, AlwaysSucceedsLookupResponses,
     AlwaysSucceedsLookups,
 };
