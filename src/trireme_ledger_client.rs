@@ -2,8 +2,8 @@ use crate::{
     error::*,
     ledger_client::{
         cml_client::{
-            blockfrost_ledger::BlockFrostLedger, key_manager::KeyManager,
-            plutus_data_interop::PlutusDataInterop, CMLLedgerCLient,
+            blockfrost_ledger::BlockFrostLedger, plutus_data_interop::PlutusDataInterop,
+            CMLLedgerCLient,
         },
         LedgerClient, LedgerClientResult,
     },
@@ -17,7 +17,7 @@ use async_trait::async_trait;
 use blockfrost_http_client::{MAINNET_URL, TEST_URL};
 use dirs::home_dir;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
-use std::{marker::PhantomData, path::Path, path::PathBuf};
+use std::{marker::PhantomData, path::PathBuf};
 use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
 
@@ -28,9 +28,8 @@ pub const TRIREME_CONFIG_FOLDER: &str = ".trireme";
 pub const TRIREME_CONFIG_FILE: &str = "config.toml";
 
 pub fn path_to_trireme_config_dir() -> Result<PathBuf> {
-    let mut dir = home_dir().ok_or(Error::Trireme(
-        "Could not find home directory :(".to_string(),
-    ))?;
+    let mut dir =
+        home_dir().ok_or_else(|| Error::Trireme("Could not find home directory :(".to_string()))?;
     dir.push(TRIREME_CONFIG_FOLDER);
     Ok(dir)
 }
@@ -108,16 +107,18 @@ impl TriremeConfig {
             LedgerSource::BlockFrost { api_key_file } => {
                 let blockfrost_key = read_toml_struct_from_file::<BlockfrostApiKey>(&api_key_file)
                     .await?
-                    .ok_or(Error::Trireme(
-                        "Couldn't find blockfrost config, please try reinitialize Trireme"
-                            .to_string(),
-                    ))?;
+                    .ok_or_else(|| {
+                        Error::Trireme(
+                            "Couldn't find blockfrost config, please try reinitialize Trireme"
+                                .to_string(),
+                        )
+                    })?;
                 let key: String = blockfrost_key.into();
                 let url = match network {
                     Network::Testnet => TEST_URL,
                     Network::Mainnet => MAINNET_URL,
                 };
-                BlockFrostLedger::new(&url, &key)
+                BlockFrostLedger::new(url, &key)
             }
         };
         let network_index = network.into();
@@ -127,7 +128,7 @@ impl TriremeConfig {
             }
         };
 
-        let inner_client = InnerClient::CML(CMLLedgerCLient::new(ledger, keys, network_index));
+        let inner_client = InnerClient::Cml(CMLLedgerCLient::new(ledger, keys, network_index));
         let trireme_client = TriremeLedgerClient {
             _datum: Default::default(),
             _redeemer: Default::default(),
@@ -138,7 +139,7 @@ impl TriremeConfig {
 }
 
 enum InnerClient<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop> {
-    CML(CMLLedgerCLient<BlockFrostLedger, RawSecretPhraseKeys, Datum, Redeemer>),
+    Cml(CMLLedgerCLient<BlockFrostLedger, RawSecretPhraseKeys, Datum, Redeemer>),
 }
 
 pub struct TriremeLedgerClient<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop> {
@@ -153,7 +154,7 @@ impl<Datum: PlutusDataInterop + Send + Sync, Redeemer: PlutusDataInterop + Send 
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
         match &self.inner_client {
-            InnerClient::CML(cml_client) => cml_client.signer(),
+            InnerClient::Cml(cml_client) => cml_client.signer(),
         }
         .await
     }
@@ -163,14 +164,14 @@ impl<Datum: PlutusDataInterop + Send + Sync, Redeemer: PlutusDataInterop + Send 
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         match &self.inner_client {
-            InnerClient::CML(cml_client) => cml_client.outputs_at_address(address),
+            InnerClient::Cml(cml_client) => cml_client.outputs_at_address(address),
         }
         .await
     }
 
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         match &self.inner_client {
-            InnerClient::CML(cml_client) => cml_client.issue(tx),
+            InnerClient::Cml(cml_client) => cml_client.issue(tx),
         }
         .await
     }
@@ -189,7 +190,7 @@ pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
     let serialized = toml::to_string(&toml_struct).map_err(|e| Error::TOML(Box::new(e)))?;
     let parent_dir = file_path
         .parent()
-        .ok_or(TomlError::NoParentDir(format!("{:?}", file_path)))
+        .ok_or_else(|| TomlError::NoParentDir(format!("{:?}", file_path)))
         .map_err(|e| Error::TOML(Box::new(e)))?;
     fs::create_dir_all(&parent_dir)
         .await

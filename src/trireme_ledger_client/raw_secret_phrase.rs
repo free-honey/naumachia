@@ -1,7 +1,5 @@
-use crate::error::*;
 use crate::ledger_client::cml_client::error::{CMLLCError, Result as CMLLCResult};
 use crate::ledger_client::cml_client::Keys;
-use crate::trireme_ledger_client::path_to_trireme_config_dir;
 use async_trait::async_trait;
 use bip39::{Language, Mnemonic};
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, StakeCredential};
@@ -11,7 +9,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use thiserror::Error;
 use tokio::fs;
-use tokio::io::AsyncWriteExt;
 
 pub struct RawSecretPhraseKeys {
     phrase_file_path: PathBuf,

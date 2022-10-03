@@ -2,18 +2,12 @@ use always::logic::{
     AlwaysSucceedsEndpoints, AlwaysSucceedsLogic, AlwaysSucceedsLookupResponses,
     AlwaysSucceedsLookups,
 };
-use blockfrost_http_client::load_key_from_file;
 use clap::Parser;
-use naumachia::output::OutputId;
-use naumachia::trireme_ledger_client::get_trireme_ledger_client_from_file;
 use naumachia::{
     backend::Backend,
-    ledger_client::cml_client::{
-        blockfrost_ledger::BlockFrostLedger,
-        key_manager::{KeyManager, TESTNET},
-        CMLLedgerCLient,
-    },
+    output::OutputId,
     smart_contract::{SmartContract, SmartContractTrait},
+    trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 
 #[derive(Parser, Debug)]
@@ -32,9 +26,6 @@ enum ActionParams {
     /// List all outputs locked at script address
     List { count: usize },
 }
-
-const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
-const CONFIG_FILE: &str = ".blockfrost.toml";
 
 #[tokio::main]
 async fn main() {
@@ -77,11 +68,4 @@ async fn main() {
             }
         }
     }
-}
-
-async fn get_cml_client() -> CMLLedgerCLient<BlockFrostLedger, KeyManager, (), ()> {
-    let api_key = load_key_from_file(CONFIG_FILE).unwrap();
-    let ledger = BlockFrostLedger::new(TEST_URL, &api_key);
-    let keys = KeyManager::new(CONFIG_FILE.to_string(), TESTNET);
-    CMLLedgerCLient::<_, _, (), ()>::new(ledger, keys, TESTNET)
 }

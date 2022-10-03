@@ -4,7 +4,7 @@ use dialoguer::Input;
 use naumachia::trireme_ledger_client::{
     blockfrost_ledger::BlockfrostApiKey, path_to_trireme_config_dir, path_to_trireme_config_file,
     raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, KeySource, LedgerSource, Network,
-    TriremeConfig, TRIREME_CONFIG_FILE,
+    TriremeConfig,
 };
 use std::{path::PathBuf, str::FromStr};
 

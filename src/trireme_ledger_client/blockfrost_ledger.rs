@@ -12,9 +12,8 @@ use cardano_multiplatform_lib::{
 };
 use futures::future;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
-use tokio::{fs, io::AsyncWriteExt};
 
 pub struct BlockFrostLedger {
     client: BlockFrostHttp,
