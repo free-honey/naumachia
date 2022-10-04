@@ -60,11 +60,29 @@ impl BlockFrostLedger {
 
 #[async_trait]
 impl Ledger for BlockFrostLedger {
-    async fn get_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>> {
+    async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>> {
         let addr_string = addr.to_bech32(None).map_err(|e| JsError(e.to_string()))?;
         let bf_utxos = self
             .client
-            .utxos(&addr_string)
+            .utxos(&addr_string, Some(count))
+            .await
+            .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
+        let utxos = future::join_all(
+            bf_utxos
+                .iter()
+                .map(|bf_utxo| async move { self.bfutxo_to_utxo(bf_utxo).await }),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?;
+        Ok(utxos)
+    }
+
+    async fn get_all_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>> {
+        let addr_string = addr.to_bech32(None).map_err(|e| JsError(e.to_string()))?;
+        let bf_utxos = self
+            .client
+            .utxos(&addr_string, None)
             .await
             .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
         let utxos = future::join_all(

@@ -162,9 +162,20 @@ impl<Datum: PlutusDataInterop + Send + Sync, Redeemer: PlutusDataInterop + Send 
     async fn outputs_at_address(
         &self,
         address: &Address,
+        count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         match &self.inner_client {
-            InnerClient::Cml(cml_client) => cml_client.outputs_at_address(address),
+            InnerClient::Cml(cml_client) => cml_client.outputs_at_address(address, count),
+        }
+        .await
+    }
+
+    async fn all_outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        match &self.inner_client {
+            InnerClient::Cml(cml_client) => cml_client.all_outputs_at_address(address),
         }
         .await
     }

@@ -133,6 +133,26 @@ where
     async fn outputs_at_address(
         &self,
         address: &Address,
+        count: usize,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        let outputs = self
+            .outputs
+            .lock()
+            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| {
+                LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
+            })?
+            .iter()
+            .cloned()
+            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+            .take(count)
+            .collect();
+        Ok(outputs)
+    }
+
+    async fn all_outputs_at_address(
+        &self,
+        address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let outputs = self
             .outputs
@@ -151,7 +171,7 @@ where
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
-        let mut combined_inputs = self.outputs_at_address(&signer).await?;
+        let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
         tx.script_inputs()
             .iter()
             .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
