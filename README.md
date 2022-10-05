@@ -1,7 +1,7 @@
 <div align="center">
   <h1 align="center">Naumachia</h1>
   <hr />
-    <h2 align="center" style="border-bottom: none">Mock your battles before you're out at sea</h2>
+    <h2 align="center" style="border-bottom: none">🌊 Mock your battles before you're out at sea 🌊</h2>
 
 [![Licence](https://img.shields.io/github/license/MitchTurner/naumachia)](https://github.com/MitchTurner/naumachia/blob/main/LICENSE) 
 [![Crates.io](https://img.shields.io/crates/v/naumachia)](https://crates.io/crates/naumachia)
@@ -11,10 +11,15 @@
 
 ---
 
-Naumachia is a framework for writing Smart Contracts on the Cardano Blockchain.
-The Cardano Smart Contract scheme was designed in a way to minimize data and processing that happens on-chain.
-This means a lot of the logic is actually off-chain and the on-chain code just ensures you don't do anything bad.
-Naumachia is designed to make the development of off-chain code as easy as possible. 
+Naumachia is a framework for writing Smart Contracts on the Cardano Blockchain using Rust!
+
+**Work in Progress :)**
+
+#### Client-Side FTW
+
+The Cardano Smart Contract scheme pushes a lot of the code off-chain. 
+Naumachia is designed to make the development of off-chain code as easy as possible, but also give you an 
+environment to test your on-chain code.
 
 Included in the library are the tools for declaratively orchestrating interactions with validator scripts, 
 minting policies, and wallets;
@@ -27,8 +32,6 @@ or any other on-chain script (UPLC) source :)
 
 Naumachia is meant as an alternative for the Plutus Application Backend (PAB).
 
-**Work in Progress :)**
-
 ### Goals
  - Make Cardano Smart Contracts easy
  - Help Smart Contract developers prototype in minutes
@@ -37,77 +40,115 @@ Naumachia is meant as an alternative for the Plutus Application Backend (PAB).
    - Enable Unit Tests for your entire Smart Contract with mocked backends
    - Give a clean interface for external parties to write against
  - Provide adaptors for deploying and interacting with your live Smart Contract in production
-#### Stretch Goals
+ - Trireme will be a CLI tool for devs and end-users alike to manage their keys, secrets, and dApps.
+#### Long-term Goals
  - Allow your Smart Contract to be compiled into WASM and injected into your web dApp
    - Provide adaptors for interacting with browser wallets and your chosen external services
  - Auto generate simple UIs, e.g. CLIs, web interfaces, etc
 
+### 🚣  Trireme 👁
+Trireme is a CLI for managing all of your dApps and secrets.
 
-### Examples
-Included is a simple smart contract with a mocked backend that can be run from your terminal. An adaptor for a real
-backend could easily be swapped in to allow this to function on chain. You can interact with this contract via a CLI! 
+For now, it is just an MVP to allow  
+your Naumachia dApps to interact with the blockchain. 
+Eventually, it will be a full CLI wallet, a package manager for you dApps, and more.
 
-Here is a brief walk-through:
+Not stable.
 
-To check your (Alice's) balance
+To install locally, run 
 ```
-> cargo run --example escrow-cli balance
-
-Alice's balance: 10000000
+cargo install --path ./trireme
 ```
-
-then create an escrow contract instance for 200 Lovelace to Bob
+or install via [crates.io](https://crates.io/crates/trireme)
 ```
-> cargo run --example escrow-cli escrow 200 Bob
-
-Successfully submitted escrow for 200 Lovelace to Bob!
+cargo install trireme
 ```
 
-list all active contracts
-
+Setup with 
 ```
-> cargo run --example escrow-cli list
-
-Active contracts:
-id: OutputId { tx_hash: "fbf651f8-c60f-419d-9d36-221c205339b9", index: 0 }, recipient: Raw("Bob"), values: Values { values: {ADA: 200} }
+trireme init
 ```
 
-if you try to claim the contract as Alice, the contract will return an error:
+and follow instructions.
 
-```
-> cargo run --example escrow-cli claim fbf651f8-c60f-419d-9d36-221c205339b9 0
+⚠️⚠️Your config files will be stored in plain text on your local file system under `~/.trireme`. Please use test
+wallets only while `trireme` is still new.
 
-thread 'main' panicked at 'unable to claim output: Script(FailedToExecute("Signer: Raw(\"Alice\") doesn't match receiver: Raw(\"Bob\")"))', examples/escrow-cli/main.rs:74:14
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+### Demo 
+
+While features are still quite limited, I'm happy to say that Naumachia is working now! You can build, deploy, and interact
+with your smart contracts on the Testnet. Over time, we'll add more sample dApps that will illustrate more features.
+
+The `/sample-dApps` directory includes the `always-succeeds-contract` which you can use as long as you have
+1. [Rust](https://www.rust-lang.org/tools/install) v1.64+ toolchain installed on your machine
+2. A [Blockfrost API](https://blockfrost.io/#pricing) Testnet Project (this is still on the old testnet, but that can change very soon)
+3. A secret phrase for an account with some funds on Testnet. 
+You can use [Yoroi](https://yoroi-wallet.com/#/), [Nami](https://namiwallet.io/), [Flint](https://flint-wallet.com/),
+or any Cardano wallet to create a new phrase, 
+and fund it with the [Testnet Faucet](https://developers.cardano.org/docs/integrate-cardano/testnet-faucet/) 
+(We'll add  the ability to generate a new phrase with `Trireme` soon, but in the meantime you'll need to build it elsewhere)
+
+I've only tested on Linux.
+
+⚠️⚠️Be very careful to not use your HODL keys! Please only use a secret phrase from a TESTNET wallet with funds you are willing to lose. 
+⚠️⚠️Naumachia and the Trireme CLI are still under development! 
+
+To interact with your contract, you will need to install the `trireme` cli:
+```
+cargo install --install ./trireme
 ```
 
-now switch to have Bob as signer
-```
-> cargo run --example escrow-cli signer Bob
+Trireme allows you to manage your secrets for all your Naumachia dApps.
 
-Successfully updated signer to "Bob"!
+To add your api key and your secret phrase, run:
 ```
+trireme init
+```
+Which will prompt you to enter your information.
+⚠️⚠️Your config files will be stored in plain text on your local file system under `~/.trireme`.
 
-claim the active contract with Bob as recipient
-```
-> cargo run --example escrow-cli claim fbf651f8-c60f-419d-9d36-221c205339b9 0
+After Trireme is set up, you are ready to interact with the blockchain!
 
-Successfully claimed output OutputId { tx_hash: "fbf651f8-c60f-419d-9d36-221c205339b9", index: 0 }!
+First:
 ```
+cargo install --path ./sample-dApps/always-succeeds-contract
+```
+and try locking 10 ADA at the contract address:
+```
+always-cli lock 10
+```
+This will return a TxId that you can track on the [testnet explorer](https://explorer.cardano-testnet.iohkdev.io/en) or 
+in your wallet interface (Yoroi, Nami, etc). Your balance should have decreased by 10 + fees.
 
-now check Bob's balance
-```
-> cargo run --example escrow-cli balance
+It can take a few minutes for your transaction to show up on chain.
 
-Bob's balance: 200
+Once it has gone through, you can run 
 ```
-This CLI is built around a Naumachia backend. That code could be repurposed to build a web dApp or whatever other Rust
-project you're dreaming up.
+always-cli list 5
+```
+Which will show the 5 newest locked UTxOs at the script address.
+
+You will need to find yours and include the Output Id info in your `claim` command. It will look something like:
+```
+always-cli claim <TxId> <Index>
+```
+Again, this might take a few minutes to execute. But check your wallet interface to see that your balance has returned
+to your original balance - fees for the two txs.
+
+**Fin!**
+
 
 ### Contributions
-Excited to accept PRs and general feedback. 
-I'm gonna try and be pretty strict about testing and other clean code stuff--sorry if that's not your jam. 
-It's all with love.
+
+Check out our [architecture diagram](docs/ARCHITECTURE.md).
+
+Excited to accept PRs and general feedback. There is a lot of work to be done to make this the best framework it can 
+be, so I'll try to help onboard anyone interested in contributing.
+
+Big fan of modern programming techniques. I want to prioritize 
+1. End user experience (Devs and dApp users)
+2. Contributor experience + Maintainability
+3. Performance, once the other stuff is solid
 
 Feel free to start issues/discussions if there are things you feel are missing or whatever.
 I love feedback. I want to get the design right.
@@ -116,7 +157,6 @@ FYI, CI requires these commands to pass. So, try to run them locally to save you
 ```
 cargo build --workspace
 cargo test --workspace
-cargo test --example escrow-cli
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 ```
