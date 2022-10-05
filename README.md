@@ -1,7 +1,7 @@
 <div align="center">
   <h1 align="center">Naumachia</h1>
   <hr />
-    <h2 align="center" style="border-bottom: none">Mock your battles before you're out at sea</h2>
+    <h2 align="center" style="border-bottom: none">🌊 Mock your battles before you're out at sea 🌊</h2>
 
 [![Licence](https://img.shields.io/github/license/MitchTurner/naumachia)](https://github.com/MitchTurner/naumachia/blob/main/LICENSE) 
 [![Crates.io](https://img.shields.io/crates/v/naumachia)](https://crates.io/crates/naumachia)
@@ -11,10 +11,15 @@
 
 ---
 
-Naumachia is a framework for writing Smart Contracts on the Cardano Blockchain.
-The Cardano Smart Contract scheme was designed in a way to minimize data and processing that happens on-chain.
-This means a lot of the logic is actually off-chain and the on-chain code just ensures you don't do anything bad.
-Naumachia is designed to make the development of off-chain code as easy as possible. 
+Naumachia is a framework for writing Smart Contracts on the Cardano Blockchain using Rust!
+
+**Work in Progress :)**
+
+#### Client-Side FTW
+
+The Cardano Smart Contract scheme pushes a lot of the code off-chain. 
+Naumachia is designed to make the development of off-chain code as easy as possible, but also give you an 
+environment to test your on-chain code.
 
 Included in the library are the tools for declaratively orchestrating interactions with validator scripts, 
 minting policies, and wallets;
@@ -26,8 +31,6 @@ Intended to be used as the off-chain backend for [Aiken][1]
 or any other on-chain script (UPLC) source :)
 
 Naumachia is meant as an alternative for the Plutus Application Backend (PAB).
-
-**Work in Progress :)**
 
 ### Goals
  - Make Cardano Smart Contracts easy
@@ -43,9 +46,12 @@ Naumachia is meant as an alternative for the Plutus Application Backend (PAB).
    - Provide adaptors for interacting with browser wallets and your chosen external services
  - Auto generate simple UIs, e.g. CLIs, web interfaces, etc
 
-### Trireme
-Trireme is a CLI for managing all of your dApps and which secrets you are using. For now it is just an MVP to all you 
-to interact with Naumachia dApps. Eventually, it will be a full CLI wallet, a package manager for you dApps, and more.
+### 🚣  Trireme 👁
+Trireme is a CLI for managing all of your dApps and secrets.
+
+For now, it is just an MVP to allow  
+your Naumachia dApps to interact with the blockchain. 
+Eventually, it will be a full CLI wallet, a package manager for you dApps, and more.
 
 Not stable.
 
@@ -58,13 +64,23 @@ or install via [crates.io](https://crates.io/crates/trireme)
 cargo install trireme
 ```
 
+Setup with 
+```
+trireme init
+```
+
+and follow instructions.
+
+⚠️⚠️Your config files will be stored in plain text on your local file system under `~/.trireme`. Please use test
+wallets only while `trireme` is still new.
+
 ### Demo 
 
 While features are still quite limited, I'm happy to say that Naumachia is working now! You can build, deploy, and interact
 with your smart contracts on the Testnet. Over time, we'll add more sample dApps that will illustrate more features.
 
 The `/sample-dApps` directory includes the `always-succeeds-contract` which you can use as long as you have
-1. [Rust](https://www.rust-lang.org/tools/install) toolchain installed on your machine
+1. [Rust](https://www.rust-lang.org/tools/install) v1.64+ toolchain installed on your machine
 2. A [Blockfrost API](https://blockfrost.io/#pricing) Testnet Project (this is still on the old testnet, but that can change very soon)
 3. A secret phrase for an account with some funds on Testnet. 
 You can use [Yoroi](https://yoroi-wallet.com/#/), [Nami](https://namiwallet.io/), [Flint](https://flint-wallet.com/),
@@ -108,9 +124,9 @@ It can take a few minutes for your transaction to show up on chain.
 
 Once it has gone through, you can run 
 ```
-always-cli list 10
+always-cli list 5
 ```
-Which will show the 10 newest locked UTxOs at the script address.
+Which will show the 5 newest locked UTxOs at the script address.
 
 You will need to find yours and include the Output Id info in your `claim` command. It will look something like:
 ```
@@ -126,9 +142,13 @@ to your original balance - fees for the two txs.
 
 Check out our [architecture diagram](docs/ARCHITECTURE.md).
 
-Excited to accept PRs and general feedback. 
-I'm gonna try and be pretty strict about testing and other clean code stuff--sorry if that's not your jam. 
-It's all with love.
+Excited to accept PRs and general feedback. There is a lot of work to be done to make this the best framework it can 
+be, so I'll try to help onboard anyone interested in contributing.
+
+Big fan of modern programming techniques. I want to prioritize 
+1. End user experience (Devs and dApp users)
+2. Contributor experience + Maintainability
+3. Performance, once the other stuff is solid
 
 Feel free to start issues/discussions if there are things you feel are missing or whatever.
 I love feedback. I want to get the design right.
@@ -137,7 +157,6 @@ FYI, CI requires these commands to pass. So, try to run them locally to save you
 ```
 cargo build --workspace
 cargo test --workspace
-cargo test --example escrow-cli
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 ```
