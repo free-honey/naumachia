@@ -92,7 +92,7 @@ async fn impl_claim<LC: LedgerClient<(), ()>>(
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let output = ledger_client
-        .outputs_at_address(&address)
+        .all_outputs_at_address(&address)
         .await
         .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
         .into_iter()
@@ -114,7 +114,7 @@ async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let outputs = ledger_client
-        .outputs_at_address(&address)
+        .outputs_at_address(&address, count)
         .await
         .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
     let subset = outputs.into_iter().take(count).collect();

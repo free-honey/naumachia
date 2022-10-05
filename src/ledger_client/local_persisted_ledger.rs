@@ -115,6 +115,21 @@ where
     async fn outputs_at_address(
         &self,
         address: &Address,
+        count: usize,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        let data = self.get_data();
+        let outputs = data
+            .outputs
+            .into_iter()
+            .filter(|o| o.owner() == address)
+            .take(count)
+            .collect();
+        Ok(outputs)
+    }
+
+    async fn all_outputs_at_address(
+        &self,
+        address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let data = self.get_data();
         let outputs = data
@@ -128,7 +143,7 @@ where
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // TODO: Have all matching Tx Id
         let signer = self.signer().await?;
-        let mut combined_inputs = self.outputs_at_address(&signer).await?;
+        let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
         tx.script_inputs()
             .iter()
             .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
@@ -203,7 +218,7 @@ mod tests {
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
-        let mut outputs = record.outputs_at_address(&signer).await.unwrap();
+        let mut outputs = record.all_outputs_at_address(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
@@ -238,7 +253,7 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         let first_output = record
-            .outputs_at_address(&signer)
+            .all_outputs_at_address(&signer)
             .await
             .unwrap()
             .pop()

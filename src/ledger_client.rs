@@ -19,18 +19,29 @@ use uuid::Uuid;
 // TODO: Having this bound to a specific Datum/Redeemer doesn't really make sense at this scope.
 //   It's convenient from the backend's perspective, but it's constricting else-wise.
 //   https://github.com/MitchTurner/naumachia/issues/38
+// TODO: Add methods for finding specific output by id
+//   (getting all is expensive if you just want the output for a specific ID)
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
     async fn signer(&self) -> LedgerClientResult<Address>;
-    async fn outputs_at_address(&self, address: &Address)
-        -> LedgerClientResult<Vec<Output<Datum>>>;
+    async fn outputs_at_address(
+        &self,
+        address: &Address,
+        count: usize,
+    ) -> LedgerClientResult<Vec<Output<Datum>>>;
+
+    async fn all_outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>>;
+
     async fn balance_at_address(
         &self,
         address: &Address,
         policy: &PolicyId,
     ) -> LedgerClientResult<u64> {
         let bal = self
-            .outputs_at_address(address)
+            .all_outputs_at_address(address)
             .await?
             .iter()
             .fold(0, |acc, o| {

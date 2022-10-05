@@ -131,7 +131,8 @@ impl Spend {
 
 #[async_trait]
 pub trait Ledger {
-    async fn get_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
+    async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>>;
+    async fn get_all_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
     async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, Spend>>;
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String>;
 }
@@ -333,6 +334,7 @@ where
     async fn outputs_at_address(
         &self,
         address: &Address,
+        count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let addr_string = match address {
             Address::Base(addr_string) => addr_string,
@@ -347,7 +349,36 @@ where
 
         let bf_utxos = self
             .ledger
-            .get_utxos_for_addr(&cml_addr)
+            .get_utxos_for_addr(&cml_addr, count)
+            .await
+            .map_err(as_failed_to_retrieve_by_address(address))?;
+
+        let utxos = bf_utxos
+            .iter()
+            .map(|utxo| utxo_to_nau_utxo(utxo, address))
+            .collect::<LedgerClientResult<Vec<_>>>()?;
+
+        Ok(utxos)
+    }
+
+    async fn all_outputs_at_address(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        let addr_string = match address {
+            Address::Base(addr_string) => addr_string,
+            Address::Script(addr_string) => addr_string,
+            Address::Raw(_) => unimplemented!("Doesn't make sense here"),
+        };
+        let cml_addr = self
+            .keys
+            .addr_from_bech_32(addr_string)
+            .await
+            .map_err(as_failed_to_retrieve_by_address(address))?;
+
+        let bf_utxos = self
+            .ledger
+            .get_all_utxos_for_addr(&cml_addr)
             .await
             .map_err(as_failed_to_retrieve_by_address(address))?;
 
@@ -374,7 +405,7 @@ where
 
         let my_utxos = self
             .ledger
-            .get_utxos_for_addr(&my_address)
+            .get_all_utxos_for_addr(&my_address)
             .await
             .map_err(as_failed_to_issue_tx)?;
 
