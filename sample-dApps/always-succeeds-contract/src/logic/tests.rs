@@ -39,7 +39,7 @@ async fn lock_and_claim() {
     }
     let instance = backend
         .ledger_client
-        .outputs_at_address(&script.address(0).unwrap())
+        .all_outputs_at_address(&script.address(0).unwrap())
         .await
         .unwrap()
         .pop()

@@ -218,7 +218,7 @@ mod tests {
         let record =
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
-        let mut outputs = record.outputs_at_address(&signer).await.unwrap();
+        let mut outputs = record.all_outputs_at_address(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
@@ -253,7 +253,7 @@ mod tests {
             LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
                 .unwrap();
         let first_output = record
-            .outputs_at_address(&signer)
+            .all_outputs_at_address(&signer)
             .await
             .unwrap()
             .pop()

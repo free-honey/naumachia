@@ -40,7 +40,7 @@ async fn get_all_my_utxos() {
     let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::Base(addr_string);
-    let my_utxos = client.outputs_at_address(&my_addr).await.unwrap();
+    let my_utxos = client.all_outputs_at_address(&my_addr).await.unwrap();
 
     dbg!(my_utxos);
 }
@@ -103,7 +103,7 @@ async fn create_datum_wait_and_then_redeem_same_datum() {
     loop {
         println!("...");
         sleep(Duration::from_secs(5)).await;
-        let script_outputs = client.outputs_at_address(&script_addr).await.unwrap();
+        let script_outputs = client.all_outputs_at_address(&script_addr).await.unwrap();
         if let Some(my_output) = output_from_tx::<()>(&tx_id.as_str(), &script_outputs) {
             println!("Found UTxO");
             println!("Issuing redeeming tx");

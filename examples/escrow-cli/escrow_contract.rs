@@ -99,7 +99,7 @@ impl SCLogic for EscrowContract {
             .address(SOME_NETWORK)
             .map_err(SCLogicError::ValidatorScript)?;
         let outputs = txo_record
-            .outputs_at_address(&address)
+            .all_outputs_at_address(&address)
             .await
             .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
         Ok(outputs)
@@ -135,7 +135,7 @@ async fn lookup_output<Record: LedgerClient<EscrowDatum, ()>>(
         .address(SOME_NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let outputs = txo_record
-        .outputs_at_address(&script_address)
+        .all_outputs_at_address(&script_address)
         .await
         .map_err(|e| SCLogicError::Lookup(Box::new(e)))?;
     outputs
@@ -194,7 +194,7 @@ mod tests {
 
         let instance = backend
             .ledger_client
-            .outputs_at_address(&script.address(0).unwrap())
+            .all_outputs_at_address(&script.address(0).unwrap())
             .await
             .unwrap()
             .pop()
