@@ -105,6 +105,9 @@ This CLI is built around a Naumachia backend. That code could be repurposed to b
 project you're dreaming up.
 
 ### Contributions
+
+Check out our [architecture diagram](docs/ARCHITECTURE.md).
+
 Excited to accept PRs and general feedback. 
 I'm gonna try and be pretty strict about testing and other clean code stuff--sorry if that's not your jam. 
 It's all with love.

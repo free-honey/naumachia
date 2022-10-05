@@ -1,0 +1,1 @@
+![Architecture](naumachia_arch.png)
