@@ -39,3 +39,11 @@ pub enum SCLogicError {
 }
 
 pub type SCLogicResult<T> = Result<T, SCLogicError>;
+
+pub fn as_endpoint_err<E: error::Error + Send + Sync + 'static>(error: E) -> SCLogicError {
+    SCLogicError::Endpoint(Box::new(error))
+}
+
+pub fn as_lookup_err<E: error::Error + Send + Sync + 'static>(error: E) -> SCLogicError {
+    SCLogicError::Lookup(Box::new(error))
+}

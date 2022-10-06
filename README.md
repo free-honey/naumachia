@@ -49,8 +49,7 @@ Naumachia is meant as an alternative for the Plutus Application Backend (PAB).
 ### 🚣  Trireme 👁
 Trireme is a CLI for managing all of your dApps and secrets.
 
-For now, it is just an MVP to allow  
-your Naumachia dApps to interact with the blockchain. 
+For now, it is just an MVP to allow your Naumachia dApps to interact with the blockchain. 
 Eventually, it will be a full CLI wallet, a package manager for you dApps, and more.
 
 Not stable.
@@ -95,7 +94,7 @@ I've only tested on Linux.
 
 To interact with your contract, you will need to install the `trireme` cli:
 ```
-cargo install --install ./trireme
+cargo install --path ./trireme
 ```
 
 Trireme allows you to manage your secrets for all your Naumachia dApps.
