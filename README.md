@@ -15,8 +15,6 @@ Naumachia is a framework for writing Smart Contracts on the Cardano Blockchain u
 
 **Work in Progress :)**
 
-#### Client-Side FTW
-
 The Cardano Smart Contract scheme pushes a lot of the code off-chain. 
 Naumachia is designed to make the development of off-chain code as easy as possible, but also give you an 
 environment to test your on-chain code.
@@ -47,6 +45,7 @@ Naumachia is meant as an alternative for the Plutus Application Backend (PAB).
  - Auto generate simple UIs, e.g. CLIs, web interfaces, etc
 
 ### 🚣  Trireme 👁
+#### Client-Side FTW
 Trireme is a CLI for managing all of your dApps and secrets.
 
 For now, it is just an MVP to allow your Naumachia dApps to interact with the blockchain. 
@@ -135,7 +134,7 @@ Once it has gone through, you can run
 always-cli list 5
 ```
 Which will show the 5 newest locked UTxOs at the script address (feel free to look at more). You will probably see 
-a bunch of other UTxOs locked at the script address. Feel free to try and claim those, 
+a bunch of other UTxOs locked at the script address. You can try and claim those, 
 but many of them aren't claimable for a number of reasons.
 
 You will need to find yours and include the Output Id info in your `claim` command. It will look something like:
