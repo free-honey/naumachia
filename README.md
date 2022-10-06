@@ -89,7 +89,8 @@ and fund it with the [Testnet Faucet](https://developers.cardano.org/docs/integr
 
 I've only tested on Linux.
 
-⚠️⚠️Be very careful to not use your HODL keys! Please only use a secret phrase from a TESTNET wallet with funds you are willing to lose. 
+⚠️⚠️Be very careful to not use your HODL keys! 
+Please only use a secret phrase from a TESTNET wallet with funds you are willing to lose. 
 ⚠️⚠️Naumachia and the Trireme CLI are still under development! 
 
 To interact with your contract, you will need to install the `trireme` cli:
@@ -106,9 +107,14 @@ trireme init
 Which will prompt you to enter your information.
 ⚠️⚠️Your config files will be stored in plain text on your local file system under `~/.trireme`.
 
-After Trireme is set up, you are ready to interact with the blockchain!
+Use `Trireme` to check your initial balance!
+``` 
+trireme balance
+```
 
-First:
+Now that Trireme is set up, you are ready to interact with the blockchain!
+
+First, install the dApp CLI:
 ```
 cargo install --path ./sample-dApps/always-succeeds-contract
 ```
@@ -116,30 +122,33 @@ and try locking 10 ADA at the contract address:
 ```
 always-cli lock 10
 ```
-This will return a TxId that you can track on the [testnet explorer](https://explorer.cardano-testnet.iohkdev.io/en) or 
-in your wallet interface (Yoroi, Nami, etc). Your balance should have decreased by 10 + fees.
 
 It can take a few minutes for your transaction to show up on chain.
+
+You can `trireme balance` again to check your balance. Or, use the returned TxId to track 
+on the [testnet explorer](https://explorer.cardano-testnet.iohkdev.io/en) or 
+in your wallet interface (Yoroi, Nami, etc). Your balance should have decreased by 10 + fees.
+
 
 Once it has gone through, you can run 
 ```
 always-cli list 5
 ```
-Which will show the 5 newest locked UTxOs at the script address.
+Which will show the 5 newest locked UTxOs at the script address (feel free to look at more). You will probably see 
+a bunch of other UTxOs locked at the script address. Feel free to try and claim those, 
+but many of them aren't claimable for a number of reasons.
 
 You will need to find yours and include the Output Id info in your `claim` command. It will look something like:
 ```
-always-cli claim <TxId> <Index>
+always-cli claim <tx_hash> <index>
 ```
-Again, this might take a few minutes to execute. But check your wallet interface to see that your balance has returned
-to your original balance - fees for the two txs.
+Again, this might take a few minutes to execute. But check `trireme balance` or your wallet interface 
+to see that your balance has returned to your original balance minus fees for the two txs.
 
 **Fin!**
 
 
 ### Contributions
-
-Check out our [architecture diagram](docs/ARCHITECTURE.md).
 
 Excited to accept PRs and general feedback. There is a lot of work to be done to make this the best framework it can 
 be, so I'll try to help onboard anyone interested in contributing.
@@ -150,7 +159,10 @@ Big fan of modern programming techniques. I want to prioritize
 3. Performance, once the other stuff is solid
 
 Feel free to start issues/discussions if there are things you feel are missing or whatever.
-I love feedback. I want to get the design right.
+I love feedback as I'm figuring out a lot of this as I go. 
+I want to get the design right. Questions also welcome.
+
+Check out our [architecture diagram](docs/ARCHITECTURE.md).
 
 FYI, CI requires these commands to pass. So, try to run them locally to save yourself some time.
 ```
