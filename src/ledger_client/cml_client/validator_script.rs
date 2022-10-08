@@ -19,19 +19,19 @@ pub struct PlutusScriptFile {
     pub cborHex: String,
 }
 
-pub struct CMLValidator<Datum, Redeemer> {
+pub struct RawPlutusValidator<Datum, Redeemer> {
     script_hex: String,
     cml_script: PlutusScript,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<D, R> CMLValidator<D, R> {
+impl<D, R> RawPlutusValidator<D, R> {
     pub fn new_v1(script_hex: String) -> Result<Self> {
         let script_bytes = hex::decode(&script_hex).map_err(|e| CMLLCError::Hex(Box::new(e)))?;
         let v1 = PlutusV1Script::from_bytes(script_bytes).map_err(|e| JsError(e.to_string()))?;
         let cml_script = PlutusScript::from_v1(&v1);
-        let v1_val = CMLValidator {
+        let v1_val = RawPlutusValidator {
             script_hex,
             cml_script,
             _datum: Default::default(),
@@ -42,7 +42,7 @@ impl<D, R> CMLValidator<D, R> {
 }
 
 impl<Datum: Send + Sync, Redeemer: Send + Sync> ValidatorCode<Datum, Redeemer>
-    for CMLValidator<Datum, Redeemer>
+    for RawPlutusValidator<Datum, Redeemer>
 {
     fn execute(&self, _datum: Datum, _redeemer: Redeemer, _ctx: TxContext) -> ScriptResult<()> {
         todo!()

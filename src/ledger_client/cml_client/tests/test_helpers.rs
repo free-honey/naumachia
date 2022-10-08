@@ -1,4 +1,4 @@
-use crate::ledger_client::cml_client::validator_script::{CMLValidator, PlutusScriptFile};
+use crate::ledger_client::cml_client::validator_script::{PlutusScriptFile, RawPlutusValidator};
 use crate::{
     ledger_client::cml_client::key_manager::TESTNET,
     output::{Output, UnbuiltOutput},
@@ -73,7 +73,7 @@ pub fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
 }
 
 pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTransaction<(), ()> {
-    let script = CMLValidator::new_v1(always_succeeds_hex()).unwrap();
+    let script = RawPlutusValidator::new_v1(always_succeeds_hex()).unwrap();
     let script = Box::new(script) as Box<dyn ValidatorCode<(), ()>>;
     UnbuiltTransaction {
         script_inputs: vec![(script_input.clone(), (), script)],

@@ -36,6 +36,7 @@ async-trait = "0.1.57"
 hex = "0.4.3"
 blockfrost-http-client = "0.0.6"
 dirs = "4.0.0"
+uplc = "0.0.18"
 
 [dependencies.uuid]
 version = "1.1.2"
