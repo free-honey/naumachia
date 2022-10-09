@@ -52,9 +52,8 @@ pub fn always_succeeds_script_address(network: u8) -> Address {
     Address::Script(script_address_str)
 }
 
-pub fn always_succeeds_hex() -> String {
-    let script_file = read_script_from_file("./plutus/always-succeeds-spending.plutus");
-    script_file.cborHex
+pub fn always_succeeds_hex() -> PlutusScriptFile {
+    read_script_from_file("./plutus/always-succeeds-spending.plutus")
 }
 
 pub fn always_succeeds_script() -> PlutusScript {
