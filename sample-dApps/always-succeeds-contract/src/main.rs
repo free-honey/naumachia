@@ -32,10 +32,8 @@ async fn main() {
     let args = Args::parse();
 
     let logic = AlwaysSucceedsLogic;
-
     let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
     let backend = Backend::new(ledger_client);
-
     let contract = SmartContract::new(&logic, &backend);
 
     match args.action {

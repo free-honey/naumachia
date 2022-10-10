@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use clap::Parser;
+use naumachia::trireme_ledger_client::TriremeLedgerClient;
 use naumachia::{
     backend::Backend,
     smart_contract::{SmartContract, SmartContractTrait},
@@ -31,13 +32,13 @@ enum ActionParams {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let logic = TriremeLogic;
-    let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
-    let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(&logic, &backend);
     match args.action {
         ActionParams::Init => init_impl().await?,
         ActionParams::Balance => {
+            let logic = TriremeLogic;
+            let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
+            let backend = Backend::new(ledger_client);
+            let contract = SmartContract::new(&logic, &backend);
             let res = contract.lookup(TriremeLookups::LovelaceBalance).await?;
             let ada = match res {
                 TriremeResponses::LovelaceBalance(lovelace) => lovelace as f64 / 1_000_000.0,
