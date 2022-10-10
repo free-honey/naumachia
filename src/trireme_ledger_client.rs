@@ -44,6 +44,7 @@ pub async fn get_trireme_ledger_client_from_file<
     Datum: PlutusDataInterop,
     Redeemer: PlutusDataInterop,
 >() -> Result<TriremeLedgerClient<Datum, Redeemer>> {
+    println!("0");
     let file_path = path_to_trireme_config_file()?;
     if let Some(config) = read_toml_struct_from_file::<TriremeConfig>(&file_path).await? {
         let ledger_client = config.to_client().await?;
@@ -222,6 +223,7 @@ pub async fn read_toml_struct_from_file<Toml: DeserializeOwned>(
     file_path: &PathBuf,
 ) -> Result<Option<Toml>> {
     if file_path.exists() {
+        println!("{:?}", file_path);
         let contents = fs::read_to_string(file_path)
             .await
             .map_err(|e| Error::TOML(Box::new(e)))?;
