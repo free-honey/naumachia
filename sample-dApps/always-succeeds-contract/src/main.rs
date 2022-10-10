@@ -3,7 +3,6 @@ use always_succeeds_contract::logic::{
     AlwaysSucceedsLookups,
 };
 use clap::Parser;
-use naumachia::trireme_ledger_client::TriremeLedgerClient;
 use naumachia::{
     backend::Backend,
     output::OutputId,
@@ -47,7 +46,7 @@ async fn main() {
         ActionParams::Claim { tx_hash, index } => {
             let output_id = OutputId::new(tx_hash, index);
             let endpoint = AlwaysSucceedsEndpoints::Claim { output_id };
-            get_contract().hit_endpoint(endpoint).await.unwrap()
+            contract.hit_endpoint(endpoint).await.unwrap()
         }
         ActionParams::List { count } => {
             let res = contract
