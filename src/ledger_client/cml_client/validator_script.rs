@@ -7,6 +7,7 @@ use cardano_multiplatform_lib::{
     address::{EnterpriseAddress, StakeCredential},
     plutus::{PlutusScript, PlutusV1Script},
 };
+use minicbor::Decoder;
 use serde::Deserialize;
 use serde::Serialize;
 use std::marker::PhantomData;
@@ -75,21 +76,21 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
     ValidatorCode<Datum, Redeemer> for RawPlutusValidator<Datum, Redeemer>
 {
     fn execute(&self, datum: Datum, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
-        let flat = hex::decode(&self.script_file.cborHex).unwrap();
+        let cbor = hex::decode(&self.script_file.cborHex).unwrap();
+        let mut outer_decoder = Decoder::new(&cbor);
+        let outer = outer_decoder.bytes().unwrap();
+        let mut flat_decoder = Decoder::new(&outer);
+        let flat = flat_decoder.bytes().unwrap();
         let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(&flat)
             .unwrap()
             .try_into()
             .unwrap(); // TODO
-        dbg!(&program);
         let datum_term = datum.to_term().unwrap(); // TODO
         let program = program.apply_term(&datum_term); // TODO
-        dbg!(&program);
         let redeemer_term = redeemer.to_term().unwrap(); // TODO
         let program = program.apply_term(&redeemer_term); // TODO
-        dbg!(&program);
         let ctx_term = ctx.to_term().unwrap(); // TODO
         let program = program.apply_term(&ctx_term); // TODO
-        dbg!(&program);
         let (term, _cost, _logs) = program.eval();
         term.unwrap(); // TODO
         Ok(())
