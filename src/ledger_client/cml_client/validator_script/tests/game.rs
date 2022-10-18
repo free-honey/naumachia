@@ -18,12 +18,6 @@ impl HashedString {
 impl AikenTermInterop for HashedString {
     fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
         let data = PlutusData::BoundedBytes(self.inner.clone().into());
-        // let constr = pallas_primitives::alonzo::Constr {
-        //     tag: 0,
-        //     any_constructor: None,
-        //     fields: vec![data],
-        // };
-        // let term = Term::Constant(Constant::Data(PlutusData::Constr(constr)));
         let term = Term::Constant(Constant::Data(data));
         Ok(term)
     }
@@ -45,19 +39,13 @@ impl AikenTermInterop for ClearString {
     fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
         let bytes = self.inner.as_bytes().to_vec();
         let data = PlutusData::BoundedBytes(bytes.into());
-        // let constr = pallas_primitives::alonzo::Constr {
-        //     tag: 0,
-        //     any_constructor: None,
-        //     fields: vec![data],
-        // };
-        // let term = Term::Constant(Constant::Data(PlutusData::Constr(constr)));
         let term = Term::Constant(Constant::Data(data));
         Ok(term)
     }
 }
 
 #[test]
-fn execute_game() {
+fn execute_game_passes() {
     let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
@@ -69,7 +57,24 @@ fn execute_game() {
         signer: Address::Raw("placeholder".to_string()),
     };
 
-    script.execute(datum, redeemer, ctx).unwrap();
+    assert!(dbg!(script.execute(datum, redeemer, ctx)).is_ok());
+}
+
+#[test]
+fn execute_game_fails() {
+    let script_file = game_script_file();
+    let script = RawPlutusValidator::new_v1(script_file).unwrap();
+
+    let word = "konnichiwa";
+    let bad_guess = "kombanwa";
+
+    let datum = HashedString::new(word);
+    let redeemer = ClearString::new(bad_guess);
+    let ctx = TxContext {
+        signer: Address::Raw("placeholder".to_string()),
+    };
+
+    assert!(dbg!(script.execute(datum, redeemer, ctx)).is_err()); // TODO: Make more specific
 }
 
 fn game_script_file() -> PlutusScriptFile {

@@ -1,3 +1,4 @@
+use crate::scripts::ScriptError;
 use crate::{
     ledger_client::{cml_client::error::CMLLCError::JsError, cml_client::error::*},
     scripts::{ScriptResult, TxContext, ValidatorCode},
@@ -93,10 +94,12 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
         let program = program.apply_term(&redeemer_term); // TODO
         let ctx_term = ctx.to_term().unwrap(); // TODO
         let program = program.apply_term(&ctx_term); // TODO
-        let (term, _cost, _logs) = program.eval();
+        let (term, _cost, logs) = program.eval();
         println!("{:?}", &term);
-        println!("{:?}", &_logs);
-        term.unwrap(); // TODO
+        println!("{:?}", &logs);
+        term.map_err(|e| {
+            ScriptError::FailedToExecute(format!("Error: {:?}, Logs: {:?}", e, logs))
+        })?; // TODO
         Ok(())
     }
 
