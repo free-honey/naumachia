@@ -11,8 +11,11 @@ use minicbor::Decoder;
 use serde::Deserialize;
 use serde::Serialize;
 use std::marker::PhantomData;
-use uplc::ast::{Constant, DeBruijn, FakeNamedDeBruijn, Name, NamedDeBruijn, Program, Term};
-use uplc::parser;
+use uplc::ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term};
+use uplc::PlutusData;
+
+#[cfg(test)]
+mod tests;
 
 #[allow(non_snake_case)]
 #[allow(unused)]
@@ -48,27 +51,25 @@ impl<D, R> RawPlutusValidator<D, R> {
 
 pub trait AikenTermInterop: Sized {
     fn to_term(&self) -> Result<Term<NamedDeBruijn>>;
-    fn from_term(term: Term<DeBruijn>) -> Result<Self>;
 }
 
 impl AikenTermInterop for () {
     fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
         Ok(Term::Constant(Constant::Unit))
     }
-
-    fn from_term(_term: Term<DeBruijn>) -> Result<Self> {
-        Ok(())
-    }
 }
 
 impl AikenTermInterop for TxContext {
     fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
-        Ok(Term::Constant(Constant::Unit))
-    }
-
-    fn from_term(_term: Term<DeBruijn>) -> Result<Self> {
-        // TODO: This might be enough reason to split this into two traits or just use `From`
-        unimplemented!("When would we use this")
+        let some_string = "some_string".to_string();
+        let some_bytes = some_string.as_bytes().to_vec();
+        let data = PlutusData::BoundedBytes(some_bytes.into());
+        let constr = pallas_primitives::alonzo::Constr {
+            tag: 0,
+            any_constructor: None,
+            fields: vec![data],
+        };
+        Ok(Term::Constant(Constant::Data(PlutusData::Constr(constr))))
     }
 }
 
@@ -85,6 +86,7 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
             .unwrap()
             .try_into()
             .unwrap(); // TODO
+                       // println!("{}", &program);
         let datum_term = datum.to_term().unwrap(); // TODO
         let program = program.apply_term(&datum_term); // TODO
         let redeemer_term = redeemer.to_term().unwrap(); // TODO
@@ -92,6 +94,8 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
         let ctx_term = ctx.to_term().unwrap(); // TODO
         let program = program.apply_term(&ctx_term); // TODO
         let (term, _cost, _logs) = program.eval();
+        println!("{:?}", &term);
+        println!("{:?}", &_logs);
         term.unwrap(); // TODO
         Ok(())
     }
@@ -108,28 +112,5 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
 
     fn script_hex(&self) -> ScriptResult<&str> {
         Ok(&self.script_file.cborHex)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn execute() {
-        let script_file = PlutusScriptFile {
-            r#type: "PlutusScriptV1".to_string(),
-            description: "".to_string(),
-            cborHex: "4e4d01000033222220051200120011".to_string(),
-        };
-        let script = RawPlutusValidator::new_v1(script_file).unwrap();
-
-        let datum = ();
-        let redeemer = ();
-        let ctx = TxContext {
-            signer: Address::Raw("placeholder".to_string()),
-        };
-
-        let res = script.execute(datum, redeemer, ctx).unwrap();
     }
 }

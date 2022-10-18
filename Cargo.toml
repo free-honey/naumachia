@@ -38,6 +38,7 @@ blockfrost-http-client = "0.0.6"
 dirs = "4.0.0"
 uplc = "0.0.18"
 minicbor = "0.18.0"
+pallas-primitives = "0.14.0-alpha.5"
 
 [dependencies.uuid]
 version = "1.1.2"
@@ -52,3 +53,4 @@ clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
 tempfile = "3.3.0"
+sha2 = "0.10.6"
