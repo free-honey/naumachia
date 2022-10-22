@@ -11,7 +11,7 @@ use cardano_multiplatform_lib::{
 use minicbor::Decoder;
 use pallas_codec::utils::Bytes;
 use pallas_crypto::hash::Hash;
-use pallas_primitives::alonzo::Multiasset;
+use pallas_primitives::alonzo::{BigInt, Certificate, Constr, Multiasset};
 use pallas_primitives::babbage::TransactionOutput;
 use pallas_primitives::babbage::Value;
 use pallas_primitives::babbage::{PostAlonzoTransactionOutput, TransactionInput};
@@ -20,7 +20,7 @@ use serde::Serialize;
 use std::marker::PhantomData;
 use uplc::ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term};
 use uplc::tx::script_context::{
-    ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
+    ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxInfoV2, TxOut,
 };
 use uplc::tx::to_plutus_data::{MintValue, ToPlutusData};
 use uplc::PlutusData;
@@ -70,11 +70,23 @@ impl AikenTermInterop for () {
     }
 }
 
+impl AikenTermInterop for i64 {
+    fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
+        let constr = Constr {
+            tag: 121,
+            any_constructor: None,
+            fields: vec![PlutusData::BigInt(BigInt::Int((*self).into()))],
+        };
+        Ok(Term::Constant(Constant::Data(PlutusData::Constr(constr))))
+    }
+}
+
+// TODO: Use real values https://github.com/MitchTurner/naumachia/issues/39
 impl AikenTermInterop for TxContext {
     fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
         let fake_tx_input = TransactionInput {
             transaction_id: Hash::new([4; 32]),
-            index: 3,
+            index: 0,
         };
         let address = vec![0; 57];
         let post_alonzo_txo = PostAlonzoTransactionOutput {
@@ -92,26 +104,41 @@ impl AikenTermInterop for TxContext {
         let tx_info_inner = TxInfoV1 {
             inputs: vec![tx_in_info],
             outputs: vec![tx_out],
-            fee: Value::Coin(0),
+            fee: Value::Coin(100000),
             mint: MintValue {
                 mint_value: Vec::new().into(),
             },
-            dcert: vec![],
-            wdrl: vec![],
+            dcert: Vec::new(),
+            wdrl: vec![].into(),
             valid_range: TimeRange {
                 lower_bound: None,
                 upper_bound: None,
             },
             signatories: vec![],
-            data: vec![],
+            data: vec![].into(),
             id: Hash::new([1; 32]),
         };
+
+        // let tx_info_inner = TxInfoV1 {
+        //     inputs: vec![],
+        //     outputs: vec![],
+        //     fee: (),
+        //     mint: MintValue {},
+        //     dcert: vec![],
+        //     wdrl: vec![],
+        //     valid_range: TimeRange {},
+        //     signatories: vec![],
+        //     data: vec![],
+        //     id: (),
+        // };
         let tx_info = TxInfo::V1(tx_info_inner);
         let script_context = ScriptContext {
             tx_info,
             purpose: ScriptPurpose::Spending(fake_tx_input),
         };
+        // dbg!(script_context.to_plutus_data());
         let plutus_data = script_context.to_plutus_data();
+        // let plutus_data = PlutusData::BoundedBytes(vec![].into());
         Ok(Term::Constant(Constant::Data(plutus_data)))
     }
 }
@@ -139,7 +166,7 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
         let ctx_term = ctx.to_term().unwrap(); // TODO
                                                // dbg!(&ctx_term);
         let program = program.apply_term(&ctx_term); // TODO
-        let (term, _cost, logs) = program.eval();
+        let (term, _cost, logs) = program.eval_v1();
         println!("{:?}", &term);
         println!("{:?}", &logs);
         term.map_err(|e| {

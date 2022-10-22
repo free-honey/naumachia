@@ -1,6 +1,7 @@
 use super::*;
 
 mod game;
+mod hello;
 
 #[test]
 fn execute_always_succeeds() {
