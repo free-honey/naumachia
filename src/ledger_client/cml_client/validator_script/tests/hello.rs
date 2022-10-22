@@ -1,5 +1,5 @@
 use crate::ledger_client::cml_client::validator_script::{PlutusScriptFile, RawPlutusValidator};
-use crate::scripts::{TxContext, ValidatorCode};
+use crate::scripts::{ScriptError, TxContext, ValidatorCode};
 use crate::Address;
 
 /// run :: HelloDatum -> HelloRedeemer -> ScriptContext -> Bool
@@ -28,4 +28,22 @@ fn execute_hello_passes() {
     };
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_ok());
+}
+
+#[test]
+fn execute_hello_fails() {
+    let script_file = hello_script_file();
+    let script = RawPlutusValidator::new_v1(script_file).unwrap();
+
+    let datum = 50;
+    let redeemer = 51;
+    let ctx = TxContext {
+        signer: Address::Raw("placeholder".to_string()),
+    };
+
+    // PT5: 'check' input is 'False'
+    assert_eq!(
+        dbg!(script.execute(datum, redeemer, ctx)).unwrap_err(),
+        ScriptError::FailedToExecute("Error: EvaluationFailure, Logs: [\"PT5\"]".to_string())
+    );
 }

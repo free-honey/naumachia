@@ -21,7 +21,7 @@ pub trait MintingPolicy: Send + Sync {
     fn id(&self) -> PolicyId;
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ScriptError {
     #[error("Failed to execute: {0:?}")]
     FailedToExecute(String),

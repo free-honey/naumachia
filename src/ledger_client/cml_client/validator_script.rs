@@ -9,9 +9,8 @@ use cardano_multiplatform_lib::{
     plutus::{PlutusScript, PlutusV1Script},
 };
 use minicbor::Decoder;
-use pallas_codec::utils::Bytes;
 use pallas_crypto::hash::Hash;
-use pallas_primitives::alonzo::{BigInt, Certificate, Constr, Multiasset};
+use pallas_primitives::alonzo::{BigInt, Constr};
 use pallas_primitives::babbage::TransactionOutput;
 use pallas_primitives::babbage::Value;
 use pallas_primitives::babbage::{PostAlonzoTransactionOutput, TransactionInput};
@@ -20,7 +19,7 @@ use serde::Serialize;
 use std::marker::PhantomData;
 use uplc::ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term};
 use uplc::tx::script_context::{
-    ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxInfoV2, TxOut,
+    ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
 };
 use uplc::tx::to_plutus_data::{MintValue, ToPlutusData};
 use uplc::PlutusData;
