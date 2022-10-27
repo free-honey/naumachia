@@ -16,7 +16,7 @@ impl HashedString {
 }
 
 impl AikenTermInterop for HashedString {
-    fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
+    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
         let data = PlutusData::BoundedBytes(self.inner.clone().into());
         let term = Term::Constant(Constant::Data(data));
         Ok(term)
@@ -36,7 +36,7 @@ impl ClearString {
 }
 
 impl AikenTermInterop for ClearString {
-    fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
+    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
         let bytes = self.inner.as_bytes().to_vec();
         let data = PlutusData::BoundedBytes(bytes.into());
         let term = Term::Constant(Constant::Data(data));
@@ -77,7 +77,7 @@ fn execute_game_fails() {
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_err()); // TODO: Make more specific
 }
 
-fn game_script_file() -> PlutusScriptFile {
+fn _game_script_file() -> PlutusScriptFile {
     PlutusScriptFile {
         r#type: "PlutusScriptV1".to_string(),
         description: "".to_string(),
@@ -132,6 +132,8 @@ fn game_lite_script_file() -> PlutusScriptFile {
         description: "".to_string(),
         cborHex: "5840583e0100003232222533532323232333573466e3c010004488008488004dc900118030019bae\
         003375c006200a264c649319ab9c490103505435000056120011"
-            .to_string(),
+            .to_string(), // Works (Replace all of ScriptContext with BuiltinData)
+                          // cborHex: "583a5838010000322225335323232333573466e3c00c004488008488004dc90009bae003375c0062008264c649319ab9c49103505435000041200101"
+                          //     .to_string(),
     }
 }

@@ -44,6 +44,8 @@ fn execute_hello_fails() {
     // PT5: 'check' input is 'False'
     assert_eq!(
         dbg!(script.execute(datum, redeemer, ctx)).unwrap_err(),
-        ScriptError::FailedToExecute("Error: EvaluationFailure, Logs: [\"PT5\"]".to_string())
+        ScriptError::FailedToExecute(
+            "AikenEval { error: \"EvaluationFailure\", logs: [\"PT5\"] }".to_string()
+        )
     );
 }

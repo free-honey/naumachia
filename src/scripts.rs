@@ -1,5 +1,6 @@
 use crate::address::Address;
 use crate::PolicyId;
+use std::fmt::Debug;
 use thiserror::Error;
 
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
@@ -27,6 +28,10 @@ pub enum ScriptError {
     FailedToExecute(String),
     #[error("Failed to construct: {0:?}")]
     FailedToConstruct(String),
+}
+
+pub fn as_failed_to_execute<E: Debug>(e: E) -> ScriptError {
+    ScriptError::FailedToExecute(format!("{:?}", e))
 }
 
 pub type ScriptResult<T> = Result<T, ScriptError>;

@@ -1,6 +1,9 @@
-use crate::scripts::ScriptError;
 use crate::{
+    ledger_client::cml_client::validator_script::error::{
+        RawPlutusScrioptError, RawPlutusScriptResult,
+    },
     ledger_client::{cml_client::error::CMLLCError::JsError, cml_client::error::*},
+    scripts::as_failed_to_execute,
     scripts::{ScriptResult, TxContext, ValidatorCode},
     Address,
 };
@@ -10,19 +13,20 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::Decoder;
 use pallas_crypto::hash::Hash;
-use pallas_primitives::alonzo::{BigInt, Constr};
-use pallas_primitives::babbage::TransactionOutput;
-use pallas_primitives::babbage::Value;
-use pallas_primitives::babbage::{PostAlonzoTransactionOutput, TransactionInput};
-use serde::Deserialize;
-use serde::Serialize;
-use std::marker::PhantomData;
-use uplc::ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term};
-use uplc::tx::script_context::{
-    ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
+use pallas_primitives::{
+    alonzo::{BigInt, Constr},
+    babbage::{PostAlonzoTransactionOutput, TransactionInput, TransactionOutput, Value},
 };
-use uplc::tx::to_plutus_data::{MintValue, ToPlutusData};
-use uplc::PlutusData;
+use serde::{Deserialize, Serialize};
+use std::{fmt::Debug, marker::PhantomData};
+use uplc::{
+    ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
+    tx::script_context::{
+        ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
+    },
+    tx::to_plutus_data::{MintValue, ToPlutusData},
+    PlutusData,
+};
 
 #[cfg(test)]
 mod tests;
@@ -34,6 +38,20 @@ pub struct PlutusScriptFile {
     pub r#type: String,
     pub description: String,
     pub cborHex: String,
+}
+
+pub mod error {
+    use thiserror::Error;
+
+    #[derive(Debug, Error, PartialEq)]
+    pub enum RawPlutusScrioptError {
+        #[error("Error in Aiken Apply: {0:?}")]
+        AikenApply(String),
+        #[error("Error in Aiken Eval: {error:?}, Logs: {logs:?}")]
+        AikenEval { error: String, logs: Vec<String> },
+    }
+
+    pub type RawPlutusScriptResult<T, E = RawPlutusScrioptError> = Result<T, E>;
 }
 
 pub struct RawPlutusValidator<Datum, Redeemer> {
@@ -60,17 +78,17 @@ impl<D, R> RawPlutusValidator<D, R> {
 }
 
 pub trait AikenTermInterop: Sized {
-    fn to_term(&self) -> Result<Term<NamedDeBruijn>>;
+    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>>;
 }
 
 impl AikenTermInterop for () {
-    fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
+    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
         Ok(Term::Constant(Constant::Unit))
     }
 }
 
 impl AikenTermInterop for i64 {
-    fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
+    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
         let constr = Constr {
             tag: 121,
             any_constructor: None,
@@ -82,7 +100,7 @@ impl AikenTermInterop for i64 {
 
 // TODO: Use real values https://github.com/MitchTurner/naumachia/issues/39
 impl AikenTermInterop for TxContext {
-    fn to_term(&self) -> Result<Term<NamedDeBruijn>> {
+    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
         let fake_tx_input = TransactionInput {
             transaction_id: Hash::new([4; 32]),
             index: 0,
@@ -118,18 +136,6 @@ impl AikenTermInterop for TxContext {
             id: Hash::new([1; 32]),
         };
 
-        // let tx_info_inner = TxInfoV1 {
-        //     inputs: vec![],
-        //     outputs: vec![],
-        //     fee: (),
-        //     mint: MintValue {},
-        //     dcert: vec![],
-        //     wdrl: vec![],
-        //     valid_range: TimeRange {},
-        //     signatories: vec![],
-        //     data: vec![],
-        //     id: (),
-        // };
         let tx_info = TxInfo::V1(tx_info_inner);
         let script_context = ScriptContext {
             tx_info,
@@ -146,31 +152,37 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
     ValidatorCode<Datum, Redeemer> for RawPlutusValidator<Datum, Redeemer>
 {
     fn execute(&self, datum: Datum, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
-        let cbor = hex::decode(&self.script_file.cborHex).unwrap();
+        let cbor = hex::decode(&self.script_file.cborHex).map_err(as_failed_to_execute)?;
         let mut outer_decoder = Decoder::new(&cbor);
-        let outer = outer_decoder.bytes().unwrap();
+        let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
         let mut flat_decoder = Decoder::new(&outer);
-        let flat = flat_decoder.bytes().unwrap();
+        let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
+        println!("flat: {:?}", hex::encode(&flat));
         let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(&flat)
             .unwrap()
             .try_into()
-            .unwrap(); // TODO
-                       // println!("{}", &program);
-        let datum_term = datum.to_term().unwrap(); // TODO
-                                                   // dbg!(&datum_term);
-        let program = program.apply_term(&datum_term); // TODO
-        let redeemer_term = redeemer.to_term().unwrap(); // TODO
-                                                         // dbg!(&redeemer_term);
-        let program = program.apply_term(&redeemer_term); // TODO
-        let ctx_term = ctx.to_term().unwrap(); // TODO
-                                               // dbg!(&ctx_term);
-        let program = program.apply_term(&ctx_term); // TODO
+            .map_err(as_failed_to_execute)?;
+        // println!("whole: {}", &program);
+        let datum_term = datum.to_term().map_err(as_failed_to_execute)?;
+        // dbg!(&datum_term);
+        let program = program.apply_term(&datum_term);
+        // println!("apply datum: {}", &program);
+        let redeemer_term = redeemer.to_term().map_err(as_failed_to_execute)?;
+        // dbg!(&redeemer_term);
+        let program = program.apply_term(&redeemer_term);
+        // println!("apply redeemer: {}", &program);
+        let ctx_term = ctx.to_term().map_err(as_failed_to_execute)?;
+        // dbg!(&ctx_term);
+        let program = program.apply_term(&ctx_term);
+        // println!("apply ctx: {}", &program);
         let (term, _cost, logs) = program.eval_v1();
         println!("{:?}", &term);
         println!("{:?}", &logs);
-        term.map_err(|e| {
-            ScriptError::FailedToExecute(format!("Error: {:?}, Logs: {:?}", e, logs))
-        })?; // TODO
+        term.map_err(|e| RawPlutusScrioptError::AikenEval {
+            error: format!("{:?}", e),
+            logs,
+        })
+        .map_err(as_failed_to_execute)?;
         Ok(())
     }
 
