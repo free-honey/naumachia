@@ -12,11 +12,7 @@ use cardano_multiplatform_lib::{
     plutus::{PlutusScript, PlutusV1Script},
 };
 use minicbor::Decoder;
-use pallas_crypto::hash::Hash;
-use pallas_primitives::{
-    alonzo::{BigInt, Constr},
-    babbage::{PostAlonzoTransactionOutput, TransactionInput, TransactionOutput, Value},
-};
+
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, marker::PhantomData};
 use uplc::{
@@ -25,7 +21,8 @@ use uplc::{
         ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
     },
     tx::to_plutus_data::{MintValue, ToPlutusData},
-    PlutusData,
+    BigInt, Constr, PlutusData, PostAlonzoTransactionOutput, TransactionInput, TransactionOutput,
+    Value,
 };
 
 #[cfg(test)]
@@ -102,7 +99,7 @@ impl AikenTermInterop for i64 {
 impl AikenTermInterop for TxContext {
     fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
         let fake_tx_input = TransactionInput {
-            transaction_id: Hash::new([4; 32]),
+            transaction_id: uplc::Hash::new([4; 32]),
             index: 0,
         };
         let address = vec![0; 57];
@@ -133,7 +130,7 @@ impl AikenTermInterop for TxContext {
             },
             signatories: vec![],
             data: vec![].into(),
-            id: Hash::new([1; 32]),
+            id: uplc::Hash::new([1; 32]),
         };
 
         let tx_info = TxInfo::V1(tx_info_inner);
@@ -141,9 +138,7 @@ impl AikenTermInterop for TxContext {
             tx_info,
             purpose: ScriptPurpose::Spending(fake_tx_input),
         };
-        // dbg!(script_context.to_plutus_data());
         let plutus_data = script_context.to_plutus_data();
-        // let plutus_data = PlutusData::BoundedBytes(vec![].into());
         Ok(Term::Constant(Constant::Data(plutus_data)))
     }
 }
@@ -157,7 +152,7 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
         let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
         let mut flat_decoder = Decoder::new(&outer);
         let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
-        println!("flat: {:?}", hex::encode(&flat));
+        // println!("flat: {:?}", hex::encode(&flat));
         let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(&flat)
             .unwrap()
             .try_into()

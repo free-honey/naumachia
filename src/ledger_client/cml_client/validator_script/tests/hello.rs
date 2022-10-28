@@ -1,6 +1,8 @@
-use crate::ledger_client::cml_client::validator_script::{PlutusScriptFile, RawPlutusValidator};
-use crate::scripts::{ScriptError, TxContext, ValidatorCode};
-use crate::Address;
+use crate::{
+    ledger_client::cml_client::validator_script::{PlutusScriptFile, RawPlutusValidator},
+    scripts::{ScriptError, TxContext, ValidatorCode},
+    Address,
+};
 
 /// run :: HelloDatum -> HelloRedeemer -> ScriptContext -> Bool
 /// run (HelloDatum datum) (HelloRedeemer redeemer) _ = redeemer < datum
@@ -27,7 +29,7 @@ fn execute_hello_passes() {
         signer: Address::Raw("placeholder".to_string()),
     };
 
-    assert!(dbg!(script.execute(datum, redeemer, ctx)).is_ok());
+    assert!(script.execute(datum, redeemer, ctx).is_ok());
 }
 
 #[test]
@@ -43,7 +45,7 @@ fn execute_hello_fails() {
 
     // PT5: 'check' input is 'False'
     assert_eq!(
-        dbg!(script.execute(datum, redeemer, ctx)).unwrap_err(),
+        script.execute(datum, redeemer, ctx).unwrap_err(),
         ScriptError::FailedToExecute(
             "AikenEval { error: \"EvaluationFailure\", logs: [\"PT5\"] }".to_string()
         )
