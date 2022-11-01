@@ -40,7 +40,7 @@ pub struct PlutusScriptFile {
 pub mod error {
     use thiserror::Error;
 
-    #[derive(Debug, Error, PartialEq)]
+    #[derive(Debug, Error, PartialEq, Eq)]
     pub enum RawPlutusScrioptError {
         #[error("Error in Aiken Apply: {0:?}")]
         AikenApply(String),
@@ -123,13 +123,13 @@ impl AikenTermInterop for TxContext {
                 mint_value: Vec::new().into(),
             },
             dcert: Vec::new(),
-            wdrl: vec![].into(),
+            wdrl: vec![],
             valid_range: TimeRange {
                 lower_bound: None,
                 upper_bound: None,
             },
             signatories: vec![],
-            data: vec![].into(),
+            data: vec![],
             id: uplc::Hash::new([1; 32]),
         };
 
@@ -150,10 +150,10 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
         let cbor = hex::decode(&self.script_file.cborHex).map_err(as_failed_to_execute)?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
-        let mut flat_decoder = Decoder::new(&outer);
+        let mut flat_decoder = Decoder::new(outer);
         let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
         // println!("flat: {:?}", hex::encode(&flat));
-        let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(&flat)
+        let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(flat)
             .unwrap()
             .try_into()
             .map_err(as_failed_to_execute)?;
@@ -171,8 +171,8 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
         let program = program.apply_term(&ctx_term);
         // println!("apply ctx: {}", &program);
         let (term, _cost, logs) = program.eval_v1();
-        println!("{:?}", &term);
-        println!("{:?}", &logs);
+        // println!("{:?}", &term);
+        // println!("{:?}", &logs);
         term.map_err(|e| RawPlutusScrioptError::AikenEval {
             error: format!("{:?}", e),
             logs,

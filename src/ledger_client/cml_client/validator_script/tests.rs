@@ -12,11 +12,9 @@ fn execute_always_succeeds() {
     };
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
-    let datum = ();
-    let redeemer = ();
     let ctx = TxContext {
         signer: Address::Raw("placeholder".to_string()),
     };
 
-    script.execute(datum, redeemer, ctx).unwrap();
+    script.execute((), (), ctx).unwrap();
 }

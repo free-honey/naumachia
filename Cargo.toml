@@ -36,7 +36,7 @@ async-trait = "0.1.57"
 hex = "0.4.3"
 blockfrost-http-client = "0.0.6"
 dirs = "4.0.0"
-uplc = "0.0.21"
+uplc = "0.0.22"
 minicbor = "0.18.0"
 
 [dependencies.uuid]
@@ -53,6 +53,3 @@ proptest = "1.0.0"
 rand = "0.8.5"
 tempfile = "3.3.0"
 sha2 = "0.10.6"
-
-[patch.crates-io]
-uplc = { path = "../forks/aiken/crates/uplc" }

@@ -22,7 +22,7 @@ pub trait MintingPolicy: Send + Sync {
     fn id(&self) -> PolicyId;
 }
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum ScriptError {
     #[error("Failed to execute: {0:?}")]
     FailedToExecute(String),
