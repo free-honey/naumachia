@@ -1,6 +1,5 @@
 use super::*;
 use sha2::{Digest, Sha256};
-use uplc::PlutusData;
 
 struct HashedString {
     inner: Vec<u8>,
@@ -15,11 +14,10 @@ impl HashedString {
     }
 }
 
-impl AikenTermInterop for HashedString {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-        let data = PlutusData::BoundedBytes(self.inner.clone().into());
-        let term = Term::Constant(Constant::Data(data));
-        Ok(term)
+impl From<HashedString> for PlutusData {
+    fn from(hs: HashedString) -> Self {
+        let bytes = hs.inner.clone();
+        PlutusData::BoundedBytes(bytes.into())
     }
 }
 
@@ -35,12 +33,10 @@ impl ClearString {
     }
 }
 
-impl AikenTermInterop for ClearString {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-        let bytes = self.inner.as_bytes().to_vec();
-        let data = PlutusData::BoundedBytes(bytes.into());
-        let term = Term::Constant(Constant::Data(data));
-        Ok(term)
+impl From<ClearString> for PlutusData {
+    fn from(cs: ClearString) -> Self {
+        let bytes = cs.inner.as_bytes().to_vec();
+        PlutusData::BoundedBytes(bytes.into())
     }
 }
 
@@ -68,8 +64,8 @@ fn execute_game_passes() {
 #[ignore]
 #[test]
 fn execute_game_fails() {
-    // let script_file = game_lite_script_file();
-    let script_file = game_script_file();
+    let script_file = _game_lite_script_file();
+    // let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
     let word = "konnichiwa";
@@ -91,13 +87,13 @@ fn _game_lite_script_file() -> PlutusScriptFile {
     PlutusScriptFile {
         r#type: "PlutusScriptV1".to_string(),
         description: "".to_string(),
-        // The ScriptContext is just two `BuiltinData`s
-        cborHex: "5840583e0100003232222533532323232333573466e3c010004488008488004dc900118030019bae\
-        003375c006200a264c649319ab9c490103505435000056120011"
-            .to_string(),
-        // Works (Replace all of ScriptContext with BuiltinData)
-        // cborHex: "583a5838010000322225335323232333573466e3c00c004488008488004dc90009bae003375c0062008264c649319ab9c49103505435000041200101"
+        // // The ScriptContext is just two `BuiltinData`s
+        // cborHex: "5840583e0100003232222533532323232333573466e3c010004488008488004dc900118030019bae\
+        // 003375c006200a264c649319ab9c490103505435000056120011"
         //     .to_string(),
+        // Works (Replace all of ScriptContext with BuiltinData)
+        cborHex: "583a5838010000322225335323232333573466e3c00c004488008488004dc90009bae003375c0062008264c649319ab9c49103505435000041200101"
+            .to_string(),
     }
 }
 

@@ -13,6 +13,7 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::Decoder;
 
+use crate::ledger_client::cml_client::validator_script::plutus_data::{BigInt, Constr, PlutusData};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, marker::PhantomData};
 use uplc::{
@@ -21,9 +22,66 @@ use uplc::{
         ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
     },
     tx::to_plutus_data::{MintValue, ToPlutusData},
-    BigInt, Constr, PlutusData, PostAlonzoTransactionOutput, TransactionInput, TransactionOutput,
-    Value,
+    BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
+    PostAlonzoTransactionOutput, TransactionInput, TransactionOutput, Value,
 };
+
+pub mod plutus_data {
+    use crate::scripts::TxContext;
+    use std::collections::HashMap;
+
+    pub enum PlutusData {
+        Constr(Constr<PlutusData>),
+        Map(HashMap<PlutusData, PlutusData>),
+        BigInt(BigInt),
+        BoundedBytes(Vec<u8>),
+        Array(Vec<PlutusData>),
+    }
+
+    pub struct Constr<T> {
+        pub tag: u64,
+        pub any_constructor: Option<u64>,
+        pub fields: Vec<T>,
+    }
+
+    pub enum BigInt {
+        Int { neg: bool, val: u64 },
+        BigUInt(Vec<u8>),
+        BigNInt(Vec<u8>),
+    }
+
+    impl From<TxContext> for PlutusData {
+        fn from(_: TxContext) -> Self {
+            todo!()
+        }
+    }
+
+    impl From<()> for PlutusData {
+        fn from(_: ()) -> Self {
+            PlutusData::BoundedBytes(Vec::new())
+        }
+    }
+
+    // impl AikenTermInterop for i64 {
+    //     fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
+    //         let constr = Constr {
+    //             tag: 121,
+    //             any_constructor: None,
+    //             fields: vec![PlutusData::BigInt(BigInt::Int((*self).into()))],
+    //         };
+    //         Ok(Term::Constant(Constant::Data(PlutusData::Constr(constr))))
+    //     }
+    // }
+
+    impl From<i64> for PlutusData {
+        fn from(num: i64) -> Self {
+            let neg = num.is_negative();
+            let val = num.abs() as u64;
+            let big_int = BigInt::Int { neg, val };
+            PlutusData::BigInt(big_int)
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests;
@@ -78,23 +136,6 @@ pub trait AikenTermInterop: Sized {
     fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>>;
 }
 
-impl AikenTermInterop for () {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-        Ok(Term::Constant(Constant::Unit))
-    }
-}
-
-impl AikenTermInterop for i64 {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-        let constr = Constr {
-            tag: 121,
-            any_constructor: None,
-            fields: vec![PlutusData::BigInt(BigInt::Int((*self).into()))],
-        };
-        Ok(Term::Constant(Constant::Data(PlutusData::Constr(constr))))
-    }
-}
-
 // TODO: Use real values https://github.com/MitchTurner/naumachia/issues/39
 impl AikenTermInterop for TxContext {
     fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
@@ -143,7 +184,53 @@ impl AikenTermInterop for TxContext {
     }
 }
 
-impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + Sync>
+impl From<PlutusData> for AikenPlutusData {
+    fn from(data: PlutusData) -> Self {
+        match data {
+            PlutusData::Constr(constr) => AikenPlutusData::Constr(constr.into()),
+            PlutusData::Map(map) => AikenPlutusData::Map(
+                map.into_iter()
+                    .map(|(key, value)| (AikenPlutusData::from(key), AikenPlutusData::from(value)))
+                    .collect::<Vec<_>>()
+                    .into(),
+            ),
+            PlutusData::BigInt(big_int) => AikenPlutusData::BigInt(big_int.into()),
+            PlutusData::BoundedBytes(bytes) => AikenPlutusData::BoundedBytes(bytes.into()),
+            PlutusData::Array(data) => {
+                AikenPlutusData::Array(data.into_iter().map(Into::into).collect())
+            }
+        }
+    }
+}
+
+impl From<Constr<PlutusData>> for AikenConstr<AikenPlutusData> {
+    fn from(constr: Constr<PlutusData>) -> Self {
+        AikenConstr {
+            tag: constr.tag,
+            any_constructor: constr.any_constructor,
+            fields: constr.fields.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl From<BigInt> for AikenBigInt {
+    fn from(big_int: BigInt) -> Self {
+        match big_int {
+            BigInt::Int { neg, val } => {
+                let new_val = val as i128;
+                let final_val = if neg { new_val * -1 } else { new_val };
+                let inner = final_val
+                    .try_into()
+                    .expect("Since this was converted from a u64, it should always be valid 🤞");
+                AikenBigInt::Int(inner)
+            }
+            BigInt::BigUInt(bytes) => AikenBigInt::BigUInt(bytes.into()),
+            BigInt::BigNInt(bytes) => AikenBigInt::BigNInt(bytes.into()),
+        }
+    }
+}
+
+impl<Datum: Into<PlutusData> + Send + Sync, Redeemer: Into<PlutusData> + Send + Sync>
     ValidatorCode<Datum, Redeemer> for RawPlutusValidator<Datum, Redeemer>
 {
     fn execute(&self, datum: Datum, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
@@ -152,21 +239,24 @@ impl<Datum: AikenTermInterop + Send + Sync, Redeemer: AikenTermInterop + Send + 
         let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
         let mut flat_decoder = Decoder::new(outer);
         let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
-        // println!("flat: {:?}", hex::encode(&flat));
+        // println!("hex: {:?}", hex::encode(&flat));
         let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(flat)
             .unwrap()
             .try_into()
             .map_err(as_failed_to_execute)?;
         // println!("whole: {}", &program);
-        let datum_term = datum.to_term().map_err(as_failed_to_execute)?;
+        let datum_data: PlutusData = datum.into();
+        let datum_term = Term::Constant(Constant::Data(datum_data.into()));
         // dbg!(&datum_term);
         let program = program.apply_term(&datum_term);
         // println!("apply datum: {}", &program);
-        let redeemer_term = redeemer.to_term().map_err(as_failed_to_execute)?;
+        let redeemer_data: PlutusData = redeemer.into();
+        let redeemer_term = Term::Constant(Constant::Data(redeemer_data.into()));
         // dbg!(&redeemer_term);
         let program = program.apply_term(&redeemer_term);
         // println!("apply redeemer: {}", &program);
-        let ctx_term = ctx.to_term().map_err(as_failed_to_execute)?;
+        let ctx_data: PlutusData = ctx.into();
+        let ctx_term = Term::Constant(Constant::Data(ctx_data.into()));
         // dbg!(&ctx_term);
         let program = program.apply_term(&ctx_term);
         // println!("apply ctx: {}", &program);
