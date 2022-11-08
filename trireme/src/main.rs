@@ -4,7 +4,6 @@ use crate::{
 };
 use anyhow::Result;
 use clap::Parser;
-use naumachia::trireme_ledger_client::TriremeLedgerClient;
 use naumachia::{
     backend::Backend,
     smart_contract::{SmartContract, SmartContractTrait},

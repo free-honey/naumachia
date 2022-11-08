@@ -1,6 +1,5 @@
 use super::*;
 use sha2::{Digest, Sha256};
-use uplc::PlutusData;
 
 struct HashedString {
     inner: Vec<u8>,
@@ -15,11 +14,10 @@ impl HashedString {
     }
 }
 
-impl AikenTermInterop for HashedString {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-        let data = PlutusData::BoundedBytes(self.inner.clone().into());
-        let term = Term::Constant(Constant::Data(data));
-        Ok(term)
+impl From<HashedString> for PlutusData {
+    fn from(hs: HashedString) -> Self {
+        let bytes = hs.inner;
+        PlutusData::BoundedBytes(bytes)
     }
 }
 
@@ -35,12 +33,10 @@ impl ClearString {
     }
 }
 
-impl AikenTermInterop for ClearString {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-        let bytes = self.inner.as_bytes().to_vec();
-        let data = PlutusData::BoundedBytes(bytes.into());
-        let term = Term::Constant(Constant::Data(data));
-        Ok(term)
+impl From<ClearString> for PlutusData {
+    fn from(cs: ClearString) -> Self {
+        let bytes = cs.inner.as_bytes().to_vec();
+        PlutusData::BoundedBytes(bytes)
     }
 }
 
@@ -49,7 +45,7 @@ impl AikenTermInterop for ClearString {
 #[ignore]
 #[test]
 fn execute_game_passes() {
-    // let script_file = game_lite_script_file();
+    // let script_file = _game_lite_script_file();
     let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
@@ -68,7 +64,7 @@ fn execute_game_passes() {
 #[ignore]
 #[test]
 fn execute_game_fails() {
-    // let script_file = game_lite_script_file();
+    // let script_file = _game_lite_script_file();
     let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
