@@ -26,62 +26,7 @@ use uplc::{
     PostAlonzoTransactionOutput, TransactionInput, TransactionOutput, Value,
 };
 
-pub mod plutus_data {
-    use crate::scripts::TxContext;
-    use std::collections::HashMap;
-
-    pub enum PlutusData {
-        Constr(Constr<PlutusData>),
-        Map(HashMap<PlutusData, PlutusData>),
-        BigInt(BigInt),
-        BoundedBytes(Vec<u8>),
-        Array(Vec<PlutusData>),
-    }
-
-    pub struct Constr<T> {
-        pub tag: u64,
-        pub any_constructor: Option<u64>,
-        pub fields: Vec<T>,
-    }
-
-    pub enum BigInt {
-        Int { neg: bool, val: u64 },
-        BigUInt(Vec<u8>),
-        BigNInt(Vec<u8>),
-    }
-
-    impl From<TxContext> for PlutusData {
-        fn from(_: TxContext) -> Self {
-            todo!()
-        }
-    }
-
-    impl From<()> for PlutusData {
-        fn from(_: ()) -> Self {
-            PlutusData::BoundedBytes(Vec::new())
-        }
-    }
-
-    // impl AikenTermInterop for i64 {
-    //     fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-    //         let constr = Constr {
-    //             tag: 121,
-    //             any_constructor: None,
-    //             fields: vec![PlutusData::BigInt(BigInt::Int((*self).into()))],
-    //         };
-    //         Ok(Term::Constant(Constant::Data(PlutusData::Constr(constr))))
-    //     }
-    // }
-
-    impl From<i64> for PlutusData {
-        fn from(num: i64) -> Self {
-            let neg = num.is_negative();
-            let val = num.abs() as u64;
-            let big_int = BigInt::Int { neg, val };
-            PlutusData::BigInt(big_int)
-        }
-    }
-}
+pub mod plutus_data;
 
 #[cfg(test)]
 mod tests;

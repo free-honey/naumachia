@@ -64,8 +64,8 @@ fn execute_game_passes() {
 #[ignore]
 #[test]
 fn execute_game_fails() {
-    let script_file = _game_lite_script_file();
-    // let script_file = game_script_file();
+    // let script_file = game_lite_script_file();
+    let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
     let word = "konnichiwa";
@@ -83,17 +83,17 @@ fn execute_game_fails() {
 // TODO: Broken
 // error: Err(EvaluationFailure)
 // logs: []
-fn _game_lite_script_file() -> PlutusScriptFile {
+fn game_lite_script_file() -> PlutusScriptFile {
     PlutusScriptFile {
         r#type: "PlutusScriptV1".to_string(),
         description: "".to_string(),
         // // The ScriptContext is just two `BuiltinData`s
-        // cborHex: "5840583e0100003232222533532323232333573466e3c010004488008488004dc900118030019bae\
-        // 003375c006200a264c649319ab9c490103505435000056120011"
-        //     .to_string(),
-        // Works (Replace all of ScriptContext with BuiltinData)
-        cborHex: "583a5838010000322225335323232333573466e3c00c004488008488004dc90009bae003375c0062008264c649319ab9c49103505435000041200101"
+        cborHex: "5840583e0100003232222533532323232333573466e3c010004488008488004dc900118030019bae\
+        003375c006200a264c649319ab9c490103505435000056120011"
             .to_string(),
+        // Works (Replace all of ScriptContext with BuiltinData)
+        // cborHex: "583a5838010000322225335323232333573466e3c00c004488008488004dc90009bae003375c0062008264c649319ab9c49103505435000041200101"
+        //     .to_string(),
     }
 }
 

@@ -29,7 +29,9 @@ fn execute_hello_passes() {
         signer: Address::Raw("placeholder".to_string()),
     };
 
-    assert!(script.execute(datum, redeemer, ctx).is_ok());
+    let res = script.execute(datum, redeemer, ctx);
+    dbg!(&res);
+    assert!(res.is_ok());
 }
 
 #[test]
