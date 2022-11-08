@@ -163,7 +163,7 @@ impl From<BigInt> for AikenBigInt {
         match big_int {
             BigInt::Int { neg, val } => {
                 let new_val = val as i128;
-                let final_val = if neg { new_val * -1 } else { new_val };
+                let final_val = if neg { -new_val } else { new_val };
                 let inner = final_val
                     .try_into()
                     .expect("Since this was converted from a u64, it should always be valid 🤞");

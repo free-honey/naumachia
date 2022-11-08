@@ -27,7 +27,7 @@ pub enum BigInt {
 impl From<i64> for BigInt {
     fn from(num: i64) -> Self {
         let neg = num.is_negative();
-        let val = num.abs() as u64;
+        let val = num.unsigned_abs();
         BigInt::Int { neg, val }
     }
 }
@@ -35,7 +35,7 @@ impl From<i64> for BigInt {
 impl From<i64> for PlutusData {
     fn from(num: i64) -> Self {
         let neg = num.is_negative();
-        let val = num.abs() as u64;
+        let val = num.unsigned_abs();
         let inner_data = PlutusData::BigInt(BigInt::Int { neg, val });
         let constr = Constr {
             tag: 121,
@@ -98,12 +98,11 @@ impl From<TxContext> for PlutusData {
             any_constructor: None,
             fields: vec![],
         });
-        let ctx = PlutusData::Constr(Constr {
+        PlutusData::Constr(Constr {
             tag: 121,
             any_constructor: None,
             fields: vec![tx_info, purpose],
-        });
-        ctx
+        })
     }
 }
 

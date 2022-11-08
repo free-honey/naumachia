@@ -16,8 +16,8 @@ impl HashedString {
 
 impl From<HashedString> for PlutusData {
     fn from(hs: HashedString) -> Self {
-        let bytes = hs.inner.clone();
-        PlutusData::BoundedBytes(bytes.into())
+        let bytes = hs.inner;
+        PlutusData::BoundedBytes(bytes)
     }
 }
 
@@ -36,7 +36,7 @@ impl ClearString {
 impl From<ClearString> for PlutusData {
     fn from(cs: ClearString) -> Self {
         let bytes = cs.inner.as_bytes().to_vec();
-        PlutusData::BoundedBytes(bytes.into())
+        PlutusData::BoundedBytes(bytes)
     }
 }
 
@@ -45,7 +45,7 @@ impl From<ClearString> for PlutusData {
 #[ignore]
 #[test]
 fn execute_game_passes() {
-    // let script_file = game_lite_script_file();
+    // let script_file = _game_lite_script_file();
     let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
@@ -64,7 +64,7 @@ fn execute_game_passes() {
 #[ignore]
 #[test]
 fn execute_game_fails() {
-    // let script_file = game_lite_script_file();
+    // let script_file = _game_lite_script_file();
     let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
@@ -83,11 +83,11 @@ fn execute_game_fails() {
 // TODO: Broken
 // error: Err(EvaluationFailure)
 // logs: []
-fn game_lite_script_file() -> PlutusScriptFile {
+fn _game_lite_script_file() -> PlutusScriptFile {
     PlutusScriptFile {
         r#type: "PlutusScriptV1".to_string(),
         description: "".to_string(),
-        // // The ScriptContext is just two `BuiltinData`s
+        // The ScriptContext is just two `BuiltinData`s
         cborHex: "5840583e0100003232222533532323232333573466e3c010004488008488004dc900118030019bae\
         003375c006200a264c649319ab9c490103505435000056120011"
             .to_string(),
