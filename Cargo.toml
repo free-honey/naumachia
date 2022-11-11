@@ -17,6 +17,7 @@ repository = "https://github.com/MitchTurner/naumachia"
 [workspace]
 members = [
     "sample-dApps/always-succeeds-contract",
+    "sample-dApps/game-contract",
     "trireme"
 ]
 

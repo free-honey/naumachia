@@ -1,7 +1,7 @@
 use crate::scripts::TxContext;
 use std::collections::BTreeMap;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum PlutusData {
     Constr(Constr<PlutusData>),
     Map(BTreeMap<PlutusData, PlutusData>),
@@ -10,14 +10,14 @@ pub enum PlutusData {
     Array(Vec<PlutusData>),
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Constr<T> {
     pub tag: u64,
     pub any_constructor: Option<u64>,
     pub fields: Vec<T>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum BigInt {
     Int { neg: bool, val: u64 },
     BigUInt(Vec<u8>),
@@ -29,6 +29,23 @@ impl From<i64> for BigInt {
         let neg = num.is_negative();
         let val = num.unsigned_abs();
         BigInt::Int { neg, val }
+    }
+}
+
+impl From<BigInt> for i64 {
+    fn from(big_int: BigInt) -> Self {
+        match big_int {
+            BigInt::Int { neg, val } => {
+                let mut value = val as i64;
+                if neg {
+                    -value
+                } else {
+                    value
+                }
+            }
+            BigInt::BigUInt(_) => todo!(),
+            BigInt::BigNInt(_) => todo!(),
+        }
     }
 }
 
@@ -154,5 +171,11 @@ fn no_time_bound() -> PlutusData {
 impl From<()> for PlutusData {
     fn from(_: ()) -> Self {
         PlutusData::BoundedBytes(Vec::new())
+    }
+}
+
+impl From<PlutusData> for () {
+    fn from(_: PlutusData) -> Self {
+        ()
     }
 }
