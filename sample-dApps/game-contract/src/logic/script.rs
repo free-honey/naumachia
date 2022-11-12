@@ -1,13 +1,8 @@
-use cardano_multiplatform_lib::{
-    address::{EnterpriseAddress, StakeCredential},
-    plutus::{PlutusScript, PlutusV1Script},
-};
 use naumachia::ledger_client::cml_client::validator_script::plutus_data::PlutusData;
 use naumachia::ledger_client::cml_client::validator_script::RawPlutusValidator;
 use naumachia::{
-    address::Address,
     ledger_client::cml_client::validator_script::PlutusScriptFile,
-    scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode},
+    scripts::{ScriptError, ScriptResult},
 };
 use sha2::Digest;
 use sha2::Sha256;

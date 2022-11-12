@@ -14,8 +14,12 @@ async fn lock_and_claim() {
         .build();
 
     let amount = 10_000_000;
-    let endpoint = GameEndpoints::Lock { amount };
-    let script = AlwaysSucceedsScript::try_new().unwrap();
+    let secret = "my secret";
+    let endpoint = GameEndpoints::Lock {
+        amount,
+        secret: secret.to_string(),
+    };
+    let script = get_script().unwrap();
     let contract = SmartContract::new(&GameLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     {
@@ -46,6 +50,7 @@ async fn lock_and_claim() {
         .unwrap();
     let call = GameEndpoints::Guess {
         output_id: instance.id().clone(),
+        guess: secret.to_string(),
     };
 
     contract.hit_endpoint(call).await.unwrap();

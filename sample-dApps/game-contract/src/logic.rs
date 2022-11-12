@@ -9,7 +9,6 @@ use naumachia::{
     transaction::TxActions,
     values::Values,
 };
-use std::hash::Hash;
 use thiserror::Error;
 
 pub mod script;
@@ -54,11 +53,10 @@ impl SCLogic for GameLogic {
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datum, Self::Redeemer>> {
         match endpoint {
-            GameEndpoints::Lock {
-                amount,
-                secret: string,
-            } => impl_lock(amount),
-            GameEndpoints::Guess { output_id, guess } => impl_guess(ledger_client, output_id).await,
+            GameEndpoints::Lock { amount, secret } => impl_lock(amount, &secret),
+            GameEndpoints::Guess { output_id, guess } => {
+                impl_guess(ledger_client, output_id, &guess).await
+            }
         }
     }
 
@@ -74,14 +72,14 @@ impl SCLogic for GameLogic {
     }
 }
 
-fn impl_lock(amount: u64) -> SCLogicResult<TxActions<HashedString, ClearString>> {
+fn impl_lock(amount: u64, secret: &str) -> SCLogicResult<TxActions<HashedString, ClearString>> {
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
-    let hashed_string = todo!();
+    let hashed_string = HashedString::new(secret);
     let tx_actions = TxActions::default().with_script_init(hashed_string, values, address);
     Ok(tx_actions)
 }
@@ -89,6 +87,7 @@ fn impl_lock(amount: u64) -> SCLogicResult<TxActions<HashedString, ClearString>>
 async fn impl_guess<LC: LedgerClient<HashedString, ClearString>>(
     ledger_client: &LC,
     output_id: OutputId,
+    guess: &str,
 ) -> SCLogicResult<TxActions<HashedString, ClearString>> {
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
@@ -102,7 +101,7 @@ async fn impl_guess<LC: LedgerClient<HashedString, ClearString>>(
         .find(|o| o.id() == &output_id)
         .ok_or(GameSucceedsError::OutputNotFound(output_id))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let redeemer = todo!();
+    let redeemer = ClearString::new(guess);
     let script_box = Box::new(script);
     let tx_actions = TxActions::default().with_script_redeem(output, redeemer, script_box);
     Ok(tx_actions)

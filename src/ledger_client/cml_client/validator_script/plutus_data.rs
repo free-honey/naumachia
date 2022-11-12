@@ -175,7 +175,5 @@ impl From<()> for PlutusData {
 }
 
 impl From<PlutusData> for () {
-    fn from(_: PlutusData) -> Self {
-        ()
-    }
+    fn from(_: PlutusData) -> Self {}
 }

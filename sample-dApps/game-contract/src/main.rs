@@ -19,7 +19,7 @@ enum ActionParams {
     /// Lock amount at script address
     Lock { amount: f64, secret: String },
     /// Claim locked Output at script address
-    Claim {
+    Guess {
         tx_hash: String,
         index: u64,
         guess: String,
@@ -45,7 +45,7 @@ async fn main() {
             })
             .await
             .unwrap(),
-        ActionParams::Claim {
+        ActionParams::Guess {
             tx_hash,
             index,
             guess,

@@ -1,8 +1,10 @@
 use crate::ledger_client::cml_client::validator_script::plutus_data::{BigInt, Constr, PlutusData};
-use cardano_multiplatform_lib::ledger::common::value::BigInt as CMLBigInt;
-use cardano_multiplatform_lib::plutus::{
-    ConstrPlutusData as CMLConstrPlutusData, PlutusData as CMLPlutusData, PlutusDataKind,
-    PlutusList as CMLPlutusList, PlutusList, PlutusMap as CMLPlutusMap,
+use cardano_multiplatform_lib::{
+    ledger::common::value::BigInt as CMLBigInt,
+    plutus::{
+        ConstrPlutusData as CMLConstrPlutusData, PlutusData as CMLPlutusData, PlutusDataKind,
+        PlutusList as CMLPlutusList, PlutusList, PlutusMap as CMLPlutusMap,
+    },
 };
 use std::collections::BTreeMap;
 
@@ -94,8 +96,7 @@ impl From<BigInt> for CMLBigInt {
                     false => "".to_string(),
                 };
                 string.push_str(&val.to_string());
-                // TODO: unwrap
-                CMLBigInt::from_str(&string).expect("Can this fail?")
+                CMLBigInt::from_str(&string).expect("Can this fail?") // TODO: unwrap
             }
             BigInt::BigUInt(_) => todo!(),
             BigInt::BigNInt(_) => todo!(),
@@ -151,7 +152,7 @@ impl From<CMLPlutusData> for PlutusData {
             }
             PlutusDataKind::Bytes => {
                 let bytes = value.as_bytes().expect("Should be bytes");
-                PlutusData::BoundedBytes(bytes.into())
+                PlutusData::BoundedBytes(bytes)
             }
         }
     }
