@@ -1,6 +1,6 @@
 [package]
-name = "always-succeeds-contract"
-description = "Always-Succeeds Script Cardano dApp"
+name = "game-contract"
+description = "Game Script Cardano dApp"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -11,7 +11,7 @@ repository.workspace = true
 path = "src/lib.rs"
 
 [[bin]]
-name = "always-cli"
+name = "game-cli"
 path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -25,5 +25,6 @@ naumachia = {path = "../..", version = "0.1.6"}
 serde = { version = "1.0.143", features = ["derive"] }
 serde_with = {version = "2.0.0", features = ["json"]}
 serde_json = "1.0"
+sha2 = "0.10.6"
 thiserror = "1.0.24"
 tokio = { version = "1.20.1", features = ["full"] }

@@ -28,6 +28,10 @@ pub enum ScriptError {
     FailedToExecute(String),
     #[error("Failed to construct: {0:?}")]
     FailedToConstruct(String),
+    #[error("Failed to deserialize Datum")]
+    DatumDeserialization(String),
+    #[error("Failed to deserialize Redeemer")]
+    RedeemerDeserialization(String),
 }
 
 pub fn as_failed_to_execute<E: Debug>(e: E) -> ScriptError {

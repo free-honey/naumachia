@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [workspace.package]
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Mitchell Turner"]
 license = "Apache-2.0"
@@ -17,6 +17,7 @@ repository = "https://github.com/MitchTurner/naumachia"
 [workspace]
 members = [
     "sample-dApps/always-succeeds-contract",
+    "sample-dApps/game-contract",
     "trireme"
 ]
 

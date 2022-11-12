@@ -49,6 +49,8 @@ where
 
     pub async fn process(&self, actions: TxActions<Datum, Redeemer>) -> Result<()> {
         let tx = actions.to_unbuilt_tx()?;
+        // TODO: I don't know that we need to check this here. That is more the business of the
+        //   ledger implementation, I think.
         can_spend_inputs(&tx, self.signer().await?)?;
         can_mint_tokens(&tx, &self.ledger_client.signer().await?)?;
         self.ledger_client.issue(tx).await?;
