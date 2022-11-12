@@ -16,7 +16,6 @@ use crate::{
 
 use async_trait::async_trait;
 use blockfrost_http_client::{MAINNET_URL, TEST_URL};
-use cardano_multiplatform_lib::plutus::PlutusData as CMLPlutusData;
 use dirs::home_dir;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
 use std::{marker::PhantomData, path::PathBuf};

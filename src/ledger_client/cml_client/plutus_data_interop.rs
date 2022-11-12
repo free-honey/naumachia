@@ -1,9 +1,10 @@
 use crate::ledger_client::cml_client::validator_script::plutus_data::{BigInt, Constr, PlutusData};
 use cardano_multiplatform_lib::ledger::common::value::BigInt as CMLBigInt;
 use cardano_multiplatform_lib::plutus::{
-    ConstrPlutusData as CMLConstrPlutusData, PlutusData as CMLPlutusData,
-    PlutusList as CMLPlutusList, PlutusMap as CMLPlutusMap,
+    ConstrPlutusData as CMLConstrPlutusData, PlutusData as CMLPlutusData, PlutusDataKind,
+    PlutusList as CMLPlutusList, PlutusList, PlutusMap as CMLPlutusMap,
 };
+use std::collections::BTreeMap;
 
 pub enum PlutusDataInteropError {
     CannotDeserializeFromPlutusData(PlutusData),
@@ -49,12 +50,10 @@ impl From<PlutusData> for CMLPlutusData {
                 CMLPlutusData::new_map(&plutus_map)
             }
             PlutusData::BigInt(big_int) => CMLPlutusData::new_integer(&big_int.into()),
-            PlutusData::BoundedBytes(_) => {
-                let bytes = todo!();
-                CMLPlutusData::new_bytes(bytes)
-            }
-            PlutusData::Array(_) => {
-                let list = todo!();
+            PlutusData::BoundedBytes(bytes) => CMLPlutusData::new_bytes(bytes),
+            PlutusData::Array(array) => {
+                let mut list = PlutusList::new();
+                array.into_iter().for_each(|data| list.add(&data.into()));
                 CMLPlutusData::new_list(&list)
             }
         }
@@ -66,6 +65,23 @@ impl From<Constr<PlutusData>> for CMLConstrPlutusData {
         let mut data = CMLPlutusList::new();
         constr.fields.into_iter().for_each(|d| data.add(&d.into()));
         CMLConstrPlutusData::new(&constr.tag.into(), &data)
+    }
+}
+
+impl From<CMLConstrPlutusData> for Constr<PlutusData> {
+    fn from(constr: CMLConstrPlutusData) -> Self {
+        let tag = constr.alternative().into();
+        let mut fields = Vec::new();
+        let data = constr.data();
+        let len = data.len();
+        for i in 0..len {
+            fields.push(data.get(i).into());
+        }
+        Constr {
+            tag,
+            any_constructor: None,
+            fields,
+        }
     }
 }
 
@@ -90,14 +106,54 @@ impl From<BigInt> for CMLBigInt {
 impl From<CMLBigInt> for BigInt {
     fn from(value: CMLBigInt) -> Self {
         let string = value.to_str();
-        dbg!(&string);
-        todo!()
+        let num = string.parse::<i64>().unwrap(); // TODO: unwrap
+        num.into()
     }
 }
 
 impl From<CMLPlutusData> for PlutusData {
-    fn from(_: CMLPlutusData) -> Self {
-        todo!()
+    fn from(value: CMLPlutusData) -> Self {
+        match value.kind() {
+            PlutusDataKind::ConstrPlutusData => {
+                let constr = value.as_constr_plutus_data().expect("Should be a constr");
+                PlutusData::Constr(constr.into())
+            }
+            PlutusDataKind::Map => {
+                let map = value.as_map().expect("Should be a map");
+                let keys = map.keys();
+                let mut keys_vec = Vec::new();
+                let keys_len = map.len();
+                for i in 0..keys_len {
+                    let key = keys.get(i);
+                    keys_vec.push(key);
+                }
+                let mut inner = BTreeMap::new();
+                keys_vec.iter().for_each(|key| {
+                    inner.insert(
+                        key.clone().into(),
+                        map.get(key).expect("should exist").into(),
+                    );
+                });
+                PlutusData::Map(inner)
+            }
+            PlutusDataKind::List => {
+                let list = value.as_list().expect("Should be a list");
+                let len = list.len();
+                let mut array = Vec::new();
+                for i in 0..len {
+                    array.push(list.get(i).into())
+                }
+                PlutusData::Array(array)
+            }
+            PlutusDataKind::Integer => {
+                let int = value.as_integer().expect("Should be a int");
+                PlutusData::BigInt(int.into())
+            }
+            PlutusDataKind::Bytes => {
+                let bytes = value.as_bytes().expect("Should be bytes");
+                PlutusData::BoundedBytes(bytes.into())
+            }
+        }
     }
 }
 

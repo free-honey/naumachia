@@ -36,7 +36,7 @@ impl From<BigInt> for i64 {
     fn from(big_int: BigInt) -> Self {
         match big_int {
             BigInt::Int { neg, val } => {
-                let mut value = val as i64;
+                let value = val as i64;
                 if neg {
                     -value
                 } else {
