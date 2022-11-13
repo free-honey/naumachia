@@ -1,5 +1,5 @@
 use super::error::*;
-use crate::ledger_client::cml_client::{
+use crate::trireme_ledger_client::cml_client::{
     error::CMLLCError::JsError, issuance_helpers::cmlvalue_from_bfvalues, Ledger, Spend, UTxO,
 };
 use async_trait::async_trait;

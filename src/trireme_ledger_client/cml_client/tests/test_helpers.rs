@@ -1,6 +1,8 @@
-use crate::ledger_client::cml_client::validator_script::{PlutusScriptFile, RawPlutusValidator};
+use crate::trireme_ledger_client::cml_client::key_manager::TESTNET;
+use crate::trireme_ledger_client::cml_client::validator_script::{
+    PlutusScriptFile, RawPlutusValidator,
+};
 use crate::{
-    ledger_client::cml_client::key_manager::TESTNET,
     output::{Output, UnbuiltOutput},
     scripts::ValidatorCode,
     values::Values,

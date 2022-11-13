@@ -1,12 +1,6 @@
 use crate::{
     error::*,
-    ledger_client::{
-        cml_client::{
-            blockfrost_ledger::BlockFrostLedger, plutus_data_interop::PlutusDataInterop,
-            CMLLedgerCLient,
-        },
-        LedgerClient, LedgerClientResult,
-    },
+    ledger_client::{LedgerClient, LedgerClientResult},
     output::Output,
     transaction::TxId,
     trireme_ledger_client::blockfrost_ledger::BlockfrostApiKey,
@@ -16,6 +10,9 @@ use crate::{
 
 use async_trait::async_trait;
 use blockfrost_http_client::{MAINNET_URL, TEST_URL};
+use cml_client::{
+    blockfrost_ledger::BlockFrostLedger, plutus_data_interop::PlutusDataInterop, CMLLedgerCLient,
+};
 use dirs::home_dir;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
 use std::{marker::PhantomData, path::PathBuf};
@@ -23,6 +20,7 @@ use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
 
 pub mod blockfrost_ledger;
+pub mod cml_client;
 pub mod raw_secret_phrase;
 
 pub const TRIREME_CONFIG_FOLDER: &str = ".trireme";

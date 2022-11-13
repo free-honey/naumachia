@@ -1,8 +1,4 @@
 use crate::{
-    ledger_client::cml_client::validator_script::error::{
-        RawPlutusScrioptError, RawPlutusScriptResult,
-    },
-    ledger_client::{cml_client::error::CMLLCError::JsError, cml_client::error::*},
     scripts::as_failed_to_execute,
     scripts::{ScriptResult, TxContext, ValidatorCode},
     Address,
@@ -13,7 +9,14 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::Decoder;
 
-use crate::ledger_client::cml_client::validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use crate::trireme_ledger_client::cml_client::error::CMLLCError::JsError;
+use crate::trireme_ledger_client::cml_client::error::*;
+use crate::trireme_ledger_client::cml_client::validator_script::error::{
+    RawPlutusScrioptError, RawPlutusScriptResult,
+};
+use crate::trireme_ledger_client::cml_client::validator_script::plutus_data::{
+    BigInt, Constr, PlutusData,
+};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, marker::PhantomData};
 use uplc::{

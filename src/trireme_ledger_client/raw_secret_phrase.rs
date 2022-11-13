@@ -1,5 +1,5 @@
-use crate::ledger_client::cml_client::error::{CMLLCError, Result as CMLLCResult};
-use crate::ledger_client::cml_client::Keys;
+use crate::trireme_ledger_client::cml_client::error::{CMLLCError, Result as CMLLCResult};
+use crate::trireme_ledger_client::cml_client::Keys;
 use async_trait::async_trait;
 use bip39::{Language, Mnemonic};
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, StakeCredential};

@@ -1,10 +1,10 @@
 use super::error::*;
-use crate::ledger_client::cml_client::error::CMLLCError::JsError;
-use crate::ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
-use crate::ledger_client::cml_client::UTxO;
 use crate::ledger_client::{LedgerClientError, LedgerClientResult};
 use crate::output::Output;
 use crate::scripts::ValidatorCode;
+use crate::trireme_ledger_client::cml_client::error::CMLLCError::JsError;
+use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
+use crate::trireme_ledger_client::cml_client::UTxO;
 use crate::values::Values;
 use crate::{Address, PolicyId};
 use blockfrost_http_client::models::Value as BFValue;
