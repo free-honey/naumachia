@@ -1,4 +1,4 @@
-use crate::ledger_client::cml_client::{
+use crate::trireme_ledger_client::cml_client::{
     error::CMLLCError, error::CMLLCError::JsError, error::Result as CMLLCResult,
     issuance_helpers::cmlvalue_from_bfvalues, Ledger, Spend, UTxO,
 };

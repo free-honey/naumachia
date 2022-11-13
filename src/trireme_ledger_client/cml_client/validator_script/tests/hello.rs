@@ -1,5 +1,7 @@
+use crate::trireme_ledger_client::cml_client::validator_script::{
+    PlutusScriptFile, RawPlutusValidator,
+};
 use crate::{
-    ledger_client::cml_client::validator_script::{PlutusScriptFile, RawPlutusValidator},
     scripts::{ScriptError, TxContext, ValidatorCode},
     Address,
 };

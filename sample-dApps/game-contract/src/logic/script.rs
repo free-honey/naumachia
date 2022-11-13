@@ -1,8 +1,7 @@
-use naumachia::ledger_client::cml_client::validator_script::plutus_data::PlutusData;
-use naumachia::ledger_client::cml_client::validator_script::RawPlutusValidator;
-use naumachia::{
-    ledger_client::cml_client::validator_script::PlutusScriptFile,
-    scripts::{ScriptError, ScriptResult},
+use naumachia::scripts::{ScriptError, ScriptResult};
+use naumachia::trireme_ledger_client::cml_client::validator_script::plutus_data::PlutusData;
+use naumachia::trireme_ledger_client::cml_client::validator_script::{
+    PlutusScriptFile, RawPlutusValidator,
 };
 use sha2::Digest;
 use sha2::Sha256;
