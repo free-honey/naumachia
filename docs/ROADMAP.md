@@ -1,0 +1,46 @@
+# Feature Progress/Roadmap
+
+### Backend
+- Transaction `Action`s (`src/transaction.rs`) 
+  - [x] Transfer
+  - [x] Mint
+  - [x] InitScript
+  - [x] RedeemScriptOutput
+  - [ ] Spend Specific Output (e.g. for one-time mintings) 
+  - [ ] Specify valid range
+  - [ ] Create Multi-Sig Tx?
+  - [ ]
+- In-memory Ledger Client
+  - [x] Transfer
+  - [ ] Mint
+    - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
+  - [x] InitScript
+  - [ ] RedeemScriptOutput
+    - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
+  - [ ] Spend Specific Output (e.g. for one-time mintings)
+  - [ ] Specify valid range
+  - [ ] Create Multi-Sig Tx?
+- Local-persisted Ledger Client
+    - [x] Transfer
+    - [ ] Mint
+      - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
+    - [x] InitScript
+    - [ ] RedeemScriptOutput
+      - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
+    - [ ] Spend Specific Output (e.g. for one-time mintings)
+    - [ ] Specify valid range
+    - [ ] Create Multi-Sig Tx?
+- Trireme Ledger Client
+  - CML Ledger Client
+    - Implemented Actions:
+      - [x] Transfer
+      - [ ] Mint
+      - [x] InitScript
+      - [x] RedeemScriptOutput
+      - [ ] Spend Specific Output (e.g. for one-time mintings)
+      - [ ] Specify valid range
+      - [ ] Create Multi-Sig Tx?
+    - Ledger Data Source
+      - [x] BlockFrost Client
+      - [ ] Local Ogmios
+      - [ ]
