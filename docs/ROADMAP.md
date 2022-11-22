@@ -1,6 +1,6 @@
 # Feature Progress/Roadmap
 
-### Backend
+### Naumachia
 - Transaction `Action`s (`src/transaction.rs`) 
   - [x] Transfer
   - [x] Mint
@@ -42,5 +42,29 @@
       - [ ] Create Multi-Sig Tx?
     - Ledger Data Source
       - [x] BlockFrost Client
-      - [ ] Local Ogmios
+      - [ ] Local Ogmios Client
+      - [ ] ...
       - [ ]
+
+### Trireme CLI
+- Keys
+  - [x] Init wallet with existing keys
+  - [ ] Init wallet with new keys
+  - [ ] Manage multiple keys/switch keys
+  - [ ] Use keys from browser wallet
+- Networks
+  - [x] Testnet
+  - [ ] Prod
+  - [ ] Pre-prod
+  - [ ] Preview
+  - [ ] Switch networks
+- Backends
+  - [x] Blockfrost
+  - [ ] Local 
+- Wallet Features
+  - [x] ADA/Lovelace balance
+  - [ ] Native tokens
+- dApp support
+  - [x] Provide setup for any dApp using Trireme Ledger Client
+  - [ ] Install WASM dApps to run as sub-processes of Trireme
+    - [ ] List and manage dApp library from `trireme`
