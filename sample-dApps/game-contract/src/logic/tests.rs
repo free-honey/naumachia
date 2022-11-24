@@ -11,7 +11,7 @@ async fn lock_and_claim() {
         .start_output(&me)
         .with_value(PolicyId::ADA, start_amount)
         .finish_output()
-        .build();
+        .build_in_memory();
 
     let amount = 10_000_000;
     let secret = "my secret";

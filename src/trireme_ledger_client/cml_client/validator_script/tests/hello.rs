@@ -32,7 +32,6 @@ fn execute_hello_passes() {
     };
 
     let res = script.execute(datum, redeemer, ctx);
-    dbg!(&res);
     assert!(res.is_ok());
 }
 

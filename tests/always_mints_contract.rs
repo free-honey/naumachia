@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use naumachia::address::PolicyId;
-use naumachia::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
+use naumachia::ledger_client::in_memory_ledger::{TestBackendsBuilder, TestLedgerClient};
 use naumachia::logic::SCLogicError;
 use naumachia::{
     address::Address,
@@ -75,7 +75,7 @@ fn mint(amount: u64, recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
 async fn can_mint_from_always_true_minting_policy() {
     let me = Address::new("me");
     let policy = PolicyId::native_token(MINT_POLICY_ID, &None);
-    let backend = TestBackendsBuilder::new(&me).build();
+    let backend = TestBackendsBuilder::new(&me).build_in_memory();
     // Call mint endpoint
     let amount = 69;
     let call = Endpoint::Mint { amount };
@@ -84,7 +84,7 @@ async fn can_mint_from_always_true_minting_policy() {
 
     // Check my balance for minted tokens
     let expected = amount;
-    let actual = <InMemoryLedgerClient<(), ()> as LedgerClient<(), ()>>::balance_at_address(
+    let actual = <TestLedgerClient<(), ()> as LedgerClient<(), ()>>::balance_at_address(
         &backend.ledger_client,
         &me,
         &policy,

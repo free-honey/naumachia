@@ -27,7 +27,7 @@ impl MintingPolicy for AliceCanMintPolicy {
 #[tokio::test]
 async fn mint__alice_can_mint() {
     let signer = Address::new("alice");
-    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
+    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build_in_memory();
     let amount = 100;
 
     let u_tx: TxActions<(), ()> =
@@ -50,7 +50,7 @@ async fn mint__alice_can_mint() {
 #[tokio::test]
 async fn mint__bob_cannot_mint() {
     let signer = Address::new("bob");
-    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
+    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build_in_memory();
     let amount = 100;
 
     let u_tx: TxActions<(), ()> =

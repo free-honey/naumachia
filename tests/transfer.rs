@@ -58,7 +58,7 @@ async fn can_transfer_and_keep_remainder() {
         .with_value(PolicyId::ADA, input_amount)
         .with_value(extra_policy.clone(), extra_amount)
         .finish_output()
-        .build();
+        .build_in_memory();
 
     let contract = SmartContract::new(&TransferADASmartContract, &backend);
 

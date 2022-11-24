@@ -25,7 +25,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Data<Datum> {
+struct LedgerData<Datum> {
     signer: Address,
     outputs: Vec<Output<Datum>>,
 }
@@ -38,10 +38,10 @@ enum LocalPersistedLCError {
     DuplicateInput, // TODO: WE don't need this once we dedupe
 }
 
-impl<Datum> Data<Datum> {
+impl<Datum> LedgerData<Datum> {
     pub fn new(signer: Address) -> Self {
         let outputs = Vec::new();
-        Data { signer, outputs }
+        LedgerData { signer, outputs }
     }
 
     pub fn add_output(&mut self, output: Output<Datum>) {
@@ -56,7 +56,7 @@ pub struct LocalPersistedLedgerClient<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
-fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
+pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     let tx_hash = Uuid::new_v4().to_string();
     let index = 0;
     let mut values = Values::default();
@@ -68,7 +68,7 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<D
     // TODO: Create builder
     pub fn init(path: &Path, signer: Address, starting_amount: u64) -> Result<Self> {
         if !path.exists() {
-            let mut data = Data::<Datum>::new(signer.clone());
+            let mut data = LedgerData::<Datum>::new(signer.clone());
             let output = starting_output(&signer, starting_amount);
             data.add_output(output); // TODO: Parameterize
             let serialized = serde_json::to_string(&data).unwrap();
@@ -86,7 +86,7 @@ impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<D
         Ok(record)
     }
 
-    fn get_data(&self) -> Data<Datum> {
+    fn get_data(&self) -> LedgerData<Datum> {
         let mut file = File::open(&self.path).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).expect("Could not read");

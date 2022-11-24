@@ -1,5 +1,7 @@
 use super::*;
-use crate::ledger_client::in_memory_ledger::{InMemoryLedgerClient, TestBackendsBuilder};
+use crate::ledger_client::in_memory_ledger::{
+    InMemoryStorage, TestBackendsBuilder, TestLedgerClient,
+};
 use crate::PolicyId;
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
@@ -10,7 +12,7 @@ prop_compose! {
         mut rng in arb_rng(),
         their_utxo_count: u8,
         decoys in prop::collection::vec(arb_policy_id(), 0..10),
-    ) -> (Address, Address, u64, Backend<(),(), InMemoryLedgerClient<(),()>>, Vec<PolicyId>) {
+    ) -> (Address, Address, u64, Backend<(),(), TestLedgerClient<(),(), InMemoryStorage<()>>>, Vec<PolicyId>) {
         let signer = Address::new("alice");
         let recipient = Address::new("bob");
         let mut total: u64 = 0;
@@ -32,7 +34,7 @@ prop_compose! {
                 builder = builder.start_output(&recipient).with_value(decoy.to_owned(), new_amount as u64).finish_output();
             }
         }
-        (signer, recipient, min_amount as u64, builder.build(), decoys)
+        (signer, recipient, min_amount as u64, builder.build_in_memory(), decoys)
     }
 }
 
@@ -56,7 +58,7 @@ async fn inner_test(
     signer: Address,
     recipient: Address,
     amount: u64,
-    backend: Backend<(), (), InMemoryLedgerClient<(), ()>>,
+    backend: Backend<(), (), TestLedgerClient<(), (), InMemoryStorage<()>>>,
     decoys: Vec<PolicyId>,
 ) {
     let u_tx = TxActions::default().with_transfer(amount, recipient.clone(), PolicyId::ADA);

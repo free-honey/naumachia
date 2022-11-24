@@ -51,16 +51,15 @@ impl<
         self.outputs.push((address.clone(), output))
     }
 
-    pub fn build(&self) -> Backend<Datum, Redeemer, InMemoryLedgerClient<Datum, Redeemer>> {
-        let txo_record = InMemoryLedgerClient {
-            signer: self.signer.clone(),
-            outputs: Arc::new(Mutex::new(self.outputs.clone())),
-            _redeemer: Default::default(),
-        };
+    pub fn build_in_memory(
+        &self,
+    ) -> Backend<Datum, Redeemer, TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>> {
+        let ledger_client =
+            TestLedgerClient::new_in_memory(self.signer.clone(), self.outputs.clone());
         Backend {
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
-            ledger_client: txo_record,
+            ledger_client,
         }
     }
 }
@@ -113,21 +112,85 @@ enum InMemoryLCError {
     DuplicateInput, // TODO: WE don't need this once we dedupe
 }
 
+#[async_trait::async_trait]
+pub trait TestLedgerStorage<Datum> {
+    async fn signer(&self) -> LedgerClientResult<Address>;
+    async fn outputs_by_count(
+        &self,
+        address: &Address,
+        count: usize,
+    ) -> LedgerClientResult<Vec<Output<Datum>>>;
+    async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>>;
+    async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()>;
+    async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()>;
+}
+
 #[derive(Debug)]
-pub struct InMemoryLedgerClient<Datum, Redeemer> {
-    pub signer: Address,
-    pub outputs: MutableData<Datum>,
+pub struct InMemoryStorage<Datum> {
+    signer: Address,
+    outputs: MutableData<Datum>,
+}
+
+#[async_trait::async_trait]
+impl<Datum: Send + Sync> TestLedgerStorage<Datum> for InMemoryStorage<Datum> {
+    async fn signer(&self) -> LedgerClientResult<Address> {
+        todo!()
+    }
+
+    async fn outputs_by_count(
+        &self,
+        address: &Address,
+        count: usize,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        todo!()
+    }
+
+    async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>> {
+        todo!()
+    }
+
+    async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
+        todo!()
+    }
+
+    async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub struct TestLedgerClient<Datum, Redeemer, Storage: TestLedgerStorage<Datum>> {
+    // pub signer: Address,
+    // pub outputs: MutableData<Datum>,
+    storage: Storage,
+    _datum: PhantomData<Datum>, // This is useless but makes calling it's functions easier
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
+impl<Datum: Send + Sync, Redeemer> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>> {
+    pub fn new_in_memory(signer: Address, outputs: Vec<(Address, Output<Datum>)>) -> Self {
+        let storage = InMemoryStorage {
+            signer,
+            outputs: Arc::new(Mutex::new(outputs)),
+        };
+        TestLedgerClient {
+            storage,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        }
+    }
+}
+
 #[async_trait]
-impl<Datum, Redeemer> LedgerClient<Datum, Redeemer> for InMemoryLedgerClient<Datum, Redeemer>
+impl<Datum, Redeemer, Storage> LedgerClient<Datum, Redeemer>
+    for TestLedgerClient<Datum, Redeemer, Storage>
 where
     Datum: Clone + PartialEq + Debug + Send + Sync,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
+    Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
-        Ok(self.signer.clone())
+        self.storage.signer().await
     }
 
     async fn outputs_at_address(
@@ -135,37 +198,39 @@ where
         address: &Address,
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        let outputs = self
-            .outputs
-            .lock()
-            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
-            .map_err(|e| {
-                LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
-            })?
-            .iter()
-            .cloned()
-            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-            .take(count)
-            .collect();
-        Ok(outputs)
+        // let outputs = self
+        //     .outputs
+        //     .lock()
+        //     .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+        //     .map_err(|e| {
+        //         LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
+        //     })?
+        //     .iter()
+        //     .cloned()
+        //     .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+        //     .take(count)
+        //     .collect();
+        // Ok(outputs)
+        self.storage.outputs_by_count(address, count).await
     }
 
     async fn all_outputs_at_address(
         &self,
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        let outputs = self
-            .outputs
-            .lock()
-            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
-            .map_err(|e| {
-                LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
-            })?
-            .iter()
-            .cloned()
-            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-            .collect();
-        Ok(outputs)
+        // let outputs = self
+        //     .outputs
+        //     .lock()
+        //     .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+        //     .map_err(|e| {
+        //         LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
+        //     })?
+        //     .iter()
+        //     .cloned()
+        //     .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+        //     .collect();
+        // Ok(outputs)
+        self.storage.all_outputs(address).await
     }
 
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
@@ -198,22 +263,26 @@ where
             .map_err(|_| InMemoryLCError::NotEnoughInputs)
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
 
-        let mut ledger_utxos = self
-            .outputs
-            .lock()
-            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
-            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+        // let mut ledger_utxos = self
+        //     .outputs
+        //     .lock()
+        //     .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+        //     .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+        // for input in combined_inputs {
+        //     let index = ledger_utxos
+        //         .iter()
+        //         .position(|(_, x)| x == &input)
+        //         .ok_or_else(|| {
+        //             LedgerClientError::FailedToRetrieveOutputWithId(
+        //                 input.id().clone(),
+        //                 Box::new(InMemoryLCError::DuplicateInput),
+        //             )
+        //         })?;
+        //     ledger_utxos.remove(index);
+        // }
+
         for input in combined_inputs {
-            let index = ledger_utxos
-                .iter()
-                .position(|(_, x)| x == &input)
-                .ok_or_else(|| {
-                    LedgerClientError::FailedToRetrieveOutputWithId(
-                        input.id().clone(),
-                        Box::new(InMemoryLCError::DuplicateInput),
-                    )
-                })?;
-            ledger_utxos.remove(index);
+            self.storage.remove_output(&input).await?;
         }
 
         let mut combined_outputs = Vec::new();
@@ -226,8 +295,91 @@ where
         combined_outputs.extend(built_outputs);
 
         for output in combined_outputs {
-            ledger_utxos.push((output.owner().clone(), output.clone()))
+            // ledger_utxos.push((output.owner().clone(), output.clone()))
+            self.storage.add_output(&output).await?;
         }
         Ok(TxId::new("Not a real id"))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(non_snake_case)]
+    use super::*;
+    use crate::ledger_client::local_persisted_ledger::starting_output;
+    use crate::output::UnbuiltOutput;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn outputs_at_address() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("data");
+        let signer = Address::new("alice");
+        let starting_amount = 10_000_000;
+        // let record = TestLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+        let output = starting_output::<()>(&signer, starting_amount);
+        let outputs = vec![(signer.clone(), output)];
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_in_memory(signer.clone(), outputs);
+        let mut outputs = record.all_outputs_at_address(&signer).await.unwrap();
+        assert_eq!(outputs.len(), 1);
+        let first_output = outputs.pop().unwrap();
+        let expected = starting_amount;
+        let actual = first_output.values().get(&PolicyId::ADA).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    // #[tokio::test]
+    // async fn balance_at_address() {
+    //     let tmp_dir = TempDir::new().unwrap();
+    //     let path = tmp_dir.path().join("data");
+    //     let signer = Address::new("alice");
+    //     let starting_amount = 10_000_000;
+    //     let record =
+    //         TestLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+    //     let expected = starting_amount;
+    //     let actual = record
+    //         .balance_at_address(&signer, &PolicyId::ADA)
+    //         .await
+    //         .unwrap();
+    //     assert_eq!(expected, actual);
+    // }
+    //
+    // #[tokio::test]
+    // async fn issue() {
+    //     let tmp_dir = TempDir::new().unwrap();
+    //     let path = tmp_dir.path().join("data");
+    //     let signer = Address::new("alice");
+    //     let starting_amount = 10_000_000;
+    //     let record =
+    //         TestLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
+    //     let first_output = record
+    //         .all_outputs_at_address(&signer)
+    //         .await
+    //         .unwrap()
+    //         .pop()
+    //         .unwrap();
+    //     let owner = Address::new("bob");
+    //     let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
+    //     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+    //         script_inputs: vec![],
+    //         unbuilt_outputs: vec![new_output],
+    //         minting: Default::default(),
+    //         policies: Default::default(),
+    //     };
+    //     record.issue(tx).await.unwrap();
+    //     let expected_bob = starting_amount;
+    //     let actual_bob = record
+    //         .balance_at_address(&owner, &PolicyId::ADA)
+    //         .await
+    //         .unwrap();
+    //     assert_eq!(expected_bob, actual_bob);
+    //
+    //     let expected_alice = 0;
+    //     let actual_alice = record
+    //         .balance_at_address(&signer, &PolicyId::ADA)
+    //         .await
+    //         .unwrap();
+    //     assert_eq!(expected_alice, actual_alice)
+    // }
 }
