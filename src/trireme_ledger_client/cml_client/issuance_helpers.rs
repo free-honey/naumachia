@@ -1,31 +1,33 @@
 use super::error::*;
-use crate::ledger_client::{LedgerClientError, LedgerClientResult};
-use crate::output::Output;
-use crate::scripts::ValidatorCode;
-use crate::trireme_ledger_client::cml_client::error::CMLLCError::JsError;
-use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
-use crate::trireme_ledger_client::cml_client::UTxO;
-use crate::values::Values;
-use crate::{Address, PolicyId};
+use crate::{
+    ledger_client::{LedgerClientError, LedgerClientResult},
+    output::Output,
+    scripts::ValidatorCode,
+    trireme_ledger_client::cml_client::{
+        error::CMLLCError::JsError, plutus_data_interop::PlutusDataInterop, UTxO,
+    },
+    values::Values,
+    Address, PolicyId,
+};
 use blockfrost_http_client::models::Value as BFValue;
-use cardano_multiplatform_lib::builders::output_builder::TransactionOutputBuilder;
-use cardano_multiplatform_lib::builders::tx_builder::{
-    ChangeSelectionAlgo, CoinSelectionStrategyCIP2, SignedTxBuilder,
-};
-use cardano_multiplatform_lib::builders::witness_builder::{
-    PartialPlutusWitness, PlutusScriptWitness,
-};
-use cardano_multiplatform_lib::crypto::{PrivateKey, TransactionHash};
-use cardano_multiplatform_lib::ledger::common::hash::hash_transaction;
-use cardano_multiplatform_lib::ledger::shelley::witness::make_vkey_witness;
-use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script};
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
-    builders::input_builder::{InputBuilderResult, SingleInputBuilder},
-    builders::tx_builder::{TransactionBuilder, TransactionBuilderConfigBuilder},
-    ledger::alonzo::fees::LinearFee,
-    ledger::common::value::{BigNum, Int, Value as CMLValue},
+    builders::{
+        input_builder::{InputBuilderResult, SingleInputBuilder},
+        output_builder::TransactionOutputBuilder,
+        tx_builder::{ChangeSelectionAlgo, CoinSelectionStrategyCIP2, SignedTxBuilder},
+        tx_builder::{TransactionBuilder, TransactionBuilderConfigBuilder},
+        witness_builder::{PartialPlutusWitness, PlutusScriptWitness},
+    },
+    crypto::{PrivateKey, TransactionHash},
+    ledger::{
+        alonzo::fees::LinearFee,
+        common::hash::hash_transaction,
+        common::value::{BigNum, Int, Value as CMLValue},
+        shelley::witness::make_vkey_witness,
+    },
     plutus::{CostModel, Costmdls, ExUnitPrices, Language},
+    plutus::{PlutusScript, PlutusV1Script},
     AssetName, Assets, MultiAsset, PolicyID, Transaction as CMLTransaction, TransactionInput,
     TransactionOutput, UnitInterval,
 };
@@ -328,7 +330,7 @@ pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
     script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
 ) -> LedgerClientResult<PlutusScript> {
     let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
-    let script_bytes = hex::decode(&script_hex).map_err(as_failed_to_issue_tx)?;
+    let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
     let v1 = PlutusV1Script::from_bytes(script_bytes)
         .map_err(|e| CMLLCError::Deserialize(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
