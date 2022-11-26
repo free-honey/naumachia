@@ -1,7 +1,7 @@
 use thiserror::Error;
 
-pub mod in_memory_ledger;
-pub mod local_persisted_ledger;
+pub mod test_ledger_client;
+
 use async_trait::async_trait;
 
 use crate::{

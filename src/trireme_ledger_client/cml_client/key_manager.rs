@@ -80,7 +80,7 @@ impl KeyManager {
 
 pub fn load_phrase_from_file(config_path: &str) -> String {
     let path = Path::new(config_path);
-    let text = fs::read_to_string(&path).unwrap();
+    let text = fs::read_to_string(path).unwrap();
     let config: toml::Value = toml::from_str(&text).unwrap();
     config["phrase"].as_str().unwrap().to_string()
 }

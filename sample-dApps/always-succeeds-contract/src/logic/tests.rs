@@ -1,6 +1,6 @@
 use super::*;
 use naumachia::address::Address;
-use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
+use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 
 #[tokio::test]
@@ -11,7 +11,7 @@ async fn lock_and_claim() {
         .start_output(&me)
         .with_value(PolicyId::ADA, start_amount)
         .finish_output()
-        .build();
+        .build_in_memory();
 
     let amount = 10_000_000;
     let endpoint = AlwaysSucceedsEndpoints::Lock { amount };

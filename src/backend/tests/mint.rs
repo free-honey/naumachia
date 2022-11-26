@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     error::Error,
-    ledger_client::in_memory_ledger::TestBackendsBuilder,
+    ledger_client::test_ledger_client::TestBackendsBuilder,
     scripts::TxContext,
     scripts::{MintingPolicy, ScriptError, ScriptResult},
 };
@@ -27,7 +27,7 @@ impl MintingPolicy for AliceCanMintPolicy {
 #[tokio::test]
 async fn mint__alice_can_mint() {
     let signer = Address::new("alice");
-    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
+    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build_in_memory();
     let amount = 100;
 
     let u_tx: TxActions<(), ()> =
@@ -50,7 +50,7 @@ async fn mint__alice_can_mint() {
 #[tokio::test]
 async fn mint__bob_cannot_mint() {
     let signer = Address::new("bob");
-    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build();
+    let backend = TestBackendsBuilder::<(), ()>::new(&signer).build_in_memory();
     let amount = 100;
 
     let u_tx: TxActions<(), ()> =

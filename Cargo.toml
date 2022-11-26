@@ -38,6 +38,7 @@ hex = "0.4.3"
 blockfrost-http-client = "0.0.6"
 dirs = "4.0.0"
 uplc = "0.0.22"
+tempfile = "3.3.0"
 minicbor = "0.18.0"
 
 [dependencies.uuid]
@@ -52,5 +53,4 @@ features = [
 clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
-tempfile = "3.3.0"
 sha2 = "0.10.6"
