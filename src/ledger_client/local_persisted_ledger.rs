@@ -8,6 +8,7 @@ use std::{
     marker::PhantomData,
     path::{Path, PathBuf},
 };
+use tempfile::TempDir;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -26,7 +27,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-struct LedgerData<Datum> {
+pub(crate) struct LedgerData<Datum> {
     signer: Address,
     outputs: Vec<Output<Datum>>,
 }
@@ -66,12 +67,59 @@ pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
 }
 
 pub struct LocalPersistedStorage<Datum> {
+    tmp_dir: TempDir,
+    signer: Address,
     _datum: PhantomData<Datum>,
 }
 
-impl<Datum> TestLedgerStorage<Datum> for LocalPersistedStorage<Datum> {
+const DATA: &str = "data";
+
+impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
+    pub fn init(tmp_dir: TempDir, signer: Address, starting_amount: u64) -> Self {
+        let path = tmp_dir.path().join(DATA);
+        if !path.exists() {
+            let mut data = LedgerData::<Datum>::new(signer.clone());
+            let output = starting_output(&signer, starting_amount);
+            data.add_output(output); // TODO: Parameterize
+            let serialized = serde_json::to_string(&data).unwrap();
+            let mut file = File::create(path).unwrap();
+            file.write_all(&serialized.into_bytes()).unwrap();
+        } else {
+            // TODO: Ensure it is valid data?
+        }
+
+        LocalPersistedStorage {
+            tmp_dir,
+            signer,
+            _datum: Default::default(),
+        }
+    }
+
+    pub(crate) fn get_data(&self) -> LedgerData<Datum> {
+        let path = self.tmp_dir.path().join(DATA);
+        let mut file = File::open(&path).unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).expect("Could not read");
+        serde_json::from_str(&contents).unwrap()
+    }
+
+    fn update_outputs(&self, new_outputs: Vec<Output<Datum>>) {
+        let path = self.tmp_dir.path().join(DATA);
+        let mut data = self.get_data();
+        data.outputs = new_outputs;
+        let serialized = serde_json::to_string(&data).unwrap();
+        let mut file = File::create(&path).unwrap();
+        file.write_all(&serialized.into_bytes()).unwrap();
+    }
+}
+
+#[async_trait::async_trait]
+impl<Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq> TestLedgerStorage<Datum>
+    for LocalPersistedStorage<Datum>
+{
     async fn signer(&self) -> LedgerClientResult<Address> {
-        todo!()
+        let signer = self.get_data().signer;
+        Ok(signer)
     }
 
     async fn outputs_by_count(
@@ -79,19 +127,48 @@ impl<Datum> TestLedgerStorage<Datum> for LocalPersistedStorage<Datum> {
         address: &Address,
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        todo!()
+        let data = self.get_data();
+        let outputs = data
+            .outputs
+            .into_iter()
+            .filter(|o| o.owner() == address)
+            .take(count)
+            .collect();
+        Ok(outputs)
     }
 
     async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>> {
-        todo!()
+        let data = self.get_data();
+        let outputs = data
+            .outputs
+            .into_iter()
+            .filter(|o| o.owner() == address)
+            .collect();
+        Ok(outputs)
     }
 
     async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
-        todo!()
+        let mut ledger_utxos = self.get_data().outputs;
+
+        let index = ledger_utxos
+            .iter()
+            .position(|x| x == output)
+            .ok_or_else(|| {
+                LedgerClientError::FailedToRetrieveOutputWithId(
+                    output.id().clone(),
+                    Box::new(LocalPersistedLCError::DuplicateInput),
+                )
+            })?;
+        ledger_utxos.remove(index);
+        self.update_outputs(ledger_utxos);
+        Ok(())
     }
 
     async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
-        todo!()
+        let mut ledger_utxos = self.get_data().outputs;
+        ledger_utxos.push(output.to_owned());
+        self.update_outputs(ledger_utxos);
+        Ok(())
     }
 }
 
@@ -237,18 +314,16 @@ where
 mod tests {
     #![allow(non_snake_case)]
     use super::*;
+    use crate::ledger_client::in_memory_ledger::TestLedgerClient;
     use crate::output::UnbuiltOutput;
     use tempfile::TempDir;
 
     #[tokio::test]
     async fn outputs_at_address() {
-        let tmp_dir = TempDir::new().unwrap();
-        let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
-        let record =
-            LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
-                .unwrap();
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_local_persisted(signer.clone(), starting_amount);
         let mut outputs = record.all_outputs_at_address(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
@@ -263,9 +338,8 @@ mod tests {
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
-        let record =
-            LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
-                .unwrap();
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_local_persisted(signer.clone(), starting_amount);
         let expected = starting_amount;
         let actual = record
             .balance_at_address(&signer, &PolicyId::ADA)
@@ -280,9 +354,8 @@ mod tests {
         let path = tmp_dir.path().join("data");
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
-        let record =
-            LocalPersistedLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount)
-                .unwrap();
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_local_persisted(signer.clone(), starting_amount);
         let first_output = record
             .all_outputs_at_address(&signer)
             .await

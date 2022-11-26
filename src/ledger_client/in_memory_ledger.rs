@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::{
     fmt::Debug,
     hash::Hash,
@@ -6,6 +7,7 @@ use std::{
 };
 use uuid::Uuid;
 
+use crate::ledger_client::local_persisted_ledger::LocalPersistedStorage;
 use crate::ledger_client::{build_outputs, new_wallet_output};
 use crate::transaction::TxId;
 use crate::{
@@ -17,6 +19,9 @@ use crate::{
     Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+use tempfile::TempDir;
 use thiserror::Error;
 
 pub struct TestBackendsBuilder<Datum, Redeemer> {
@@ -224,6 +229,21 @@ impl<Datum: Clone + Send + Sync + PartialEq, Redeemer>
             _datum: Default::default(),
             _redeemer: Default::default(),
         }
+    }
+}
+impl<Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned, Redeemer>
+    TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<Datum>>
+{
+    pub fn new_local_persisted(signer: Address, starting_amount: u64) -> Self {
+        let tmp_dir = TempDir::new().unwrap();
+        let storage = LocalPersistedStorage::init(tmp_dir, signer, starting_amount);
+        let _ = storage.get_data();
+        let client = TestLedgerClient {
+            storage,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        client
     }
 }
 
