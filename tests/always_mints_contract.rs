@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use naumachia::address::PolicyId;
-use naumachia::ledger_client::in_memory_ledger::{
-    InMemoryStorage, TestBackendsBuilder, TestLedgerClient,
+use naumachia::ledger_client::test_ledger_client::{
+    in_memory_storage::InMemoryStorage, TestBackendsBuilder, TestLedgerClient,
 };
 use naumachia::logic::SCLogicError;
 use naumachia::{

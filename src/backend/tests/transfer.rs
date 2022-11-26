@@ -1,8 +1,10 @@
 use super::*;
-use crate::ledger_client::in_memory_ledger::{
-    InMemoryStorage, TestBackendsBuilder, TestLedgerClient,
+use crate::{
+    ledger_client::test_ledger_client::{
+        in_memory_storage::InMemoryStorage, TestBackendsBuilder, TestLedgerClient,
+    },
+    PolicyId,
 };
-use crate::PolicyId;
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 

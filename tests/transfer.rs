@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use naumachia::address::PolicyId;
-use naumachia::ledger_client::in_memory_ledger::TestBackendsBuilder;
+use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
 use naumachia::logic::SCLogicResult;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{

@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     error::Error,
-    ledger_client::in_memory_ledger::TestBackendsBuilder,
+    ledger_client::test_ledger_client::TestBackendsBuilder,
     scripts::TxContext,
     scripts::{MintingPolicy, ScriptError, ScriptResult},
 };
