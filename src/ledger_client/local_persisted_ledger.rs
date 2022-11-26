@@ -11,6 +11,7 @@ use std::{
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::ledger_client::in_memory_ledger::TestLedgerStorage;
 use crate::ledger_client::LedgerClientError::FailedToIssueTx;
 use crate::ledger_client::{build_outputs, new_wallet_output};
 use crate::transaction::TxId;
@@ -62,6 +63,36 @@ pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
     Output::new_wallet(tx_hash, index, owner.clone(), values)
+}
+
+pub struct LocalPersistedStorage<Datum> {
+    _datum: PhantomData<Datum>,
+}
+
+impl<Datum> TestLedgerStorage<Datum> for LocalPersistedStorage<Datum> {
+    async fn signer(&self) -> LedgerClientResult<Address> {
+        todo!()
+    }
+
+    async fn outputs_by_count(
+        &self,
+        address: &Address,
+        count: usize,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
+        todo!()
+    }
+
+    async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>> {
+        todo!()
+    }
+
+    async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
+        todo!()
+    }
+
+    async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
+        todo!()
+    }
 }
 
 impl<Datum: Serialize + DeserializeOwned, Redeemer> LocalPersistedLedgerClient<Datum, Redeemer> {

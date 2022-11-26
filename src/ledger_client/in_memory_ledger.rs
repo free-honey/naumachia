@@ -132,9 +132,9 @@ pub struct InMemoryStorage<Datum> {
 }
 
 #[async_trait::async_trait]
-impl<Datum: Send + Sync> TestLedgerStorage<Datum> for InMemoryStorage<Datum> {
+impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemoryStorage<Datum> {
     async fn signer(&self) -> LedgerClientResult<Address> {
-        todo!()
+        Ok(self.signer.clone())
     }
 
     async fn outputs_by_count(
@@ -142,19 +142,63 @@ impl<Datum: Send + Sync> TestLedgerStorage<Datum> for InMemoryStorage<Datum> {
         address: &Address,
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        todo!()
+        let outputs = self
+            .outputs
+            .lock()
+            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| {
+                LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
+            })?
+            .iter()
+            .cloned()
+            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+            .take(count)
+            .collect();
+        Ok(outputs)
     }
 
     async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>> {
-        todo!()
+        let outputs = self
+            .outputs
+            .lock()
+            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| {
+                LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
+            })?
+            .iter()
+            .cloned()
+            .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
+            .collect();
+        Ok(outputs)
     }
 
     async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
-        todo!()
+        let mut ledger_utxos = self
+            .outputs
+            .lock()
+            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+        let index = ledger_utxos
+            .iter()
+            .position(|(_, x)| x == output)
+            .ok_or_else(|| {
+                LedgerClientError::FailedToRetrieveOutputWithId(
+                    output.id().clone(),
+                    Box::new(InMemoryLCError::DuplicateInput),
+                )
+            })?;
+        ledger_utxos.remove(index);
+        Ok(())
     }
 
     async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
-        todo!()
+        let mut ledger_utxos = self
+            .outputs
+            .lock()
+            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+        ledger_utxos.push((output.owner().clone(), output.clone()));
+        Ok(())
     }
 }
 
@@ -167,7 +211,9 @@ pub struct TestLedgerClient<Datum, Redeemer, Storage: TestLedgerStorage<Datum>> 
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
-impl<Datum: Send + Sync, Redeemer> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>> {
+impl<Datum: Clone + Send + Sync + PartialEq, Redeemer>
+    TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>
+{
     pub fn new_in_memory(signer: Address, outputs: Vec<(Address, Output<Datum>)>) -> Self {
         let storage = InMemoryStorage {
             signer,
@@ -198,19 +244,6 @@ where
         address: &Address,
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        // let outputs = self
-        //     .outputs
-        //     .lock()
-        //     .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
-        //     .map_err(|e| {
-        //         LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
-        //     })?
-        //     .iter()
-        //     .cloned()
-        //     .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-        //     .take(count)
-        //     .collect();
-        // Ok(outputs)
         self.storage.outputs_by_count(address, count).await
     }
 
@@ -218,18 +251,6 @@ where
         &self,
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        // let outputs = self
-        //     .outputs
-        //     .lock()
-        //     .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
-        //     .map_err(|e| {
-        //         LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
-        //     })?
-        //     .iter()
-        //     .cloned()
-        //     .filter_map(|(a, o)| if &a == address { Some(o) } else { None })
-        //     .collect();
-        // Ok(outputs)
         self.storage.all_outputs(address).await
     }
 
@@ -263,24 +284,6 @@ where
             .map_err(|_| InMemoryLCError::NotEnoughInputs)
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
 
-        // let mut ledger_utxos = self
-        //     .outputs
-        //     .lock()
-        //     .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
-        //     .map_err(|e| FailedToIssueTx(Box::new(e)))?;
-        // for input in combined_inputs {
-        //     let index = ledger_utxos
-        //         .iter()
-        //         .position(|(_, x)| x == &input)
-        //         .ok_or_else(|| {
-        //             LedgerClientError::FailedToRetrieveOutputWithId(
-        //                 input.id().clone(),
-        //                 Box::new(InMemoryLCError::DuplicateInput),
-        //             )
-        //         })?;
-        //     ledger_utxos.remove(index);
-        // }
-
         for input in combined_inputs {
             self.storage.remove_output(&input).await?;
         }
@@ -295,7 +298,6 @@ where
         combined_outputs.extend(built_outputs);
 
         for output in combined_outputs {
-            // ledger_utxos.push((output.owner().clone(), output.clone()))
             self.storage.add_output(&output).await?;
         }
         Ok(TxId::new("Not a real id"))
@@ -329,57 +331,61 @@ mod tests {
         assert_eq!(expected, actual);
     }
 
-    // #[tokio::test]
-    // async fn balance_at_address() {
-    //     let tmp_dir = TempDir::new().unwrap();
-    //     let path = tmp_dir.path().join("data");
-    //     let signer = Address::new("alice");
-    //     let starting_amount = 10_000_000;
-    //     let record =
-    //         TestLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
-    //     let expected = starting_amount;
-    //     let actual = record
-    //         .balance_at_address(&signer, &PolicyId::ADA)
-    //         .await
-    //         .unwrap();
-    //     assert_eq!(expected, actual);
-    // }
-    //
-    // #[tokio::test]
-    // async fn issue() {
-    //     let tmp_dir = TempDir::new().unwrap();
-    //     let path = tmp_dir.path().join("data");
-    //     let signer = Address::new("alice");
-    //     let starting_amount = 10_000_000;
-    //     let record =
-    //         TestLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
-    //     let first_output = record
-    //         .all_outputs_at_address(&signer)
-    //         .await
-    //         .unwrap()
-    //         .pop()
-    //         .unwrap();
-    //     let owner = Address::new("bob");
-    //     let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
-    //     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
-    //         script_inputs: vec![],
-    //         unbuilt_outputs: vec![new_output],
-    //         minting: Default::default(),
-    //         policies: Default::default(),
-    //     };
-    //     record.issue(tx).await.unwrap();
-    //     let expected_bob = starting_amount;
-    //     let actual_bob = record
-    //         .balance_at_address(&owner, &PolicyId::ADA)
-    //         .await
-    //         .unwrap();
-    //     assert_eq!(expected_bob, actual_bob);
-    //
-    //     let expected_alice = 0;
-    //     let actual_alice = record
-    //         .balance_at_address(&signer, &PolicyId::ADA)
-    //         .await
-    //         .unwrap();
-    //     assert_eq!(expected_alice, actual_alice)
-    // }
+    #[tokio::test]
+    async fn balance_at_address() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("data");
+        let signer = Address::new("alice");
+        let starting_amount = 10_000_000;
+        let output = starting_output::<()>(&signer, starting_amount);
+        let outputs = vec![(signer.clone(), output)];
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_in_memory(signer.clone(), outputs);
+        let expected = starting_amount;
+        let actual = record
+            .balance_at_address(&signer, &PolicyId::ADA)
+            .await
+            .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[tokio::test]
+    async fn issue() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("data");
+        let signer = Address::new("alice");
+        let starting_amount = 10_000_000;
+        let output = starting_output::<()>(&signer, starting_amount);
+        let outputs = vec![(signer.clone(), output)];
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_in_memory(signer.clone(), outputs);
+        let first_output = record
+            .all_outputs_at_address(&signer)
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+        let owner = Address::new("bob");
+        let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
+        let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+            script_inputs: vec![],
+            unbuilt_outputs: vec![new_output],
+            minting: Default::default(),
+            policies: Default::default(),
+        };
+        record.issue(tx).await.unwrap();
+        let expected_bob = starting_amount;
+        let actual_bob = record
+            .balance_at_address(&owner, &PolicyId::ADA)
+            .await
+            .unwrap();
+        assert_eq!(expected_bob, actual_bob);
+
+        let expected_alice = 0;
+        let actual_alice = record
+            .balance_at_address(&signer, &PolicyId::ADA)
+            .await
+            .unwrap();
+        assert_eq!(expected_alice, actual_alice)
+    }
 }
