@@ -161,12 +161,11 @@ impl<Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned, Rede
         let tmp_dir = TempDir::new().unwrap();
         let storage = LocalPersistedStorage::init(tmp_dir, signer, starting_amount);
         let _ = storage.get_data();
-        let client = TestLedgerClient {
+        TestLedgerClient {
             storage,
             _datum: Default::default(),
             _redeemer: Default::default(),
-        };
-        client
+        }
     }
 }
 

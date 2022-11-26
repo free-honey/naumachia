@@ -101,7 +101,6 @@ mod tests {
     async fn outputs_at_address() {
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
-        // let record = TestLedgerClient::<(), ()>::init(&path, signer.clone(), starting_amount).unwrap();
         let output = starting_output::<()>(&signer, starting_amount);
         let outputs = vec![(signer.clone(), output)];
         let record: TestLedgerClient<(), (), _> =
