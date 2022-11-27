@@ -42,16 +42,16 @@ pub enum AlwaysSucceedsError {
 
 #[async_trait]
 impl SCLogic for AlwaysSucceedsLogic {
-    type Endpoint = AlwaysSucceedsEndpoints;
-    type Lookup = AlwaysSucceedsLookups;
-    type LookupResponse = AlwaysSucceedsLookupResponses;
-    type Datum = ();
-    type Redeemer = ();
+    type Endpoints = AlwaysSucceedsEndpoints;
+    type Lookups = AlwaysSucceedsLookups;
+    type LookupResponses = AlwaysSucceedsLookupResponses;
+    type Datums = ();
+    type Redeemers = ();
 
-    async fn handle_endpoint<LC: LedgerClient<Self::Datum, Self::Redeemer>>(
-        endpoint: Self::Endpoint,
+    async fn handle_endpoint<LC: LedgerClient<Self::Datums, Self::Redeemers>>(
+        endpoint: Self::Endpoints,
         ledger_client: &LC,
-    ) -> SCLogicResult<TxActions<Self::Datum, Self::Redeemer>> {
+    ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
             AlwaysSucceedsEndpoints::Lock { amount } => impl_lock(amount),
             AlwaysSucceedsEndpoints::Claim { output_id } => {
@@ -60,10 +60,10 @@ impl SCLogic for AlwaysSucceedsLogic {
         }
     }
 
-    async fn lookup<LC: LedgerClient<Self::Datum, Self::Redeemer>>(
-        query: Self::Lookup,
+    async fn lookup<LC: LedgerClient<Self::Datums, Self::Redeemers>>(
+        query: Self::Lookups,
         ledger_client: &LC,
-    ) -> SCLogicResult<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponses> {
         match query {
             AlwaysSucceedsLookups::ListActiveContracts { count } => {
                 impl_list_active_contracts(ledger_client, count).await

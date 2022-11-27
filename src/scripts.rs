@@ -3,6 +3,10 @@ use crate::PolicyId;
 use std::fmt::Debug;
 use thiserror::Error;
 
+pub mod raw_policy_script;
+pub mod raw_script;
+pub mod raw_validator_script;
+
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
 #[derive(Clone)]
 pub struct TxContext {

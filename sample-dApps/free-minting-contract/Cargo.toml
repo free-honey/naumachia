@@ -1,0 +1,29 @@
+[package]
+name = "free-minting-contract"
+description = "Free Minting Policy Cardano dApp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "always-cli"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.57"
+cardano-multiplatform-lib = "3.0.1"
+clap = { version = "3.2.16", features = ["derive"] }
+hex = "0.4.3"
+naumachia = {path = "../..", version = "0.1.6"}
+serde = { version = "1.0.143", features = ["derive"] }
+serde_with = {version = "2.0.0", features = ["json"]}
+serde_json = "1.0"
+thiserror = "1.0.24"
+tokio = { version = "1.20.1", features = ["full"] }

@@ -2,7 +2,7 @@ use cardano_multiplatform_lib::{
     address::{EnterpriseAddress, StakeCredential},
     plutus::{PlutusScript, PlutusV1Script},
 };
-use naumachia::trireme_ledger_client::cml_client::validator_script::PlutusScriptFile;
+use naumachia::scripts::raw_script::PlutusScriptFile;
 use naumachia::{
     address::Address,
     scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode},

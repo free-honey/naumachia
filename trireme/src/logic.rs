@@ -19,23 +19,23 @@ pub enum TriremeResponses {
 
 #[async_trait]
 impl SCLogic for TriremeLogic {
-    type Endpoint = ();
-    type Lookup = TriremeLookups;
-    type LookupResponse = TriremeResponses;
-    type Datum = ();
-    type Redeemer = ();
+    type Endpoints = ();
+    type Lookups = TriremeLookups;
+    type LookupResponses = TriremeResponses;
+    type Datums = ();
+    type Redeemers = ();
 
-    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        _endpoint: Self::Endpoint,
+    async fn handle_endpoint<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        _endpoint: Self::Endpoints,
         _ledger_client: &Record,
-    ) -> SCLogicResult<TxActions<Self::Datum, Self::Redeemer>> {
+    ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         todo!()
     }
 
-    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        query: Self::Lookup,
+    async fn lookup<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        query: Self::Lookups,
         ledger_client: &Record,
-    ) -> SCLogicResult<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponses> {
         match query {
             TriremeLookups::LovelaceBalance => impl_lovelace_balance(ledger_client).await,
         }

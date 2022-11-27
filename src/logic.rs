@@ -11,21 +11,21 @@ use std::hash::Hash;
 
 #[async_trait]
 pub trait SCLogic: Send + Sync {
-    type Endpoint: Send + Sync;
-    type Lookup: Send + Sync;
-    type LookupResponse: Send + Sync;
-    type Datum: Clone + Eq + Debug + Send + Sync;
-    type Redeemer: Clone + PartialEq + Eq + Hash + Send + Sync;
+    type Endpoints: Send + Sync;
+    type Lookups: Send + Sync;
+    type LookupResponses: Send + Sync;
+    type Datums: Clone + Eq + Debug + Send + Sync;
+    type Redeemers: Clone + PartialEq + Eq + Hash + Send + Sync;
 
-    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        endpoint: Self::Endpoint,
+    async fn handle_endpoint<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        endpoint: Self::Endpoints,
         ledger_client: &Record,
-    ) -> SCLogicResult<TxActions<Self::Datum, Self::Redeemer>>;
+    ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>>;
 
-    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        query: Self::Lookup,
+    async fn lookup<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        query: Self::Lookups,
         ledger_client: &Record,
-    ) -> SCLogicResult<Self::LookupResponse>;
+    ) -> SCLogicResult<Self::LookupResponses>;
 }
 
 #[derive(Debug, Error)]

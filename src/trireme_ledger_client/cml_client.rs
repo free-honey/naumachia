@@ -42,8 +42,6 @@ pub mod issuance_helpers;
 pub mod key_manager;
 pub mod plutus_data_interop;
 
-pub mod validator_script;
-
 #[cfg(test)]
 mod tests;
 

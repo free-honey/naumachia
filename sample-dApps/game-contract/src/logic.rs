@@ -42,16 +42,16 @@ pub enum GameSucceedsError {
 
 #[async_trait]
 impl SCLogic for GameLogic {
-    type Endpoint = GameEndpoints;
-    type Lookup = GameLookups;
-    type LookupResponse = GameLookupResponses;
-    type Datum = HashedString;
-    type Redeemer = ClearString;
+    type Endpoints = GameEndpoints;
+    type Lookups = GameLookups;
+    type LookupResponses = GameLookupResponses;
+    type Datums = HashedString;
+    type Redeemers = ClearString;
 
-    async fn handle_endpoint<LC: LedgerClient<Self::Datum, Self::Redeemer>>(
-        endpoint: Self::Endpoint,
+    async fn handle_endpoint<LC: LedgerClient<Self::Datums, Self::Redeemers>>(
+        endpoint: Self::Endpoints,
         ledger_client: &LC,
-    ) -> SCLogicResult<TxActions<Self::Datum, Self::Redeemer>> {
+    ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
             GameEndpoints::Lock { amount, secret } => impl_lock(amount, &secret),
             GameEndpoints::Guess { output_id, guess } => {
@@ -60,10 +60,10 @@ impl SCLogic for GameLogic {
         }
     }
 
-    async fn lookup<LC: LedgerClient<Self::Datum, Self::Redeemer>>(
-        query: Self::Lookup,
+    async fn lookup<LC: LedgerClient<Self::Datums, Self::Redeemers>>(
+        query: Self::Lookups,
         ledger_client: &LC,
-    ) -> SCLogicResult<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponses> {
         match query {
             GameLookups::ListActiveContracts { count } => {
                 impl_list_active_contracts(ledger_client, count).await
