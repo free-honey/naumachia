@@ -36,6 +36,8 @@ pub enum SCLogicError {
     Lookup(Box<dyn error::Error + Send + Sync>),
     #[error("Error from Validator Script: {0:?}")]
     ValidatorScript(ScriptError),
+    #[error("Error from Policy Script: {0:?}")]
+    PolicyScript(ScriptError),
 }
 
 pub type SCLogicResult<T> = Result<T, SCLogicError>;

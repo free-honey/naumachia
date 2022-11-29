@@ -1,70 +1,40 @@
-// use clap::Parser;
-// use naumachia::{
-//     backend::Backend,
-//     output::OutputId,
-//     smart_contract::{SmartContract, SmartContractTrait},
-//     trireme_ledger_client::get_trireme_ledger_client_from_file,
-// };
+use clap::Parser;
+use free_minting_contract::logic::FreeMintingEndpoints;
+use free_minting_contract::{logic::script::get_policy, logic::FreeMintingLogic};
+use naumachia::smart_contract::SmartContractTrait;
+use naumachia::{
+    backend::Backend, scripts::MintingPolicy, smart_contract::SmartContract,
+    trireme_ledger_client::get_trireme_ledger_client_from_file,
+};
 
-// #[derive(Parser, Debug)]
-// #[clap(author, version, about, long_about = None)]
-// struct Args {
-//     #[clap(subcommand)]
-//     action: ActionParams,
-// }
-//
-// #[derive(clap::Subcommand, Debug)]
-// enum ActionParams {
-//     /// Lock amount at script address
-//     Lock { amount: f64 },
-//     /// Claim locked Output at script address
-//     Claim { tx_hash: String, index: u64 },
-//     /// List all outputs locked at script address
-//     List { count: usize },
-// }
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    #[clap(subcommand)]
+    action: ActionParams,
+}
 
-use free_minting_contract::logic::script::get_policy;
-use naumachia::scripts::MintingPolicy;
+#[derive(clap::Subcommand, Debug)]
+enum ActionParams {
+    /// Mint amount
+    Mint { amount: u64 },
+}
 
 #[tokio::main]
 async fn main() {
-    let policy = get_policy().unwrap();
-    dbg!(policy.id());
-    // let args = Args::parse();
+    // let policy = get_policy().unwrap();
+    // dbg!(policy.id());
+    let args = Args::parse();
     //
-    // let logic = AlwaysSucceedsLogic;
-    // let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
-    // let backend = Backend::new(ledger_client);
-    // let contract = SmartContract::new(&logic, &backend);
-    //
-    // match args.action {
-    //     ActionParams::Lock { amount } => contract
-    //         .hit_endpoint(AlwaysSucceedsEndpoints::Lock {
-    //             amount: (amount * 1_000_000.) as u64,
-    //         })
-    //         .await
-    //         .unwrap(),
-    //     ActionParams::Claim { tx_hash, index } => {
-    //         let output_id = OutputId::new(tx_hash, index);
-    //         let endpoint = AlwaysSucceedsEndpoints::Claim { output_id };
-    //         contract.hit_endpoint(endpoint).await.unwrap()
-    //     }
-    //     ActionParams::List { count } => {
-    //         let res = contract
-    //             .lookup(AlwaysSucceedsLookups::ListActiveContracts { count })
-    //             .await
-    //             .unwrap();
-    //         match res {
-    //             AlwaysSucceedsLookupResponses::ActiveContracts(outputs) => {
-    //                 println!("Active contracts:");
-    //                 for output in outputs {
-    //                     println!("-------------------------------------");
-    //                     println!("{:?}", output.id());
-    //                     println!("{:?}", output.values());
-    //                     println!("{:?}", output.datum());
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    let logic = FreeMintingLogic;
+    let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
+    let backend = Backend::new(ledger_client);
+    let contract = SmartContract::new(&logic, &backend);
+
+    match args.action {
+        ActionParams::Mint { amount } => contract
+            .hit_endpoint(FreeMintingEndpoints::Mint { amount })
+            .await
+            .expect("Couldn't mint tokens :("),
+    }
 }

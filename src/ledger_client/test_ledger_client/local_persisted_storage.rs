@@ -210,7 +210,6 @@ mod tests {
             script_inputs: vec![],
             unbuilt_outputs: vec![new_output],
             minting: Default::default(),
-            policies: Default::default(),
         };
         record.issue(tx).await.unwrap();
         let expected_bob = starting_amount;

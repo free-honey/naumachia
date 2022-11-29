@@ -27,27 +27,27 @@ pub fn can_spend_inputs<
     Ok(())
 }
 
-pub fn can_mint_tokens<Datum, Redeemer>(
-    tx: &UnbuiltTransaction<Datum, Redeemer>,
-    signer: &Address,
-) -> Result<()> {
-    let ctx = TxContext {
-        signer: signer.clone(),
-    };
-    for (id, _) in tx.minting.as_iter() {
-        match id {
-            PolicyId::NativeToken(_, _) => {
-                if let Some(policy) = tx.policies.get(id) {
-                    policy.execute(ctx.clone())?;
-                } else {
-                    return Err(Error::FailedToRetrievePolicyFor(id.to_owned()));
-                }
-            }
-            PolicyId::ADA => {
-                return Err(Error::ImpossibleToMintADA);
-            }
-        }
-    }
-
-    Ok(())
-}
+// pub fn can_mint_tokens<Datum, Redeemer>(
+//     tx: &UnbuiltTransaction<Datum, Redeemer>,
+//     signer: &Address,
+// ) -> Result<()> {
+//     let ctx = TxContext {
+//         signer: signer.clone(),
+//     };
+//     for (id, _) in tx.minting.as_iter() {
+//         match id {
+//             PolicyId::NativeToken(_, _) => {
+//                 if let Some(policy) = tx.policies.get(id) {
+//                     policy.execute(ctx.clone())?;
+//                 } else {
+//                     return Err(Error::FailedToRetrievePolicyFor(id.to_owned()));
+//                 }
+//             }
+//             PolicyId::ADA => {
+//                 return Err(Error::ImpossibleToMintADA);
+//             }
+//         }
+//     }
+//
+//     Ok(())
+// }

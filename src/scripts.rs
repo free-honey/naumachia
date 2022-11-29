@@ -23,7 +23,7 @@ pub trait ValidatorCode<D, R>: Send + Sync {
 pub trait MintingPolicy: Send + Sync {
     fn execute(&self, ctx: TxContext) -> ScriptResult<()>;
     // TODO: Add network param!
-    fn id(&self) -> PolicyId;
+    fn id(&self) -> String;
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

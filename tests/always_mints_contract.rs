@@ -22,8 +22,8 @@ impl MintingPolicy for AlwaysMintsPolicy {
         Ok(())
     }
 
-    fn id(&self) -> PolicyId {
-        PolicyId::native_token(MINT_POLICY_ID, &None)
+    fn id(&self) -> String {
+        MINT_POLICY_ID.to_string()
     }
 }
 
@@ -69,7 +69,7 @@ impl SCLogic for AlwaysMintsSmartContract {
 
 fn mint(amount: u64, recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
     let policy = Box::new(AlwaysMintsPolicy);
-    let utx = TxActions::default().with_mint(amount, &recipient, policy);
+    let utx = TxActions::default().with_mint(amount, None, &recipient, (), policy);
     Ok(utx)
 }
 

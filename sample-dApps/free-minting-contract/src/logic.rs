@@ -1,3 +1,4 @@
+use crate::logic::script::get_policy;
 use async_trait::async_trait;
 use naumachia::{
     address::PolicyId,
@@ -14,18 +15,15 @@ pub mod script;
 #[cfg(test)]
 mod tests;
 
-// TODO: Pass through someplace, do not hardcode!
-const NETWORK: u8 = 0;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct AlwaysSucceedsLogic;
+pub struct FreeMintingLogic;
 
 pub enum FreeMintingEndpoints {
     Mint { amount: u64 },
 }
 
 #[async_trait]
-impl SCLogic for AlwaysSucceedsLogic {
+impl SCLogic for FreeMintingLogic {
     type Endpoints = FreeMintingEndpoints;
     type Lookups = ();
     type LookupResponses = ();
@@ -36,7 +34,18 @@ impl SCLogic for AlwaysSucceedsLogic {
         endpoint: Self::Endpoints,
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
-        todo!()
+        match endpoint {
+            FreeMintingEndpoints::Mint { amount } => {
+                let recipient = ledger_client
+                    .signer()
+                    .await
+                    .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+                let inner_policy = get_policy().map_err(SCLogicError::PolicyScript)?;
+                let policy = Box::new(inner_policy);
+                let actions = TxActions::default().with_mint(amount, None, &recipient, (), policy);
+                Ok(actions)
+            }
+        }
     }
 
     async fn lookup<LC: LedgerClient<Self::Datums, Self::Redeemers>>(

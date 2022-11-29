@@ -1,22 +1,27 @@
-use crate::ledger_client::LedgerClientError;
-use crate::trireme_ledger_client::cml_client::issuance_helpers::vasil_v1_tx_builder;
-use crate::trireme_ledger_client::cml_client::issuance_helpers::{
-    add_all_possible_utxos_for_selection, add_collateral, build_tx_for_signing,
-    select_inputs_from_utxos, sign_tx, utxo_to_nau_utxo,
-};
-use crate::trireme_ledger_client::cml_client::issuance_helpers::{
-    cml_v1_script_from_nau_script, input_tx_hash, partial_script_witness,
-};
-use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use crate::{
+    ledger_client::LedgerClientError,
     ledger_client::{LedgerClient, LedgerClientResult},
     output::{Output, UnbuiltOutput},
     scripts::ValidatorCode,
     transaction::TxId,
-    Address, UnbuiltTransaction,
+    trireme_ledger_client::cml_client::issuance_helpers::vasil_v1_tx_builder,
+    trireme_ledger_client::cml_client::issuance_helpers::{
+        add_collateral, build_tx_for_signing, select_inputs_from_utxos, sign_tx,
+        specify_utxos_available_for_selection, utxo_to_nau_utxo,
+    },
+    trireme_ledger_client::cml_client::issuance_helpers::{
+        cml_v1_script_from_nau_script, input_tx_hash, partial_script_witness,
+    },
+    trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop,
+    Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::address::BaseAddress;
+use cardano_multiplatform_lib::builders::mint_builder::{MintBuilderResult, SingleMintBuilder};
+use cardano_multiplatform_lib::builders::witness_builder::{
+    PartialPlutusWitness, PlutusScriptWitness,
+};
+use cardano_multiplatform_lib::ledger::common::value::{Int, Value};
 use cardano_multiplatform_lib::{
     address::{Address as CMLAddress, EnterpriseAddress, StakeCredential},
     builders::input_builder::InputBuilderResult,
@@ -29,8 +34,8 @@ use cardano_multiplatform_lib::{
     crypto::{PrivateKey, TransactionHash},
     ledger::common::{hash::hash_plutus_data, value::BigNum, value::Value as CMLValue},
     plutus::{ExUnits, PlutusData, PlutusScript, RedeemerTag},
-    Datum as CMLDatum, RequiredSigners, Transaction as CMLTransaction, TransactionInput,
-    TransactionOutput,
+    AssetName, Datum as CMLDatum, MintAssets, RequiredSigners, Transaction as CMLTransaction,
+    TransactionInput, TransactionOutput,
 };
 use error::*;
 use std::ops::Deref;
@@ -243,6 +248,53 @@ where
         Ok(())
     }
 
+    async fn add_tokens_for_minting<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<()> {
+        for (amount, asset_name, policy, redeemer) in tx.minting.iter() {
+            let policy_id = todo!();
+            let script = todo!();
+            let mint_builder_res = self.build_mint_res(policy_id, *amount, script).await?;
+            tx_builder.add_mint(&mint_builder_res);
+        }
+        Ok(())
+    }
+
+    async fn build_mint_res(
+        &self,
+        policy_id: &PolicyId,
+        amount: u64,
+        script: PlutusScript,
+    ) -> LedgerClientResult<MintBuilderResult> {
+        match policy_id {
+            PolicyId::ADA => {
+                todo!("can't mint ADA")
+            }
+            PolicyId::NativeToken(policy_id, asset_name) => {
+                let inner_key = if let Some(name) = asset_name {
+                    name.as_bytes().to_vec()
+                } else {
+                    Vec::new()
+                };
+                let key = AssetName::new(inner_key)
+                    .map_err(|e| CMLLCError::JsError(e.to_string()))
+                    .map_err(as_failed_to_issue_tx)?;
+                let big_num = BigNum::from(amount);
+                let value = Int::new(&big_num);
+                let mint_assets = MintAssets::new_from_entry(&key, value);
+                let mint_builder = SingleMintBuilder::new(&mint_assets);
+                let script_witness = PlutusScriptWitness::from_script(script);
+                let redeemer = todo!();
+                let partial_witness = PartialPlutusWitness::new(&script_witness, &redeemer);
+                let required_signers = RequiredSigners::new();
+                let res = mint_builder.plutus_script(&partial_witness, &required_signers);
+                Ok(res)
+            }
+        }
+    }
+
     async fn add_script_inputs<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
@@ -291,7 +343,8 @@ where
     ) -> LedgerClientResult<TxId> {
         let mut tx_builder = vasil_v1_tx_builder()?;
         self.add_script_inputs(&mut tx_builder, &tx).await?;
-        add_all_possible_utxos_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
+        self.add_tokens_for_minting(&mut tx_builder, &tx).await?;
+        specify_utxos_available_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
         select_inputs_from_utxos(&mut tx_builder).await?;

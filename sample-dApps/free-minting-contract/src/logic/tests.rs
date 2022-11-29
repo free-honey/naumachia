@@ -16,7 +16,7 @@ async fn lock_and_claim() {
     let amount = 10_000_000;
     let endpoint = FreeMintingEndpoints::Lock { amount };
     let script = AlwaysSucceedsScript::try_new().unwrap();
-    let contract = SmartContract::new(&AlwaysSucceedsLogic, &backend);
+    let contract = SmartContract::new(&FreeMintingLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     {
         let expected = amount;

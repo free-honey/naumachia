@@ -31,9 +31,8 @@ impl MintingPolicy for RawPolicy {
         todo!()
     }
 
-    fn id(&self) -> PolicyId {
+    fn id(&self) -> String {
         let script_hash = self.cml_script.hash();
-        let policy_id = PolicyId::NativeToken(script_hash.to_string(), None);
-        policy_id
+        script_hash.to_string()
     }
 }
