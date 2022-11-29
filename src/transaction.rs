@@ -23,7 +23,7 @@ pub enum Action<Datum, Redeemer> {
         amount: u64,
         asset_name: Option<String>,
         redeemer: Redeemer,
-        policy: Box<dyn MintingPolicy>,
+        policy: Box<dyn MintingPolicy<Redeemer>>,
         recipient: Address,
     },
     InitScript {
@@ -67,7 +67,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         asset_name: Option<String>,
         recipient: &Address,
         redeemer: Redeemer,
-        policy: Box<dyn MintingPolicy>,
+        policy: Box<dyn MintingPolicy<Redeemer>>,
     ) -> Self {
         let action = Action::Mint {
             amount,
@@ -196,7 +196,12 @@ fn create_outputs_for<Datum>(
 pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
     pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
-    pub minting: Vec<(u64, Option<String>, Redeemer, Box<dyn MintingPolicy>)>,
+    pub minting: Vec<(
+        u64,
+        Option<String>,
+        Redeemer,
+        Box<dyn MintingPolicy<Redeemer>>,
+    )>,
 }
 
 impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {

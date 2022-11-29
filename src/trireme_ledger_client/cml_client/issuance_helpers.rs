@@ -1,4 +1,5 @@
 use super::error::*;
+use crate::scripts::MintingPolicy;
 use crate::{
     ledger_client::{LedgerClientError, LedgerClientResult},
     output::Output,
@@ -10,6 +11,7 @@ use crate::{
     Address, PolicyId,
 };
 use blockfrost_http_client::models::Value as BFValue;
+use cardano_multiplatform_lib::crypto::ScriptHash;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::{
@@ -31,6 +33,7 @@ use cardano_multiplatform_lib::{
     AssetName, Assets, MultiAsset, PolicyID, Transaction as CMLTransaction, TransactionInput,
     TransactionOutput, UnitInterval,
 };
+use std::collections::BTreeMap;
 
 // TODO: I think some of these values might be dynamic, in which case we should query them
 //   rather than hard-coding them
@@ -136,23 +139,60 @@ impl TryFrom<Values> for CMLValue {
     type Error = CMLLCError;
 
     fn try_from(mut vals: Values) -> Result<Self> {
-        if let Some(ada) = vals.take(&PolicyId::ADA) {
-            let coin = ada.into();
-            let cml_value = CMLValue::new(&coin);
-            // let mut multi_asset = MultiAsset::new();
-            for (_id, _amount) in vals.as_iter() {
-                todo!("Not handling multiasset yet")
-                // if let Some(id_str) = id.to_str {
-                //     let policy_id = ScriptHash::from_hex(id_str).unwrap(); // TODO: unwrap
-                //     let assets = Assets::new();
-                //     multi_asset.insert(&policy_id, &assets);
-                // }
+        // if let Some(ada) = vals.take(&PolicyId::ADA) {
+        //     let coin = ada.into();
+        //     let cml_value = CMLValue::new(&coin);
+        //     // let mut multi_asset = MultiAsset::new();
+        //     for (_id, _amount) in vals.as_iter() {
+        //         todo!("Not handling multiasset yet")
+        //         // if let Some(id_str) = id.to_str {
+        //         //     let policy_id = ScriptHash::from_hex(id_str).unwrap(); // TODO: unwrap
+        //         //     let assets = Assets::new();
+        //         //     multi_asset.insert(&policy_id, &assets);
+        //         // }
+        //     }
+        //     // cml_value.set_multiasset(&multi_asset);
+        //     Ok(cml_value)
+        // } else {
+        //     Err(CMLLCError::InsufficientADA)
+        // }
+        let mut ada = 1120600u64; // TODO: This is kinda buried. Maybe ref the CML value
+        let mut nau_assets: BTreeMap<String, BTreeMap<Option<String>, u64>> = BTreeMap::new();
+        for (policy_id, amount) in vals.as_iter() {
+            match policy_id {
+                PolicyId::ADA => ada = *amount,
+                PolicyId::NativeToken(id, asset_name) => {
+                    if let Some(mut inner) = nau_assets.remove(id) {
+                        inner.insert(asset_name.to_owned(), *amount);
+                        nau_assets.insert(id.to_owned(), inner);
+                    } else {
+                        let mut inner = BTreeMap::new();
+                        inner.insert(asset_name.to_owned(), *amount);
+                        nau_assets.insert(id.to_owned(), inner);
+                    }
+                }
             }
-            // cml_value.set_multiasset(&multi_asset);
-            Ok(cml_value)
-        } else {
-            Err(CMLLCError::InsufficientADA)
         }
+        let coin = ada.into();
+        let mut cml_value = CMLValue::new(&coin);
+        let mut multi_asset = MultiAsset::new();
+        for (id, assets) in nau_assets.iter() {
+            let mut cml_assets = Assets::new();
+            for (name, amount) in assets.iter() {
+                let key = if let Some(inner) = name {
+                    AssetName::new(inner.as_bytes().to_owned())
+                } else {
+                    AssetName::new(Vec::new())
+                }
+                .unwrap(); // TODO
+                let value = (*amount).into();
+                cml_assets.insert(&key, &value);
+            }
+            let policy_id = ScriptHash::from_hex(id).unwrap(); // TODO
+            multi_asset.insert(&policy_id, &cml_assets);
+        }
+        cml_value.set_multiasset(&multi_asset);
+        Ok(cml_value)
     }
 }
 
@@ -328,6 +368,18 @@ pub(crate) async fn input_tx_hash<Datum>(
 
 pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
     script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+) -> LedgerClientResult<PlutusScript> {
+    let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
+    let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
+    let v1 = PlutusV1Script::from_bytes(script_bytes)
+        .map_err(|e| CMLLCError::Deserialize(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    let cml_script = PlutusScript::from_v1(&v1);
+    Ok(cml_script)
+}
+
+pub(crate) async fn cml_v1_script_from_nau_policy<Redeemer>(
+    script: &(dyn MintingPolicy<Redeemer> + '_),
 ) -> LedgerClientResult<PlutusScript> {
     let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
     let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;

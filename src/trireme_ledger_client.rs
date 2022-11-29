@@ -15,6 +15,7 @@ use cml_client::{
 };
 use dirs::home_dir;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
+use std::fmt::Debug;
 use std::{marker::PhantomData, path::PathBuf};
 use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
@@ -149,7 +150,7 @@ pub struct TriremeLedgerClient<Datum: PlutusDataInterop, Redeemer: PlutusDataInt
 }
 
 #[async_trait]
-impl<Datum: PlutusDataInterop + Send + Sync, Redeemer: PlutusDataInterop + Send + Sync>
+impl<Datum: PlutusDataInterop + Send + Sync + Debug, Redeemer: PlutusDataInterop + Send + Sync>
     LedgerClient<Datum, Redeemer> for TriremeLedgerClient<Datum, Redeemer>
 {
     async fn signer(&self) -> LedgerClientResult<Address> {

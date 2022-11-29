@@ -35,6 +35,6 @@ async fn main() {
         ActionParams::Mint { amount } => contract
             .hit_endpoint(FreeMintingEndpoints::Mint { amount })
             .await
-            .expect("Couldn't mint tokens :("),
+            .unwrap(),
     }
 }

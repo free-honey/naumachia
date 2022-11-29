@@ -9,6 +9,7 @@ use naumachia::{
     scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode},
 };
 
+// const SCRIPT_RAW: &str = include_str!("../../plutus/anyone-can-mint.plutus");
 const SCRIPT_RAW: &str = include_str!("../../plutus/free-minting.plutus");
 
 pub fn get_policy() -> ScriptResult<RawPolicy> {

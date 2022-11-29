@@ -20,10 +20,11 @@ pub trait ValidatorCode<D, R>: Send + Sync {
     fn script_hex(&self) -> ScriptResult<&str>;
 }
 
-pub trait MintingPolicy: Send + Sync {
-    fn execute(&self, ctx: TxContext) -> ScriptResult<()>;
+pub trait MintingPolicy<R>: Send + Sync {
+    fn execute(&self, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
     // TODO: Add network param!
     fn id(&self) -> String;
+    fn script_hex(&self) -> ScriptResult<&str>;
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

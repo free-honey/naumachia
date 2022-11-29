@@ -26,13 +26,17 @@ impl RawPolicy {
     }
 }
 
-impl MintingPolicy for RawPolicy {
-    fn execute(&self, ctx: TxContext) -> ScriptResult<()> {
+impl<Redeemer> MintingPolicy<Redeemer> for RawPolicy {
+    fn execute(&self, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
         todo!()
     }
 
     fn id(&self) -> String {
         let script_hash = self.cml_script.hash();
         script_hash.to_string()
+    }
+
+    fn script_hex(&self) -> ScriptResult<&str> {
+        Ok(&self.script_file.cborHex)
     }
 }
