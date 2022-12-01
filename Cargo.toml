@@ -55,6 +55,3 @@ clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
 sha2 = "0.10.6"
-
-[patch.crates-io]
-blockfrost-http-client = {version = "0.0.8", path = "../blockfrost-http-client"}
