@@ -138,24 +138,7 @@ pub fn cmlvalue_from_bfvalues(values: &[BFValue]) -> CMLValue {
 impl TryFrom<Values> for CMLValue {
     type Error = CMLLCError;
 
-    fn try_from(mut vals: Values) -> Result<Self> {
-        // if let Some(ada) = vals.take(&PolicyId::ADA) {
-        //     let coin = ada.into();
-        //     let cml_value = CMLValue::new(&coin);
-        //     // let mut multi_asset = MultiAsset::new();
-        //     for (_id, _amount) in vals.as_iter() {
-        //         todo!("Not handling multiasset yet")
-        //         // if let Some(id_str) = id.to_str {
-        //         //     let policy_id = ScriptHash::from_hex(id_str).unwrap(); // TODO: unwrap
-        //         //     let assets = Assets::new();
-        //         //     multi_asset.insert(&policy_id, &assets);
-        //         // }
-        //     }
-        //     // cml_value.set_multiasset(&multi_asset);
-        //     Ok(cml_value)
-        // } else {
-        //     Err(CMLLCError::InsufficientADA)
-        // }
+    fn try_from(vals: Values) -> Result<Self> {
         let mut ada = 1120600u64; // TODO: This is kinda buried. Maybe ref the CML value
         let mut nau_assets: BTreeMap<String, BTreeMap<Option<String>, u64>> = BTreeMap::new();
         for (policy_id, amount) in vals.as_iter() {

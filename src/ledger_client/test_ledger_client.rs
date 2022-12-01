@@ -7,7 +7,6 @@ use std::{
 use uuid::Uuid;
 
 use crate::ledger_client::test_ledger_client::in_memory_storage::InMemoryStorage;
-use crate::transaction::nested_value_map::add_amount_to_nested_map;
 use crate::{
     backend::Backend,
     ledger_client::LedgerClientError::FailedToIssueTx,
@@ -217,7 +216,7 @@ where
 
         for (amount, asset_name, _, policy) in tx.minting.iter() {
             let id = policy.id();
-            let policy_id = PolicyId::native_token(&id, &asset_name);
+            let policy_id = PolicyId::native_token(&id, asset_name);
             minted_value.add_one_value(&policy_id, *amount);
         }
 

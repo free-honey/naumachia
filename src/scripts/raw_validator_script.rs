@@ -11,8 +11,7 @@ use minicbor::Decoder;
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
-use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, marker::PhantomData};
+use std::marker::PhantomData;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     tx::script_context::{

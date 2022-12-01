@@ -1,9 +1,4 @@
-use crate::{
-    error::{Error, Result},
-    output::Output,
-    scripts::TxContext,
-    Address, PolicyId, UnbuiltTransaction,
-};
+use crate::{error::Result, output::Output, Address, UnbuiltTransaction};
 use std::{fmt::Debug, hash::Hash};
 
 pub fn can_spend_inputs<

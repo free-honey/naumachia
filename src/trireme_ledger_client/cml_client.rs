@@ -14,7 +14,7 @@ use crate::{
         cml_v1_script_from_nau_script, input_tx_hash, partial_script_witness,
     },
     trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop,
-    Address, PolicyId, UnbuiltTransaction,
+    Address, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::address::BaseAddress;
@@ -22,7 +22,7 @@ use cardano_multiplatform_lib::builders::mint_builder::{MintBuilderResult, Singl
 use cardano_multiplatform_lib::builders::witness_builder::{
     PartialPlutusWitness, PlutusScriptWitness,
 };
-use cardano_multiplatform_lib::ledger::common::value::{Int, Value};
+use cardano_multiplatform_lib::ledger::common::value::Int;
 use cardano_multiplatform_lib::{
     address::{Address as CMLAddress, EnterpriseAddress, StakeCredential},
     builders::input_builder::InputBuilderResult,

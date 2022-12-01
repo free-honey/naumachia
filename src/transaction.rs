@@ -196,6 +196,7 @@ fn create_outputs_for<Datum>(
 pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
     pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
+    #[allow(clippy::type_complexity)]
     pub minting: Vec<(
         u64,
         Option<String>,

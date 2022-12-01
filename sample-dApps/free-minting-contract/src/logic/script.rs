@@ -1,13 +1,6 @@
-use cardano_multiplatform_lib::{
-    address::{EnterpriseAddress, StakeCredential},
-    plutus::{PlutusScript, PlutusV1Script},
-};
 use naumachia::scripts::raw_policy_script::RawPolicy;
 use naumachia::scripts::raw_script::PlutusScriptFile;
-use naumachia::{
-    address::Address,
-    scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode},
-};
+use naumachia::scripts::{ScriptError, ScriptResult};
 
 // const SCRIPT_RAW: &str = include_str!("../../plutus/anyone-can-mint.plutus");
 // const SCRIPT_RAW: &str = include_str!("../../plutus/free-minting.plutus");

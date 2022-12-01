@@ -17,13 +17,17 @@ use naumachia::{
 
 struct AlwaysMintsPolicy;
 
-impl MintingPolicy for AlwaysMintsPolicy {
-    fn execute(&self, _ctx: TxContext) -> ScriptResult<()> {
+impl<R> MintingPolicy<R> for AlwaysMintsPolicy {
+    fn execute(&self, _redeemer: R, _ctx: TxContext) -> ScriptResult<()> {
         Ok(())
     }
 
     fn id(&self) -> String {
         MINT_POLICY_ID.to_string()
+    }
+
+    fn script_hex(&self) -> ScriptResult<&str> {
+        todo!()
     }
 }
 

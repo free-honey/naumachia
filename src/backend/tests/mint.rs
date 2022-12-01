@@ -1,6 +1,5 @@
 use super::*;
 use crate::{
-    error::Error,
     ledger_client::test_ledger_client::TestBackendsBuilder,
     scripts::TxContext,
     scripts::{MintingPolicy, ScriptError, ScriptResult},
@@ -8,8 +7,8 @@ use crate::{
 
 struct AliceCanMintPolicy;
 
-impl MintingPolicy for AliceCanMintPolicy {
-    fn execute(&self, ctx: TxContext) -> ScriptResult<()> {
+impl<R> MintingPolicy<R> for AliceCanMintPolicy {
+    fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<()> {
         if ctx.signer == Address::new("alice") {
             Ok(())
         } else {
@@ -21,6 +20,10 @@ impl MintingPolicy for AliceCanMintPolicy {
 
     fn id(&self) -> String {
         "OnlyAliceCanMint".to_string()
+    }
+
+    fn script_hex(&self) -> ScriptResult<&str> {
+        todo!()
     }
 }
 
@@ -41,7 +44,7 @@ async fn mint__alice_can_mint() {
 
     backend.process(u_tx).await.unwrap();
 
-    let id = AliceCanMintPolicy.id();
+    let id = <AliceCanMintPolicy as MintingPolicy<()>>::id(&AliceCanMintPolicy);
     let policy_id = PolicyId::native_token(&id, &asset_name);
 
     let expected = 100;

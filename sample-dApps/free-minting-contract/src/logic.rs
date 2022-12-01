@@ -1,15 +1,10 @@
 use crate::logic::script::get_policy;
 use async_trait::async_trait;
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
     logic::{SCLogic, SCLogicError, SCLogicResult},
-    output::{Output, OutputId},
-    scripts::ValidatorCode,
     transaction::TxActions,
-    values::Values,
 };
-use thiserror::Error;
 
 pub mod script;
 #[cfg(test)]
@@ -49,8 +44,8 @@ impl SCLogic for FreeMintingLogic {
     }
 
     async fn lookup<LC: LedgerClient<Self::Datums, Self::Redeemers>>(
-        query: Self::Lookups,
-        ledger_client: &LC,
+        _query: Self::Lookups,
+        _ledger_client: &LC,
     ) -> SCLogicResult<Self::LookupResponses> {
         unimplemented!()
     }
