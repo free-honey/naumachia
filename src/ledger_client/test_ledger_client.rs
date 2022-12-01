@@ -212,7 +212,15 @@ where
                     acc
                 });
 
-        total_input_value.add_values(&tx.minting);
+        let mut minted_value = Values::default();
+
+        for (amount, asset_name, _, policy) in tx.minting.iter() {
+            let id = policy.id();
+            let policy_id = PolicyId::native_token(&id, asset_name);
+            minted_value.add_one_value(&policy_id, *amount);
+        }
+
+        total_input_value.add_values(&minted_value);
 
         let total_output_value =
             tx.unbuilt_outputs()
@@ -242,6 +250,7 @@ where
         for output in combined_outputs {
             self.storage.add_output(&output).await?;
         }
+
         Ok(TxId::new("Not a real id"))
     }
 }

@@ -10,7 +10,7 @@ use crate::{
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-mod nested_value_map;
+pub(crate) mod nested_value_map;
 
 pub enum Action<Datum, Redeemer> {
     Transfer {
@@ -21,8 +21,10 @@ pub enum Action<Datum, Redeemer> {
     // TODO: Support sending to script address
     Mint {
         amount: u64,
+        asset_name: Option<String>,
+        redeemer: Redeemer,
+        policy: Box<dyn MintingPolicy<Redeemer>>,
         recipient: Address,
-        policy: Box<dyn MintingPolicy>,
     },
     InitScript {
         datum: Datum,
@@ -62,13 +64,17 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
     pub fn with_mint(
         mut self,
         amount: u64,
+        asset_name: Option<String>,
         recipient: &Address,
-        policy: Box<dyn MintingPolicy>,
+        redeemer: Redeemer,
+        policy: Box<dyn MintingPolicy<Redeemer>>,
     ) -> Self {
         let action = Action::Mint {
             amount,
-            recipient: recipient.clone(),
+            asset_name,
+            redeemer,
             policy,
+            recipient: recipient.clone(),
         };
         self.actions.push(action);
         self
@@ -103,11 +109,10 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
     pub fn to_unbuilt_tx(self) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
         let TxActions { actions } = self;
         let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
-        let mut minting = Values::default();
+        let mut minting = Vec::new();
         let mut script_inputs: Vec<RedemptionDetails<Datum, Redeemer>> = Vec::new();
         let mut specific_outputs: Vec<UnbuiltOutput<Datum>> = Vec::new();
 
-        let mut policies: HashMap<PolicyId, Box<dyn MintingPolicy>> = HashMap::new();
         for action in actions {
             match action {
                 Action::Transfer {
@@ -119,18 +124,20 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
                 }
                 Action::Mint {
                     amount,
-                    recipient,
+                    asset_name,
+                    redeemer,
                     policy,
+                    recipient,
                 } => {
-                    let policy_id = policy.id();
-                    minting.add_one_value(&policy_id, amount);
+                    let id = policy.id();
+                    let policy_id = PolicyId::native_token(&id, &asset_name);
+                    minting.push((amount, asset_name, redeemer, policy));
                     add_amount_to_nested_map(
                         &mut min_output_values,
                         amount,
                         &recipient,
                         &policy_id,
                     );
-                    policies.insert(policy.id(), policy);
                 }
                 Action::InitScript {
                     datum,
@@ -163,7 +170,6 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
             script_inputs,
             unbuilt_outputs: outputs,
             minting,
-            policies,
         };
         Ok(tx)
     }
@@ -190,8 +196,13 @@ fn create_outputs_for<Datum>(
 pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
     pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
-    pub minting: Values,
-    pub policies: HashMap<PolicyId, Box<dyn MintingPolicy>>,
+    #[allow(clippy::type_complexity)]
+    pub minting: Vec<(
+        u64,
+        Option<String>,
+        Redeemer,
+        Box<dyn MintingPolicy<Redeemer>>,
+    )>,
 }
 
 impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {

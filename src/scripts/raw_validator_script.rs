@@ -9,16 +9,9 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::Decoder;
 
-use crate::trireme_ledger_client::cml_client::error::CMLLCError::JsError;
-use crate::trireme_ledger_client::cml_client::error::*;
-use crate::trireme_ledger_client::cml_client::validator_script::error::{
-    RawPlutusScrioptError, RawPlutusScriptResult,
-};
-use crate::trireme_ledger_client::cml_client::validator_script::plutus_data::{
-    BigInt, Constr, PlutusData,
-};
-use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, marker::PhantomData};
+use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
+use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use std::marker::PhantomData;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     tx::script_context::{
@@ -34,29 +27,6 @@ pub mod plutus_data;
 #[cfg(test)]
 mod tests;
 
-#[allow(non_snake_case)]
-#[allow(unused)]
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PlutusScriptFile {
-    pub r#type: String,
-    pub description: String,
-    pub cborHex: String,
-}
-
-pub mod error {
-    use thiserror::Error;
-
-    #[derive(Debug, Error, PartialEq, Eq)]
-    pub enum RawPlutusScrioptError {
-        #[error("Error in Aiken Apply: {0:?}")]
-        AikenApply(String),
-        #[error("Error in Aiken Eval: {error:?}, Logs: {logs:?}")]
-        AikenEval { error: String, logs: Vec<String> },
-    }
-
-    pub type RawPlutusScriptResult<T, E = RawPlutusScrioptError> = Result<T, E>;
-}
-
 pub struct RawPlutusValidator<Datum, Redeemer> {
     script_file: PlutusScriptFile,
     cml_script: PlutusScript,
@@ -65,10 +35,11 @@ pub struct RawPlutusValidator<Datum, Redeemer> {
 }
 
 impl<D, R> RawPlutusValidator<D, R> {
-    pub fn new_v1(script_file: PlutusScriptFile) -> Result<Self> {
-        let script_bytes =
-            hex::decode(&script_file.cborHex).map_err(|e| CMLLCError::Hex(Box::new(e)))?;
-        let v1 = PlutusV1Script::from_bytes(script_bytes).map_err(|e| JsError(e.to_string()))?;
+    pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
+        let script_bytes = hex::decode(&script_file.cborHex)
+            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
+        let v1 = PlutusV1Script::from_bytes(script_bytes)
+            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
         let cml_script = PlutusScript::from_v1(&v1);
         let v1_val = RawPlutusValidator {
             script_file,
@@ -211,7 +182,7 @@ impl<Datum: Into<PlutusData> + Send + Sync, Redeemer: Into<PlutusData> + Send + 
         let (term, _cost, logs) = program.eval_v1();
         // println!("{:?}", &term);
         // println!("{:?}", &logs);
-        term.map_err(|e| RawPlutusScrioptError::AikenEval {
+        term.map_err(|e| RawPlutusScriptError::AikenEval {
             error: format!("{:?}", e),
             logs,
         })
@@ -224,7 +195,7 @@ impl<Datum: Into<PlutusData> + Send + Sync, Redeemer: Into<PlutusData> + Send + 
         let stake_cred = StakeCredential::from_scripthash(&script_hash);
         let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);
         let cml_script_address = enterprise_addr.to_address();
-        let script_address_str = cml_script_address.to_bech32(None).unwrap();
+        let script_address_str = cml_script_address.to_bech32(None).unwrap(); // TODO: unwrap
         let address = Address::Script(script_address_str);
         Ok(address)
     }

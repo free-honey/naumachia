@@ -1,7 +1,6 @@
+use crate::scripts::raw_script::PlutusScriptFile;
+use crate::scripts::raw_validator_script::RawPlutusValidator;
 use crate::trireme_ledger_client::cml_client::key_manager::TESTNET;
-use crate::trireme_ledger_client::cml_client::validator_script::{
-    PlutusScriptFile, RawPlutusValidator,
-};
 use crate::{
     output::{Output, UnbuiltOutput},
     scripts::ValidatorCode,
@@ -23,7 +22,6 @@ pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()
         script_inputs: vec![],
         unbuilt_outputs: vec![output],
         minting: Default::default(),
-        policies: Default::default(),
     }
 }
 
@@ -36,7 +34,6 @@ pub fn lock_at_always_succeeds_tx(amount: u64) -> UnbuiltTransaction<(), ()> {
         script_inputs: vec![],
         unbuilt_outputs: vec![output],
         minting: Default::default(),
-        policies: Default::default(),
     }
 }
 
@@ -80,7 +77,6 @@ pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTrans
         script_inputs: vec![(script_input.clone(), (), script)],
         unbuilt_outputs: vec![],
         minting: Default::default(),
-        policies: Default::default(),
     }
 }
 

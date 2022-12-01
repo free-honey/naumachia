@@ -16,20 +16,20 @@ pub trait SmartContractTrait {
 pub struct SmartContract<'a, Logic, Record>
 where
     Logic: SCLogic,
-    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
+    Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
     pub smart_contract: &'a Logic,
-    pub backend: &'a Backend<Logic::Datum, Logic::Redeemer, Record>,
+    pub backend: &'a Backend<Logic::Datums, Logic::Redeemers, Record>,
 }
 
 impl<'a, Logic, Record> SmartContract<'a, Logic, Record>
 where
     Logic: SCLogic,
-    Record: LedgerClient<Logic::Datum, Logic::Redeemer>,
+    Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
     pub fn new(
         smart_contract: &'a Logic,
-        backend: &'a Backend<Logic::Datum, Logic::Redeemer, Record>,
+        backend: &'a Backend<Logic::Datums, Logic::Redeemers, Record>,
     ) -> Self {
         SmartContract {
             smart_contract,
@@ -42,13 +42,13 @@ where
 impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
 where
     Logic: SCLogic + Eq + Debug + Send + Sync,
-    Record: LedgerClient<Logic::Datum, Logic::Redeemer> + Send + Sync,
+    Record: LedgerClient<Logic::Datums, Logic::Redeemers> + Send + Sync,
 {
-    type Endpoint = Logic::Endpoint;
-    type Lookup = Logic::Lookup;
-    type LookupResponse = Logic::LookupResponse;
+    type Endpoint = Logic::Endpoints;
+    type Lookup = Logic::Lookups;
+    type LookupResponse = Logic::LookupResponses;
 
-    async fn hit_endpoint(&self, endpoint: Logic::Endpoint) -> Result<()> {
+    async fn hit_endpoint(&self, endpoint: Logic::Endpoints) -> Result<()> {
         let tx_actions = Logic::handle_endpoint(endpoint, self.backend.ledger_client()).await?;
         self.backend.process(tx_actions).await?;
         Ok(())

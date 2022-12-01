@@ -17,13 +17,17 @@ use naumachia::{
 
 struct AlwaysMintsPolicy;
 
-impl MintingPolicy for AlwaysMintsPolicy {
-    fn execute(&self, _ctx: TxContext) -> ScriptResult<()> {
+impl<R> MintingPolicy<R> for AlwaysMintsPolicy {
+    fn execute(&self, _redeemer: R, _ctx: TxContext) -> ScriptResult<()> {
         Ok(())
     }
 
-    fn id(&self) -> PolicyId {
-        PolicyId::native_token(MINT_POLICY_ID, &None)
+    fn id(&self) -> String {
+        MINT_POLICY_ID.to_string()
+    }
+
+    fn script_hex(&self) -> ScriptResult<&str> {
+        todo!()
     }
 }
 
@@ -38,14 +42,14 @@ const MINT_POLICY_ID: &str = "mint_policy";
 
 #[async_trait]
 impl SCLogic for AlwaysMintsSmartContract {
-    type Endpoint = Endpoint;
-    type Lookup = ();
-    type LookupResponse = ();
-    type Datum = ();
-    type Redeemer = ();
+    type Endpoints = Endpoint;
+    type Lookups = ();
+    type LookupResponses = ();
+    type Datums = ();
+    type Redeemers = ();
 
-    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        endpoint: Self::Endpoint,
+    async fn handle_endpoint<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        endpoint: Self::Endpoints,
         txo_record: &Record,
     ) -> SCLogicResult<TxActions<(), ()>> {
         match endpoint {
@@ -59,17 +63,17 @@ impl SCLogic for AlwaysMintsSmartContract {
         }
     }
 
-    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        _endpoint: Self::Lookup,
+    async fn lookup<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        _endpoint: Self::Lookups,
         _txo_record: &Record,
-    ) -> SCLogicResult<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponses> {
         Ok(())
     }
 }
 
 fn mint(amount: u64, recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
     let policy = Box::new(AlwaysMintsPolicy);
-    let utx = TxActions::default().with_mint(amount, &recipient, policy);
+    let utx = TxActions::default().with_mint(amount, None, &recipient, (), policy);
     Ok(utx)
 }
 

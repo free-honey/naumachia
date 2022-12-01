@@ -1,7 +1,10 @@
 use crate::address::Address;
-use crate::PolicyId;
 use std::fmt::Debug;
 use thiserror::Error;
+
+pub mod raw_policy_script;
+pub mod raw_script;
+pub mod raw_validator_script;
 
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
 #[derive(Clone)]
@@ -16,10 +19,11 @@ pub trait ValidatorCode<D, R>: Send + Sync {
     fn script_hex(&self) -> ScriptResult<&str>;
 }
 
-pub trait MintingPolicy: Send + Sync {
-    fn execute(&self, ctx: TxContext) -> ScriptResult<()>;
+pub trait MintingPolicy<R>: Send + Sync {
+    fn execute(&self, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
     // TODO: Add network param!
-    fn id(&self) -> PolicyId;
+    fn id(&self) -> String;
+    fn script_hex(&self) -> ScriptResult<&str>;
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

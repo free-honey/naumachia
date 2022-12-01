@@ -18,6 +18,7 @@ repository = "https://github.com/MitchTurner/naumachia"
 members = [
     "sample-dApps/always-succeeds-contract",
     "sample-dApps/game-contract",
+    "sample-dApps/free-minting-contract",
     "trireme"
 ]
 
@@ -35,7 +36,7 @@ tiny-bip39 = "1.0.0"
 futures = "0.3.23"
 async-trait = "0.1.57"
 hex = "0.4.3"
-blockfrost-http-client = "0.0.6"
+blockfrost-http-client = "0.0.8"
 dirs = "4.0.0"
 uplc = "0.0.22"
 tempfile = "3.3.0"

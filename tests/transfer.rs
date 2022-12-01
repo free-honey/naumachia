@@ -16,14 +16,14 @@ enum Endpoint {
 
 #[async_trait]
 impl SCLogic for TransferADASmartContract {
-    type Endpoint = Endpoint;
-    type Lookup = ();
-    type LookupResponse = ();
-    type Datum = ();
-    type Redeemer = ();
+    type Endpoints = Endpoint;
+    type Lookups = ();
+    type LookupResponses = ();
+    type Datums = ();
+    type Redeemers = ();
 
-    async fn handle_endpoint<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        endpoint: Self::Endpoint,
+    async fn handle_endpoint<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        endpoint: Self::Endpoints,
         _txo_record: &Record,
     ) -> SCLogicResult<TxActions<(), ()>> {
         match endpoint {
@@ -34,10 +34,10 @@ impl SCLogic for TransferADASmartContract {
         }
     }
 
-    async fn lookup<Record: LedgerClient<Self::Datum, Self::Redeemer>>(
-        _endpoint: Self::Lookup,
+    async fn lookup<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
+        _endpoint: Self::Lookups,
         _txo_record: &Record,
-    ) -> SCLogicResult<Self::LookupResponse> {
+    ) -> SCLogicResult<Self::LookupResponses> {
         Ok(())
     }
 }
