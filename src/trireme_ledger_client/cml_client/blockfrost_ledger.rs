@@ -116,6 +116,7 @@ impl Ledger for BlockFrostLedger {
     }
 
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String> {
+        println!("{}", &tx.to_json().unwrap());
         let res = self
             .client
             .submit_tx(&tx.to_bytes())

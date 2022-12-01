@@ -299,10 +299,12 @@ pub(crate) fn select_collateral_utxo(
     let mut smallest_utxo_meets_qual = None;
     let mut smallest_amount = min_amount;
     for utxo in my_utxos {
-        let amount: u64 = utxo.amount().coin().into();
-        if amount < smallest_amount {
-            smallest_utxo_meets_qual = Some(utxo);
-            smallest_amount = amount;
+        if utxo.amount().multiasset().is_none() {
+            let amount: u64 = utxo.amount().coin().into();
+            if amount < smallest_amount {
+                smallest_utxo_meets_qual = Some(utxo);
+                smallest_amount = amount;
+            }
         }
     }
     let res = if let Some(utxo) = smallest_utxo_meets_qual {
