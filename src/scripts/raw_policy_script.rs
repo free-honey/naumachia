@@ -1,10 +1,12 @@
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::RawPlutusValidator;
-use crate::scripts::{MintingPolicy, ScriptResult, TxContext};
+use crate::scripts::{as_failed_to_execute, MintingPolicy, ScriptResult, TxContext};
 use crate::PolicyId;
 use cardano_multiplatform_lib::address::{EnterpriseAddress, StakeCredential};
 use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script};
+use minicbor::Decoder;
 use std::marker::PhantomData;
+use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
 
 pub struct RawPolicy {
     script_file: PlutusScriptFile,
@@ -28,6 +30,17 @@ impl RawPolicy {
 
 impl<Redeemer> MintingPolicy<Redeemer> for RawPolicy {
     fn execute(&self, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
+        let cbor = hex::decode(&self.script_file.cborHex).map_err(as_failed_to_execute)?;
+        let mut outer_decoder = Decoder::new(&cbor);
+        let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
+        let mut flat_decoder = Decoder::new(outer);
+        let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
+        // println!("hex: {:?}", hex::encode(&flat));
+        let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(flat)
+            .unwrap()
+            .try_into()
+            .map_err(as_failed_to_execute)?;
+        println!("whole: {}", &program);
         todo!()
     }
 

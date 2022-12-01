@@ -114,14 +114,39 @@ impl UTxO {
     }
 }
 
-pub struct Spend {
+pub struct ExecutionCost {
+    execution_type: ExecutionType,
     memory: u64,
     steps: u64,
 }
 
-impl Spend {
-    pub fn new(memory: u64, steps: u64) -> Self {
-        Spend { memory, steps }
+#[derive(Clone, Debug)]
+pub enum ExecutionType {
+    Spend,
+    Mint,
+}
+
+impl ExecutionCost {
+    pub fn new_spend(memory: u64, steps: u64) -> Self {
+        let execution_type = ExecutionType::Spend;
+        ExecutionCost {
+            execution_type,
+            memory,
+            steps,
+        }
+    }
+
+    pub fn new_mint(memory: u64, steps: u64) -> Self {
+        let execution_type = ExecutionType::Mint;
+        ExecutionCost {
+            execution_type,
+            memory,
+            steps,
+        }
+    }
+
+    pub fn execution_type(&self) -> ExecutionType {
+        self.execution_type.clone()
     }
 
     pub fn memory(&self) -> u64 {
@@ -136,7 +161,7 @@ impl Spend {
 pub trait Ledger {
     async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>>;
     async fn get_all_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
-    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, Spend>>;
+    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, ExecutionCost>>;
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String>;
 }
 
@@ -323,8 +348,12 @@ where
         let transaction = tx_redeemer_builder.draft_tx();
         let res = self.ledger.calculate_ex_units(&transaction).await.unwrap(); // TODO: unwrap
         for (index, spend) in res.iter() {
+            let tag = match spend.execution_type {
+                ExecutionType::Spend => RedeemerTag::new_spend(),
+                ExecutionType::Mint => RedeemerTag::new_mint(),
+            };
             tx_builder.set_exunits(
-                &RedeemerWitnessKey::new(&RedeemerTag::new_spend(), &BigNum::from(*index)),
+                &RedeemerWitnessKey::new(&tag, &BigNum::from(*index)),
                 &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
             );
         }

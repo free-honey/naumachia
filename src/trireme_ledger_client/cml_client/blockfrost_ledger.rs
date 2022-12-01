@@ -1,8 +1,10 @@
 use super::error::*;
 use crate::trireme_ledger_client::cml_client::{
-    error::CMLLCError::JsError, issuance_helpers::cmlvalue_from_bfvalues, Ledger, Spend, UTxO,
+    error::CMLLCError::JsError, issuance_helpers::cmlvalue_from_bfvalues, ExecutionCost, Ledger,
+    UTxO,
 };
 use async_trait::async_trait;
+use blockfrost_http_client::models::ExecutionType;
 use blockfrost_http_client::{models::UTxO as BFUTxO, BlockFrostHttp, BlockFrostHttpTrait};
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
@@ -96,7 +98,7 @@ impl Ledger for BlockFrostLedger {
         Ok(utxos)
     }
 
-    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, Spend>> {
+    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, ExecutionCost>> {
         let bytes = tx.to_bytes();
         let res = self
             .client
@@ -104,7 +106,7 @@ impl Ledger for BlockFrostLedger {
             .await
             .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
         let bf_spends = res
-            .get_spends()
+            .get_execution_costs()
             .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
         let spends = bf_spends
             .iter()
@@ -123,8 +125,13 @@ impl Ledger for BlockFrostLedger {
     }
 }
 
-fn spend_from_bf_spend(bf_spend: &blockfrost_http_client::models::Spend) -> Spend {
+fn spend_from_bf_spend(
+    bf_spend: &blockfrost_http_client::models::ExecutionCostsWithType,
+) -> ExecutionCost {
     let memory = bf_spend.memory();
     let steps = bf_spend.steps();
-    Spend::new(memory, steps)
+    match bf_spend.execution_type() {
+        ExecutionType::Spend => ExecutionCost::new_spend(memory, steps),
+        ExecutionType::Mint => ExecutionCost::new_mint(memory, steps),
+    }
 }
