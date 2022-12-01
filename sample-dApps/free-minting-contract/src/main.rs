@@ -22,10 +22,7 @@ enum ActionParams {
 
 #[tokio::main]
 async fn main() {
-    // let policy = get_policy().unwrap();
-    // dbg!(policy.id());
     let args = Args::parse();
-    //
     let logic = FreeMintingLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
     let backend = Backend::new(ledger_client);
