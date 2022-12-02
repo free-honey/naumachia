@@ -4,6 +4,8 @@
 
 ### Added
 
+**naumachia**: Remove dupe Blockfrost Client
+
 ## [v0.2.0] - 2022-11-20
 
 ### Added

@@ -3,11 +3,11 @@ use crate::{
     ledger_client::{LedgerClient, LedgerClientResult},
     output::Output,
     transaction::TxId,
-    trireme_ledger_client::blockfrost_ledger::BlockfrostApiKey,
     trireme_ledger_client::raw_secret_phrase::RawSecretPhraseKeys,
     Address, UnbuiltTransaction,
 };
 
+use crate::trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey;
 use async_trait::async_trait;
 use blockfrost_http_client::{MAINNET_URL, TEST_URL};
 use cml_client::{
@@ -20,7 +20,7 @@ use std::{marker::PhantomData, path::PathBuf};
 use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
 
-pub mod blockfrost_ledger;
+// pub mod blockfrost_ledger;
 pub mod cml_client;
 pub mod raw_secret_phrase;
 

@@ -13,7 +13,10 @@ use cardano_multiplatform_lib::{
     Transaction as CMLTransaction,
 };
 use futures::future;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::str::FromStr;
+use thiserror::Error;
 
 pub struct BlockFrostLedger {
     client: BlockFrostHttp,
@@ -135,4 +138,36 @@ fn spend_from_bf_spend(
         ExecutionType::Spend => ExecutionCost::new_spend(memory, steps),
         ExecutionType::Mint => ExecutionCost::new_mint(memory, steps),
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BlockfrostApiKey {
+    inner: String,
+}
+
+impl From<BlockfrostApiKey> for String {
+    fn from(secret_phrase: BlockfrostApiKey) -> Self {
+        secret_phrase.inner
+    }
+}
+
+impl From<&BlockfrostApiKey> for String {
+    fn from(secret_phrase: &BlockfrostApiKey) -> Self {
+        secret_phrase.inner.clone()
+    }
+}
+
+impl FromStr for BlockfrostApiKey {
+    type Err = BlockfrostLedgerError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = s.to_string();
+        Ok(BlockfrostApiKey { inner })
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum BlockfrostLedgerError {
+    #[error("No config directory for raw phrase file: {0:?}")]
+    NoConfigDirectory(String),
 }
