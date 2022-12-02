@@ -368,27 +368,16 @@ where
         priv_key: PrivateKey,
     ) -> LedgerClientResult<TxId> {
         let mut tx_builder = vasil_v1_tx_builder()?;
-        println!("0");
         self.add_script_inputs(&mut tx_builder, &tx).await?;
-        println!("1");
         self.add_tokens_for_minting(&mut tx_builder, &tx).await?;
-        println!("2");
         specify_utxos_available_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
-        println!("3");
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
-        println!("4");
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
-        println!("5");
         select_inputs_from_utxos(&mut tx_builder).await?;
-        println!("6");
         self.update_ex_units(&mut tx_builder, &my_address).await?;
-        println!("7");
         let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
-        println!("8");
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
-        println!("9");
         let tx_id = self.submit_tx(&tx).await?;
-        println!("{:?}", &tx_id); // TODO: https://github.com/MitchTurner/naumachia/issues/44
         Ok(tx_id)
     }
 }

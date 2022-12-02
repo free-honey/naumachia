@@ -34,7 +34,8 @@
   - CML Ledger Client
     - Implemented Actions:
       - [x] Transfer
-      - [ ] Mint
+      - [x] Mint
+        - [ ] Use Datum/Redeemers (Might work, just not tested)
       - [x] InitScript
       - [x] RedeemScriptOutput
       - [ ] Spend Specific Output (e.g. for one-time mintings)

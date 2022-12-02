@@ -39,12 +39,21 @@ pub enum Action<Datum, Redeemer> {
 }
 
 pub struct TxActions<Datum, Redeemer> {
+    pub script_version: ScriptVersion,
     pub actions: Vec<Action<Datum, Redeemer>>,
 }
 
-impl<Datum, Redeemer> Default for TxActions<Datum, Redeemer> {
-    fn default() -> Self {
+impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
+    pub fn v1() -> Self {
         TxActions {
+            script_version: ScriptVersion::V1,
+            actions: Vec::new(),
+        }
+    }
+
+    pub fn v2() -> Self {
+        TxActions {
+            script_version: ScriptVersion::V2,
             actions: Vec::new(),
         }
     }
@@ -107,7 +116,10 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
     }
 
     pub fn to_unbuilt_tx(self) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
-        let TxActions { actions } = self;
+        let TxActions {
+            script_version,
+            actions,
+        } = self;
         let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
         let mut minting = Vec::new();
         let mut script_inputs: Vec<RedemptionDetails<Datum, Redeemer>> = Vec::new();
@@ -167,6 +179,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         outputs.extend(specific_outputs);
 
         let tx = UnbuiltTransaction {
+            script_version,
             script_inputs,
             unbuilt_outputs: outputs,
             minting,
@@ -193,7 +206,13 @@ fn create_outputs_for<Datum>(
     Ok(outputs)
 }
 
+pub enum ScriptVersion {
+    V1,
+    V2,
+}
+
 pub struct UnbuiltTransaction<Datum, Redeemer> {
+    pub script_version: ScriptVersion,
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
     pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
     #[allow(clippy::type_complexity)]
