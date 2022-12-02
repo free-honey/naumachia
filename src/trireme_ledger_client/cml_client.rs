@@ -187,26 +187,19 @@ where
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
-        println!("0");
         for unbuilt_output in tx.unbuilt_outputs().iter() {
-            println!("1");
-            dbg!(&unbuilt_output);
             let cml_values: CMLValue = unbuilt_output
                 .values()
                 .to_owned()
                 .try_into()
                 .map_err(as_failed_to_issue_tx)?;
-            println!("2");
             let recipient = unbuilt_output.owner();
-            println!("3");
             let recp_addr = self
                 .keys
                 .addr_from_bech_32(recipient.to_str())
                 .await
                 .map_err(as_failed_to_issue_tx)?;
-            println!("4");
             let mut output = TransactionOutput::new(&recp_addr, &cml_values);
-            println!("5");
             let res = if let UnbuiltOutput::Validator { datum, .. } = unbuilt_output {
                 let data = datum.to_plutus_data();
                 let data_hash = hash_plutus_data(&data);
@@ -216,10 +209,8 @@ where
                 res.set_communication_datum(&data);
                 res
             } else {
-                println!("6");
                 SingleOutputBuilderResult::new(&output)
             };
-            println!("7");
             tx_builder
                 .add_output(&res)
                 .map_err(|e| CMLLCError::JsError(e.to_string()))
