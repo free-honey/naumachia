@@ -1,4 +1,7 @@
-use crate::trireme_ledger_client::cml_client::issuance_helpers::cml_v1_script_from_nau_policy;
+use crate::transaction::ScriptVersion;
+use crate::trireme_ledger_client::cml_client::issuance_helpers::{
+    cml_v1_script_from_nau_policy, vasil_v2_tx_builder,
+};
 use crate::{
     ledger_client::LedgerClientError,
     ledger_client::{LedgerClient, LedgerClientResult},
@@ -380,6 +383,27 @@ where
         let tx_id = self.submit_tx(&tx).await?;
         Ok(tx_id)
     }
+
+    async fn issue_v2_tx<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+        &self,
+        tx: UnbuiltTransaction<Datum, Redeemer>,
+        my_utxos: Vec<UTxO>,
+        my_address: CMLAddress,
+        priv_key: PrivateKey,
+    ) -> LedgerClientResult<TxId> {
+        let mut tx_builder = vasil_v2_tx_builder()?;
+        self.add_script_inputs(&mut tx_builder, &tx).await?;
+        self.add_tokens_for_minting(&mut tx_builder, &tx).await?;
+        specify_utxos_available_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
+        self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
+        add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
+        select_inputs_from_utxos(&mut tx_builder).await?;
+        self.update_ex_units(&mut tx_builder, &my_address).await?;
+        let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
+        let tx_id = self.submit_tx(&tx).await?;
+        Ok(tx_id)
+    }
 }
 
 #[async_trait]
@@ -483,6 +507,9 @@ where
             .await
             .map_err(as_failed_to_issue_tx)?;
 
-        self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await
+        match tx.script_version {
+            ScriptVersion::V1 => self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await,
+            ScriptVersion::V2 => self.issue_v2_tx(tx, my_utxos, my_address, priv_key).await,
+        }
     }
 }
