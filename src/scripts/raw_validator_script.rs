@@ -11,6 +11,7 @@ use minicbor::Decoder;
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use std::marker::PhantomData;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
@@ -27,6 +28,7 @@ pub mod plutus_data;
 #[cfg(test)]
 mod tests;
 
+// TODO: Maybe make V1 and V2 different types? We want to protect the end user better!
 pub struct RawPlutusValidator<Datum, Redeemer> {
     script_file: PlutusScriptFile,
     cml_script: PlutusScript,
@@ -48,6 +50,21 @@ impl<D, R> RawPlutusValidator<D, R> {
             _redeemer: Default::default(),
         };
         Ok(v1_val)
+    }
+
+    pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
+        let script_bytes = hex::decode(&script_file.cborHex)
+            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
+        let v2 = PlutusV2Script::from_bytes(script_bytes)
+            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
+        let cml_script = PlutusScript::from_v2(&v2);
+        let v2_val = RawPlutusValidator {
+            script_file,
+            cml_script,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_val)
     }
 }
 

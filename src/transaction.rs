@@ -38,6 +38,8 @@ pub enum Action<Datum, Redeemer> {
     },
 }
 
+// TODO: Maybe we should make V1 and V2 TxActions be completely different types,
+//   since they have different options e.g. inline datum etc
 pub struct TxActions<Datum, Redeemer> {
     pub script_version: ScriptVersion,
     pub actions: Vec<Action<Datum, Redeemer>>,

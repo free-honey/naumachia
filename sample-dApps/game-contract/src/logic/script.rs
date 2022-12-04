@@ -5,7 +5,8 @@ use naumachia::scripts::{ScriptError, ScriptResult};
 use sha2::Digest;
 use sha2::Sha256;
 
-const SCRIPT_RAW: &str = include_str!("../../plutus/game.plutus");
+// const SCRIPT_RAW: &str = include_str!("../../plutus/game_v1.plutus");
+const SCRIPT_RAW: &str = include_str!("../../plutus/game_v2.plutus");
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct HashedString {
@@ -77,7 +78,7 @@ impl TryFrom<PlutusData> for ClearString {
 pub fn get_script() -> ScriptResult<RawPlutusValidator<HashedString, ClearString>> {
     let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = RawPlutusValidator::new_v1(script_file)
+    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }

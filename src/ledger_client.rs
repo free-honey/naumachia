@@ -69,6 +69,8 @@ pub enum LedgerClientError {
     NoBigEnoughCollateralUTxO,
     #[error("The script input you're trying to spend doesn't have a datum")]
     NoDatumOnScriptInput,
+    #[error("The script input you're trying to spend doesn't have a datum")]
+    ConfigError(String),
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

@@ -38,13 +38,16 @@ async fn main() {
     let contract = SmartContract::new(&logic, &backend);
 
     match args.action {
-        ActionParams::Lock { amount, secret } => contract
-            .hit_endpoint(GameEndpoints::Lock {
-                amount: (amount * 1_000_000.) as u64,
-                secret,
-            })
-            .await
-            .unwrap(),
+        ActionParams::Lock { amount, secret } => {
+            let tx_id = contract
+                .hit_endpoint(GameEndpoints::Lock {
+                    amount: (amount * 1_000_000.) as u64,
+                    secret,
+                })
+                .await
+                .unwrap();
+            println!("tx: {:?}", tx_id);
+        }
         ActionParams::Guess {
             tx_hash,
             index,
@@ -52,7 +55,8 @@ async fn main() {
         } => {
             let output_id = OutputId::new(tx_hash, index);
             let endpoint = GameEndpoints::Guess { output_id, guess };
-            contract.hit_endpoint(endpoint).await.unwrap()
+            let tx_id = contract.hit_endpoint(endpoint).await.unwrap();
+            println!("tx: {:?}", tx_id);
         }
         ActionParams::List { count } => {
             let res = contract

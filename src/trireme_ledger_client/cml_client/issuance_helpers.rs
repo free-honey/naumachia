@@ -12,6 +12,7 @@ use crate::{
 };
 use blockfrost_http_client::models::Value as BFValue;
 use cardano_multiplatform_lib::crypto::ScriptHash;
+use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::{
@@ -107,7 +108,7 @@ pub fn vasil_v2_tx_builder() -> LedgerClientResult<TransactionBuilder> {
     let step_den = 10000000.into();
     let step_price = UnitInterval::new(&step_num, &step_den);
     let ex_unit_prices = ExUnitPrices::new(&mem_price, &step_price);
-    let vasil_v2_cost_models = vec![
+    let vasil_v2_cost_models: Vec<i64> = vec![
         205665,
         812,
         1,
@@ -286,7 +287,13 @@ pub fn vasil_v2_tx_builder() -> LedgerClientResult<TransactionBuilder> {
     ];
     let cm = CostModel::new(
         &Language::new_plutus_v2(),
-        &vasil_v2_cost_models.iter().map(|&i| Int::from(i)).collect(),
+        &vasil_v2_cost_models
+            .iter()
+            .map(|&i| Int::from_str(&i.to_string()))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| {
+                LedgerClientError::ConfigError(format!("Cost models misconfigured: {:?}", e))
+            })?,
     );
     let mut cost_models = Costmdls::new();
     cost_models.insert(&cm);
@@ -582,6 +589,18 @@ pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
     Ok(cml_script)
 }
 
+pub(crate) async fn cml_v2_script_from_nau_script<Datum, Redeemer>(
+    script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+) -> LedgerClientResult<PlutusScript> {
+    let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
+    let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
+    let v1 = PlutusV2Script::from_bytes(script_bytes)
+        .map_err(|e| CMLLCError::Deserialize(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    let cml_script = PlutusScript::from_v2(&v1);
+    Ok(cml_script)
+}
+
 pub(crate) async fn cml_v1_script_from_nau_policy<Redeemer>(
     script: &(dyn MintingPolicy<Redeemer> + '_),
 ) -> LedgerClientResult<PlutusScript> {
@@ -591,6 +610,18 @@ pub(crate) async fn cml_v1_script_from_nau_policy<Redeemer>(
         .map_err(|e| CMLLCError::Deserialize(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
     let cml_script = PlutusScript::from_v1(&v1);
+    Ok(cml_script)
+}
+
+pub(crate) async fn cml_v2_script_from_nau_policy<Redeemer>(
+    script: &(dyn MintingPolicy<Redeemer> + '_),
+) -> LedgerClientResult<PlutusScript> {
+    let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
+    let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
+    let v1 = PlutusV2Script::from_bytes(script_bytes)
+        .map_err(|e| CMLLCError::Deserialize(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    let cml_script = PlutusScript::from_v2(&v1);
     Ok(cml_script)
 }
 
