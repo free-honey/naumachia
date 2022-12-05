@@ -12,6 +12,7 @@ use crate::{
 };
 use blockfrost_http_client::models::Value as BFValue;
 use cardano_multiplatform_lib::crypto::ScriptHash;
+use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::{
@@ -68,6 +69,231 @@ pub fn vasil_v1_tx_builder() -> LedgerClientResult<TransactionBuilder> {
     let cm = CostModel::new(
         &Language::new_plutus_v1(),
         &vasil_v1_cost_models.iter().map(|&i| Int::from(i)).collect(),
+    );
+    let mut cost_models = Costmdls::new();
+    cost_models.insert(&cm);
+
+    let tx_builder_cfg = TransactionBuilderConfigBuilder::new()
+        .fee_algo(&linear_fee)
+        .pool_deposit(&pool_deposit)
+        .key_deposit(&key_deposit)
+        .max_value_size(5000)
+        .max_tx_size(16384)
+        .coins_per_utxo_byte(&coins_per_utxo_byte)
+        .ex_unit_prices(&ex_unit_prices)
+        .collateral_percentage(150)
+        .max_collateral_inputs(3)
+        .costmdls(&cost_models)
+        .build()
+        .map_err(|e| CMLLCError::JsError(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    Ok(TransactionBuilder::new(&tx_builder_cfg))
+}
+
+// TODO: I think some of these values might be dynamic, in which case we should query them
+//   rather than hard-coding them
+pub fn vasil_v2_tx_builder() -> LedgerClientResult<TransactionBuilder> {
+    let coefficient = 44.into();
+    let constant = 155381.into();
+    let linear_fee = LinearFee::new(&coefficient, &constant);
+
+    let pool_deposit = 500000000.into();
+    let key_deposit = 2000000.into();
+
+    let coins_per_utxo_byte = 4310.into();
+    let mem_num = 577.into();
+    let mem_den = 10000.into();
+    let mem_price = UnitInterval::new(&mem_num, &mem_den);
+    let step_num = 721.into();
+    let step_den = 10000000.into();
+    let step_price = UnitInterval::new(&step_num, &step_den);
+    let ex_unit_prices = ExUnitPrices::new(&mem_price, &step_price);
+    let vasil_v2_cost_models: Vec<i64> = vec![
+        205665,
+        812,
+        1,
+        1,
+        1000,
+        571,
+        0,
+        1,
+        1000,
+        24177,
+        4,
+        1,
+        1000,
+        32,
+        117366,
+        10475,
+        4,
+        23000,
+        100,
+        23000,
+        100,
+        23000,
+        100,
+        23000,
+        100,
+        23000,
+        100,
+        23000,
+        100,
+        100,
+        100,
+        23000,
+        100,
+        19537,
+        32,
+        175354,
+        32,
+        46417,
+        4,
+        221973,
+        511,
+        0,
+        1,
+        89141,
+        32,
+        497525,
+        14068,
+        4,
+        2,
+        196500,
+        453240,
+        220,
+        0,
+        1,
+        1,
+        1000,
+        28662,
+        4,
+        2,
+        245000,
+        216773,
+        62,
+        1,
+        1060367,
+        12586,
+        1,
+        208512,
+        421,
+        1,
+        187000,
+        1000,
+        52998,
+        1,
+        80436,
+        32,
+        43249,
+        32,
+        1000,
+        32,
+        80556,
+        1,
+        57667,
+        4,
+        1000,
+        10,
+        197145,
+        156,
+        1,
+        197145,
+        156,
+        1,
+        204924,
+        473,
+        1,
+        208896,
+        511,
+        1,
+        52467,
+        32,
+        64832,
+        32,
+        65493,
+        32,
+        22558,
+        32,
+        16563,
+        32,
+        76511,
+        32,
+        196500,
+        453240,
+        220,
+        0,
+        1,
+        1,
+        69522,
+        11687,
+        0,
+        1,
+        60091,
+        32,
+        196500,
+        453240,
+        220,
+        0,
+        1,
+        1,
+        196500,
+        453240,
+        220,
+        0,
+        1,
+        1,
+        1159724,
+        392670,
+        0,
+        2,
+        806990,
+        30482,
+        4,
+        1927926,
+        82523,
+        4,
+        265318,
+        0,
+        4,
+        0,
+        85931,
+        32,
+        205665,
+        812,
+        1,
+        1,
+        41182,
+        32,
+        212342,
+        32,
+        31220,
+        32,
+        32696,
+        32,
+        43357,
+        32,
+        32247,
+        32,
+        38314,
+        32,
+        20000000000,
+        20000000000,
+        9462713,
+        1021,
+        10,
+        20000000000,
+        0,
+        20000000000,
+    ];
+    let cm = CostModel::new(
+        &Language::new_plutus_v2(),
+        &vasil_v2_cost_models
+            .iter()
+            .map(|&i| Int::from_str(&i.to_string()))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| {
+                LedgerClientError::ConfigError(format!("Cost models misconfigured: {:?}", e))
+            })?,
     );
     let mut cost_models = Costmdls::new();
     cost_models.insert(&cm);
@@ -363,6 +589,18 @@ pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
     Ok(cml_script)
 }
 
+pub(crate) async fn cml_v2_script_from_nau_script<Datum, Redeemer>(
+    script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+) -> LedgerClientResult<PlutusScript> {
+    let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
+    let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
+    let v1 = PlutusV2Script::from_bytes(script_bytes)
+        .map_err(|e| CMLLCError::Deserialize(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    let cml_script = PlutusScript::from_v2(&v1);
+    Ok(cml_script)
+}
+
 pub(crate) async fn cml_v1_script_from_nau_policy<Redeemer>(
     script: &(dyn MintingPolicy<Redeemer> + '_),
 ) -> LedgerClientResult<PlutusScript> {
@@ -372,6 +610,18 @@ pub(crate) async fn cml_v1_script_from_nau_policy<Redeemer>(
         .map_err(|e| CMLLCError::Deserialize(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
     let cml_script = PlutusScript::from_v1(&v1);
+    Ok(cml_script)
+}
+
+pub(crate) async fn cml_v2_script_from_nau_policy<Redeemer>(
+    script: &(dyn MintingPolicy<Redeemer> + '_),
+) -> LedgerClientResult<PlutusScript> {
+    let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
+    let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
+    let v1 = PlutusV2Script::from_bytes(script_bytes)
+        .map_err(|e| CMLLCError::Deserialize(e.to_string()))
+        .map_err(as_failed_to_issue_tx)?;
+    let cml_script = PlutusScript::from_v2(&v1);
     Ok(cml_script)
 }
 

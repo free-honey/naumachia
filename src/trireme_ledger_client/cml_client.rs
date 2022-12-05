@@ -1,4 +1,8 @@
-use crate::trireme_ledger_client::cml_client::issuance_helpers::cml_v1_script_from_nau_policy;
+use crate::transaction::ScriptVersion;
+use crate::trireme_ledger_client::cml_client::issuance_helpers::{
+    cml_v1_script_from_nau_policy, cml_v2_script_from_nau_policy, cml_v2_script_from_nau_script,
+    vasil_v2_tx_builder,
+};
 use crate::{
     ledger_client::LedgerClientError,
     ledger_client::{LedgerClient, LedgerClientResult},
@@ -187,26 +191,19 @@ where
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
-        println!("0");
         for unbuilt_output in tx.unbuilt_outputs().iter() {
-            println!("1");
-            dbg!(&unbuilt_output);
             let cml_values: CMLValue = unbuilt_output
                 .values()
                 .to_owned()
                 .try_into()
                 .map_err(as_failed_to_issue_tx)?;
-            println!("2");
             let recipient = unbuilt_output.owner();
-            println!("3");
             let recp_addr = self
                 .keys
                 .addr_from_bech_32(recipient.to_str())
                 .await
                 .map_err(as_failed_to_issue_tx)?;
-            println!("4");
             let mut output = TransactionOutput::new(&recp_addr, &cml_values);
-            println!("5");
             let res = if let UnbuiltOutput::Validator { datum, .. } = unbuilt_output {
                 let data = datum.to_plutus_data();
                 let data_hash = hash_plutus_data(&data);
@@ -216,10 +213,8 @@ where
                 res.set_communication_datum(&data);
                 res
             } else {
-                println!("6");
                 SingleOutputBuilderResult::new(&output)
             };
-            println!("7");
             tx_builder
                 .add_output(&res)
                 .map_err(|e| CMLLCError::JsError(e.to_string()))
@@ -235,7 +230,7 @@ where
         enterprise_addr.to_address()
     }
 
-    async fn build_cml_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn build_v1_cml_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
@@ -269,6 +264,40 @@ where
         Ok(cml_input)
     }
 
+    async fn build_v2_cml_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        input: &Output<Datum>,
+        redeemer: &Redeemer,
+        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+    ) -> LedgerClientResult<InputBuilderResult> {
+        let tx_hash = input_tx_hash(input).await?;
+        let cml_script = cml_v2_script_from_nau_script(script).await?;
+        let partial_witness = partial_script_witness(&cml_script, redeemer).await;
+        let cml_script_address = self.cml_script_address(&cml_script).await;
+        let required_signers = RequiredSigners::new();
+
+        let script_input = TransactionInput::new(
+            &tx_hash,                   // tx hash
+            &input.id().index().into(), // index
+        );
+        let value = input
+            .values()
+            .clone()
+            .try_into()
+            .map_err(as_failed_to_issue_tx)?;
+        let utxo_info = TransactionOutput::new(&cml_script_address, &value);
+        let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
+        let data = input
+            .datum()
+            .ok_or(LedgerClientError::NoDatumOnScriptInput)?;
+        let datum = data.to_plutus_data();
+        let cml_input = input_builder
+            .plutus_script(&partial_witness, &required_signers, &datum)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(cml_input)
+    }
+
     async fn add_v1_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
@@ -276,7 +305,7 @@ where
         redeemer: &Redeemer,
         script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
-        let cml_input = self.build_cml_input(input, redeemer, script).await?;
+        let cml_input = self.build_v1_cml_input(input, redeemer, script).await?;
         tx_builder
             .add_input(&cml_input)
             .map_err(|e| CMLLCError::JsError(e.to_string()))
@@ -284,13 +313,43 @@ where
         Ok(())
     }
 
-    async fn add_tokens_for_minting<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_v2_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        input: &Output<Datum>,
+        redeemer: &Redeemer,
+        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+    ) -> LedgerClientResult<()> {
+        let cml_input = self.build_v2_cml_input(input, redeemer, script).await?;
+        tx_builder
+            .add_input(&cml_input)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
+        Ok(())
+    }
+
+    async fn add_tokens_for_v1_minting<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
         for (amount, asset_name, redeemer, policy) in tx.minting.iter() {
             let script = cml_v1_script_from_nau_policy(policy.deref()).await?;
+            let mint_builder_res = self
+                .build_mint_res(*amount, asset_name, redeemer, script)
+                .await?;
+            tx_builder.add_mint(&mint_builder_res);
+        }
+        Ok(())
+    }
+
+    async fn add_tokens_for_v2_minting<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<()> {
+        for (amount, asset_name, redeemer, policy) in tx.minting.iter() {
+            let script = cml_v2_script_from_nau_policy(policy.deref()).await?;
             let mint_builder_res = self
                 .build_mint_res(*amount, asset_name, redeemer, script)
                 .await?;
@@ -326,13 +385,25 @@ where
         Ok(res)
     }
 
-    async fn add_script_inputs<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_v1_script_inputs<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
         for (input, redeemer, script) in tx.script_inputs() {
             self.add_v1_script_input(tx_builder, input, redeemer, script.deref())
+                .await?
+        }
+        Ok(())
+    }
+
+    async fn add_v2_script_inputs<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<()> {
+        for (input, redeemer, script) in tx.script_inputs() {
+            self.add_v2_script_input(tx_builder, input, redeemer, script.deref())
                 .await?
         }
         Ok(())
@@ -346,6 +417,7 @@ where
         let algo = ChangeSelectionAlgo::Default;
         let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, my_address).unwrap(); // TODO: unwrap
         let transaction = tx_redeemer_builder.draft_tx();
+        println!("{}", &transaction.to_json().unwrap());
         let res = self.ledger.calculate_ex_units(&transaction).await.unwrap(); // TODO: unwrap
         for (index, spend) in res.iter() {
             let tag = match spend.execution_type {
@@ -377,27 +449,37 @@ where
         priv_key: PrivateKey,
     ) -> LedgerClientResult<TxId> {
         let mut tx_builder = vasil_v1_tx_builder()?;
-        println!("0");
-        self.add_script_inputs(&mut tx_builder, &tx).await?;
-        println!("1");
-        self.add_tokens_for_minting(&mut tx_builder, &tx).await?;
-        println!("2");
+        self.add_v1_script_inputs(&mut tx_builder, &tx).await?;
+        self.add_tokens_for_v1_minting(&mut tx_builder, &tx).await?;
         specify_utxos_available_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
-        println!("3");
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
-        println!("4");
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
-        println!("5");
         select_inputs_from_utxos(&mut tx_builder).await?;
-        println!("6");
         self.update_ex_units(&mut tx_builder, &my_address).await?;
-        println!("7");
         let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
-        println!("8");
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
-        println!("9");
         let tx_id = self.submit_tx(&tx).await?;
-        println!("{:?}", &tx_id); // TODO: https://github.com/MitchTurner/naumachia/issues/44
+        Ok(tx_id)
+    }
+
+    async fn issue_v2_tx<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+        &self,
+        tx: UnbuiltTransaction<Datum, Redeemer>,
+        my_utxos: Vec<UTxO>,
+        my_address: CMLAddress,
+        priv_key: PrivateKey,
+    ) -> LedgerClientResult<TxId> {
+        let mut tx_builder = vasil_v2_tx_builder()?;
+        self.add_v2_script_inputs(&mut tx_builder, &tx).await?;
+        self.add_tokens_for_v2_minting(&mut tx_builder, &tx).await?;
+        specify_utxos_available_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
+        self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
+        add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
+        select_inputs_from_utxos(&mut tx_builder).await?;
+        self.update_ex_units(&mut tx_builder, &my_address).await?;
+        let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
+        let tx_id = self.submit_tx(&tx).await?;
         Ok(tx_id)
     }
 }
@@ -503,6 +585,9 @@ where
             .await
             .map_err(as_failed_to_issue_tx)?;
 
-        self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await
+        match tx.script_version {
+            ScriptVersion::V1 => self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await,
+            ScriptVersion::V2 => self.issue_v2_tx(tx, my_utxos, my_address, priv_key).await,
+        }
     }
 }

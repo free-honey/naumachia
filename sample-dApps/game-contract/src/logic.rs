@@ -80,7 +80,7 @@ fn impl_lock(amount: u64, secret: &str) -> SCLogicResult<TxActions<HashedString,
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
     let hashed_string = HashedString::new(secret);
-    let tx_actions = TxActions::default().with_script_init(hashed_string, values, address);
+    let tx_actions = TxActions::v2().with_script_init(hashed_string, values, address);
     Ok(tx_actions)
 }
 
@@ -103,7 +103,7 @@ async fn impl_guess<LC: LedgerClient<HashedString, ClearString>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let redeemer = ClearString::new(guess);
     let script_box = Box::new(script);
-    let tx_actions = TxActions::default().with_script_redeem(output, redeemer, script_box);
+    let tx_actions = TxActions::v2().with_script_redeem(output, redeemer, script_box);
     Ok(tx_actions)
 }
 

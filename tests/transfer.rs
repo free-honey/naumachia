@@ -28,7 +28,7 @@ impl SCLogic for TransferADASmartContract {
     ) -> SCLogicResult<TxActions<(), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
-                let u_tx = TxActions::default().with_transfer(amount, recipient, PolicyId::ADA);
+                let u_tx = TxActions::v1().with_transfer(amount, recipient, PolicyId::ADA);
                 Ok(u_tx)
             }
         }
