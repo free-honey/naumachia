@@ -162,6 +162,7 @@ mod tests {
     use crate::ledger_client::test_ledger_client::TestLedgerClient;
     use crate::ledger_client::LedgerClient;
     use crate::output::UnbuiltOutput;
+    use crate::transaction::ScriptVersion;
     use crate::UnbuiltTransaction;
 
     #[tokio::test]
@@ -207,6 +208,7 @@ mod tests {
         let owner = Address::new("bob");
         let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
         let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+            script_version: ScriptVersion::V1,
             script_inputs: vec![],
             unbuilt_outputs: vec![new_output],
             minting: Default::default(),

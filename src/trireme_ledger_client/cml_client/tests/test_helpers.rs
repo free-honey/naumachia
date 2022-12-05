@@ -1,5 +1,6 @@
 use crate::scripts::raw_script::PlutusScriptFile;
 use crate::scripts::raw_validator_script::RawPlutusValidator;
+use crate::transaction::ScriptVersion;
 use crate::trireme_ledger_client::cml_client::key_manager::TESTNET;
 use crate::{
     output::{Output, UnbuiltOutput},
@@ -19,6 +20,7 @@ pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()
     values.add_one_value(&PolicyId::ADA, amount);
     let output = UnbuiltOutput::new_wallet(recipient, values);
     UnbuiltTransaction {
+        script_version: ScriptVersion::V1,
         script_inputs: vec![],
         unbuilt_outputs: vec![output],
         minting: Default::default(),
@@ -31,6 +33,7 @@ pub fn lock_at_always_succeeds_tx(amount: u64) -> UnbuiltTransaction<(), ()> {
     values.add_one_value(&PolicyId::ADA, amount);
     let output = UnbuiltOutput::new_validator(script_address, values, ());
     UnbuiltTransaction {
+        script_version: ScriptVersion::V1,
         script_inputs: vec![],
         unbuilt_outputs: vec![output],
         minting: Default::default(),
@@ -74,6 +77,7 @@ pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTrans
     let script = RawPlutusValidator::new_v1(always_succeeds_hex()).unwrap();
     let script = Box::new(script) as Box<dyn ValidatorCode<(), ()>>;
     UnbuiltTransaction {
+        script_version: ScriptVersion::V1,
         script_inputs: vec![(script_input.clone(), (), script)],
         unbuilt_outputs: vec![],
         minting: Default::default(),

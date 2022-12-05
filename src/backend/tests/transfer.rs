@@ -63,7 +63,7 @@ async fn inner_test(
     backend: Backend<(), (), TestLedgerClient<(), (), InMemoryStorage<()>>>,
     decoys: Vec<PolicyId>,
 ) {
-    let u_tx = TxActions::default().with_transfer(amount, recipient.clone(), PolicyId::ADA);
+    let u_tx = TxActions::v1().with_transfer(amount, recipient.clone(), PolicyId::ADA);
 
     let my_bal_before = backend
         .ledger_client

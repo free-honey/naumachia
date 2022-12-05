@@ -34,7 +34,7 @@ async fn mint__alice_can_mint() {
     let amount = 100;
 
     let asset_name = None;
-    let u_tx: TxActions<(), ()> = TxActions::default().with_mint(
+    let u_tx: TxActions<(), ()> = TxActions::v1().with_mint(
         amount,
         asset_name.clone(),
         &signer,
