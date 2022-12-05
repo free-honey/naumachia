@@ -33,14 +33,24 @@
 - Trireme Ledger Client
   - CML Ledger Client
     - Implemented Actions:
-      - [x] Transfer
-      - [x] Mint
-        - [ ] Use Datum/Redeemers (Might work, just not tested)
-      - [x] InitScript
-      - [x] RedeemScriptOutput
-      - [ ] Spend Specific Output (e.g. for one-time mintings)
-      - [ ] Specify valid range
-      - [ ] Create Multi-Sig Tx?
+      - V1
+        - [x] Transfer
+        - [x] Mint
+          - [ ] Use Datum/Redeemers (Might work, just not tested)
+        - [x] InitScript
+        - [x] RedeemScriptOutput
+        - [ ] Spend Specific Output (e.g. for one-time mintings)
+        - [ ] Specify valid range
+        - [ ] Create Multi-Sig Tx?
+      - V2
+        - [x] Transfer
+        - [x] Mint
+          - [ ] Use Datum/Redeemers (Might work, just not tested)
+        - [x] InitScript
+        - [x] RedeemScriptOutput
+        - [ ] Spend Specific Output (e.g. for one-time mintings)
+        - [ ] Specify valid range
+        - [ ] Create Multi-Sig Tx?
     - Ledger Data Source
       - [x] BlockFrost Client
       - [ ] Local Ogmios Client
