@@ -1,4 +1,4 @@
-use crate::logic::script::AlwaysSucceedsScript;
+use crate::logic::script::get_script;
 use async_trait::async_trait;
 use naumachia::{
     address::PolicyId,
@@ -75,7 +75,7 @@ impl SCLogic for AlwaysSucceedsLogic {
 fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
-    let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
+    let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
@@ -87,7 +87,7 @@ async fn impl_claim<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
     output_id: OutputId,
 ) -> SCLogicResult<TxActions<(), ()>> {
-    let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
+    let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
@@ -109,7 +109,7 @@ async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
     count: usize,
 ) -> SCLogicResult<AlwaysSucceedsLookupResponses> {
-    let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
+    let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
