@@ -18,7 +18,7 @@ path = "src/main.rs"
 
 [dependencies]
 async-trait = "0.1.57"
-cardano-multiplatform-lib = "3.0.1"
+cardano-multiplatform-lib = "3.1.1"
 clap = { version = "3.2.16", features = ["derive"] }
 hex = "0.4.3"
 naumachia = {path = "../..", version = "0.2.0"}

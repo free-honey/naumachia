@@ -1,4 +1,4 @@
-name = "alway_succeeds_contract"
+name = "always_succeeds"
 version = "0.1.0"
 licences = ["Apache-2.0"]
 description = "Aiken contracts"

@@ -10,6 +10,16 @@ pub struct PlutusScriptFile {
     pub cborHex: String,
 }
 
+impl PlutusScriptFile {
+    pub fn new(script_type: &str, description: &str, cbor: &str) -> Self {
+        PlutusScriptFile {
+            r#type: script_type.to_string(),
+            description: description.to_string(),
+            cborHex: cbor.to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum RawPlutusScriptError {
     #[error("Error in Aiken Apply: {0:?}")]
