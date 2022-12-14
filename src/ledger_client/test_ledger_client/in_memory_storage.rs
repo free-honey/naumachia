@@ -88,7 +88,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
 mod tests {
     #![allow(non_snake_case)]
     use super::*;
-    use crate::transaction::ScriptVersion;
+    use crate::transaction::TransactionVersion;
     use crate::{
         ledger_client::{
             test_ledger_client::{local_persisted_storage::starting_output, TestLedgerClient},
@@ -147,7 +147,7 @@ mod tests {
         let owner = Address::new("bob");
         let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
         let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
-            script_version: ScriptVersion::V1,
+            script_version: TransactionVersion::V1,
             script_inputs: vec![],
             unbuilt_outputs: vec![new_output],
             minting: Default::default(),

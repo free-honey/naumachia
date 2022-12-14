@@ -11,7 +11,7 @@ use minicbor::Decoder;
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
-use crate::transaction::ScriptVersion;
+use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use std::marker::PhantomData;
 use uplc::{
@@ -129,8 +129,7 @@ where
         // println!("hex: {:?}", hex::encode(&flat));
         let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(flat)
             .map_err(as_failed_to_execute)?
-            .try_into()
-            .map_err(as_failed_to_execute)?;
+            .into();
         // println!("whole: {}", &program);
         let datum_data: PlutusData = datum.into();
         let datum_term = Term::Constant(Constant::Data(datum_data.into()));

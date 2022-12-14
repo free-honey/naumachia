@@ -41,21 +41,21 @@ pub enum Action<Datum, Redeemer> {
 // TODO: Maybe we should make V1 and V2 TxActions be completely different types,
 //   since they have different options e.g. inline datum etc
 pub struct TxActions<Datum, Redeemer> {
-    pub script_version: ScriptVersion,
+    pub script_version: TransactionVersion,
     pub actions: Vec<Action<Datum, Redeemer>>,
 }
 
 impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
     pub fn v1() -> Self {
         TxActions {
-            script_version: ScriptVersion::V1,
+            script_version: TransactionVersion::V1,
             actions: Vec::new(),
         }
     }
 
     pub fn v2() -> Self {
         TxActions {
-            script_version: ScriptVersion::V2,
+            script_version: TransactionVersion::V2,
             actions: Vec::new(),
         }
     }
@@ -208,13 +208,13 @@ fn create_outputs_for<Datum>(
     Ok(outputs)
 }
 
-pub enum ScriptVersion {
+pub enum TransactionVersion {
     V1,
     V2,
 }
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {
-    pub script_version: ScriptVersion,
+    pub script_version: TransactionVersion,
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
     pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
     #[allow(clippy::type_complexity)]

@@ -1,4 +1,4 @@
-use crate::transaction::ScriptVersion;
+use crate::transaction::TransactionVersion;
 use crate::trireme_ledger_client::cml_client::issuance_helpers::{
     cml_v1_script_from_nau_policy, cml_v2_script_from_nau_policy, cml_v2_script_from_nau_script,
     vasil_v2_tx_builder,
@@ -586,8 +586,8 @@ where
             .map_err(as_failed_to_issue_tx)?;
 
         match tx.script_version {
-            ScriptVersion::V1 => self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await,
-            ScriptVersion::V2 => self.issue_v2_tx(tx, my_utxos, my_address, priv_key).await,
+            TransactionVersion::V1 => self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await,
+            TransactionVersion::V2 => self.issue_v2_tx(tx, my_utxos, my_address, priv_key).await,
         }
     }
 }

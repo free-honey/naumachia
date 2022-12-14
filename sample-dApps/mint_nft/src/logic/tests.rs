@@ -15,7 +15,7 @@ async fn lock_and_claim() {
 
     let amount = 10_000_000;
     let endpoint = MintNFTEndpoints::Lock { amount };
-    let script = get_script().unwrap();
+    let script = get_parameterized_script().unwrap();
     let contract = SmartContract::new(&MintNFTLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     {

@@ -1,7 +1,7 @@
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::scripts::{as_failed_to_execute, MintingPolicy, ScriptResult, TxContext};
-use crate::transaction::ScriptVersion;
+use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script, PlutusV2Script};
 use minicbor::Decoder;
 use std::marker::PhantomData;
@@ -44,16 +44,16 @@ impl<R> RawPolicy<R> {
 }
 
 pub struct OneParamRawPolicy<One, Redeemer> {
-    version: ScriptVersion,
+    version: TransactionVersion,
     cbor_hex: String,
     _one: PhantomData<One>,
     _redeemer: PhantomData<Redeemer>,
 }
 
 impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
-    fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
+    pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let v2_val = OneParamRawPolicy {
-            version: ScriptVersion::V2,
+            version: TransactionVersion::V2,
             cbor_hex: script_file.cborHex,
             _one: Default::default(),
             _redeemer: Default::default(),
@@ -61,7 +61,7 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
         Ok(v2_val)
     }
 
-    fn apply(&self, one: One) -> RawPlutusScriptResult<RawPolicy<R>> {
+    pub fn apply(&self, one: One) -> RawPlutusScriptResult<RawPolicy<R>> {
         let cbor = hex::decode(&self.cbor_hex)
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);

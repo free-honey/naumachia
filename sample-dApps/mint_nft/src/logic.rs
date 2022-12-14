@@ -1,4 +1,4 @@
-use crate::logic::script::get_script;
+use crate::logic::script::get_parameterized_script;
 use async_trait::async_trait;
 use naumachia::{
     address::PolicyId,
@@ -57,5 +57,16 @@ impl SCLogic for MintNFTLogic {
 }
 
 fn impl_mint<LC: LedgerClient<(), ()>>(ledger_client: &LC) -> SCLogicResult<TxActions<(), ()>> {
-    todo!()
+    let recipient = ledger_client
+        .signer()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let my_input = todo!();
+    let param_script = get_parameterized_script()?;
+    let script = param_script
+        .apply(my_input)
+        .map_err(SCLogicError::PolicyScript)?;
+    let policy = Box::new(script);
+    let actions = TxActions::v2().with_mint(1, None, &recipient, (), policy);
+    Ok(actions)
 }
