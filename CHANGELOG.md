@@ -4,7 +4,8 @@
 
 ### Added
 
-**naumachia**: Add V2 Support for CML client
+**always-succeeds-contract**: Convert to Aiken :)  
+**naumachia**: Add V2 Support for CML client  
 **naumachia**: Remove dupe Blockfrost Client
 
 ## [v0.2.0] - 2022-11-20
