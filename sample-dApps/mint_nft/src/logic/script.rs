@@ -26,14 +26,6 @@ pub struct OutputReference {
     output_index: u32,
 }
 
-// pub type Output {
-//   address: Address,
-//   value: Value,
-//   datum: DatumOption,
-//   reference_script: Option(ScriptHash),
-// }
-pub struct Output {}
-
 // pub type TransactionId {
 //   hash: Hash(Transaction),
 // }
