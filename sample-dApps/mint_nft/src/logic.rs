@@ -1,5 +1,6 @@
-use crate::logic::script::get_parameterized_script;
+use crate::logic::script::{get_parameterized_script, Input};
 use async_trait::async_trait;
+use naumachia::scripts::ScriptError;
 use naumachia::{
     address::PolicyId,
     ledger_client::LedgerClient,
@@ -44,7 +45,7 @@ impl SCLogic for MintNFTLogic {
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
-            MintNFTEndpoints::Mint => impl_mint(ledger_client),
+            MintNFTEndpoints::Mint => impl_mint(ledger_client).await,
         }
     }
 
@@ -56,17 +57,24 @@ impl SCLogic for MintNFTLogic {
     }
 }
 
-fn impl_mint<LC: LedgerClient<(), ()>>(ledger_client: &LC) -> SCLogicResult<TxActions<(), ()>> {
+async fn impl_mint<LC: LedgerClient<(), ()>>(
+    ledger_client: &LC,
+) -> SCLogicResult<TxActions<(), ()>> {
     let recipient = ledger_client
         .signer()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let my_input = todo!();
-    let param_script = get_parameterized_script()?;
+    let my_input = any_input(ledger_client).await?;
+    let param_script = get_parameterized_script().map_err(SCLogicError::PolicyScript)?;
     let script = param_script
         .apply(my_input)
+        .map_err(|e| ScriptError::FailedToConstruct(format!("{:?}", e)))
         .map_err(SCLogicError::PolicyScript)?;
     let policy = Box::new(script);
     let actions = TxActions::v2().with_mint(1, None, &recipient, (), policy);
     Ok(actions)
+}
+
+async fn any_input<LC: LedgerClient<(), ()>>(ledger_client: &LC) -> SCLogicResult<Input> {
+    todo!()
 }

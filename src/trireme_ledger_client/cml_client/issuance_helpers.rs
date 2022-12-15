@@ -458,7 +458,7 @@ fn as_nau_values(cml_value: &CMLValue) -> LedgerClientResult<Values> {
     Ok(values)
 }
 
-pub(crate) async fn specify_utxos_available_for_selection(
+pub(crate) async fn specify_utxos_available_for_input_selection(
     tx_builder: &mut TransactionBuilder,
     my_address: &CMLAddress,
     my_utxos: &[UTxO],

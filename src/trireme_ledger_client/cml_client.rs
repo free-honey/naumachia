@@ -12,7 +12,7 @@ use crate::{
     trireme_ledger_client::cml_client::issuance_helpers::vasil_v1_tx_builder,
     trireme_ledger_client::cml_client::issuance_helpers::{
         add_collateral, build_tx_for_signing, select_inputs_from_utxos, sign_tx,
-        specify_utxos_available_for_selection, utxo_to_nau_utxo,
+        specify_utxos_available_for_input_selection, utxo_to_nau_utxo,
     },
     trireme_ledger_client::cml_client::issuance_helpers::{
         cml_v1_script_from_nau_script, input_tx_hash, partial_script_witness,
@@ -451,7 +451,8 @@ where
         let mut tx_builder = vasil_v1_tx_builder()?;
         self.add_v1_script_inputs(&mut tx_builder, &tx).await?;
         self.add_tokens_for_v1_minting(&mut tx_builder, &tx).await?;
-        specify_utxos_available_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
+        specify_utxos_available_for_input_selection(&mut tx_builder, &my_address, &my_utxos)
+            .await?;
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
         select_inputs_from_utxos(&mut tx_builder).await?;
@@ -472,7 +473,9 @@ where
         let mut tx_builder = vasil_v2_tx_builder()?;
         self.add_v2_script_inputs(&mut tx_builder, &tx).await?;
         self.add_tokens_for_v2_minting(&mut tx_builder, &tx).await?;
-        specify_utxos_available_for_selection(&mut tx_builder, &my_address, &my_utxos).await?;
+        specify_utxos_available_for_input_selection(&mut tx_builder, &my_address, &my_utxos)
+            .await?;
+        // self.add_specific_inputs().await?;
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
         select_inputs_from_utxos(&mut tx_builder).await?;
