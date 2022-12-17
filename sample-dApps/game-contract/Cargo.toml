@@ -18,7 +18,6 @@ path = "src/main.rs"
 
 [dependencies]
 async-trait = "0.1.57"
-cardano-multiplatform-lib = "3.1.1"
 clap = { version = "3.2.16", features = ["derive"] }
 hex = "0.4.3"
 naumachia = {path = "../..", version = "0.2.0"}
@@ -28,3 +27,9 @@ serde_json = "1.0"
 sha2 = "0.10.6"
 thiserror = "1.0.24"
 tokio = { version = "1.20.1", features = ["full"] }
+
+[dependencies.cardano-multiplatform-lib]
+version = "3.1.1"
+git = "https://github.com/dcSpark/cardano-multiplatform-lib.git"
+rev = "685354495562ff879101fd023eb89555db9bbb1e"
+#branch = "develop"

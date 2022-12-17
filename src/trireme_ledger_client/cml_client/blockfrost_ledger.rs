@@ -8,9 +8,7 @@ use blockfrost_http_client::models::ExecutionType;
 use blockfrost_http_client::{models::UTxO as BFUTxO, BlockFrostHttp, BlockFrostHttpTrait};
 use cardano_multiplatform_lib::plutus::encode_json_str_to_plutus_datum;
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress,
-    crypto::TransactionHash,
-    plutus::{encode_json_value_to_plutus_datum, PlutusDatumSchema},
+    address::Address as CMLAddress, crypto::TransactionHash, plutus::PlutusDatumSchema,
     Transaction as CMLTransaction,
 };
 use futures::future;

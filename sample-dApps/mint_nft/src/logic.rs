@@ -1,23 +1,18 @@
-use crate::logic::script::{get_parameterized_script, Input};
+use crate::logic::script::{get_parameterized_script, OutputReference};
 use async_trait::async_trait;
+use naumachia::output::Output;
 use naumachia::scripts::ScriptError;
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
     logic::{SCLogic, SCLogicError, SCLogicResult},
-    output::{Output, OutputId},
-    scripts::ValidatorCode,
+    output::OutputId,
     transaction::TxActions,
-    values::Values,
 };
 use thiserror::Error;
 
 pub mod script;
 #[cfg(test)]
 mod tests;
-
-// TODO: Pass through someplace, do not hardcode!
-const NETWORK: u8 = 0;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MintNFTLogic;
@@ -67,7 +62,7 @@ async fn impl_mint<LC: LedgerClient<(), ()>>(
     let my_input = any_input(ledger_client).await?;
     let param_script = get_parameterized_script().map_err(SCLogicError::PolicyScript)?;
     let script = param_script
-        .apply(my_input)
+        .apply(OutputReference::from(&my_input))
         .map_err(|e| ScriptError::FailedToConstruct(format!("{:?}", e)))
         .map_err(SCLogicError::PolicyScript)?;
     let policy = Box::new(script);
@@ -75,6 +70,6 @@ async fn impl_mint<LC: LedgerClient<(), ()>>(
     Ok(actions)
 }
 
-async fn any_input<LC: LedgerClient<(), ()>>(ledger_client: &LC) -> SCLogicResult<Input> {
+async fn any_input<LC: LedgerClient<(), ()>>(_ledger_client: &LC) -> SCLogicResult<Output<()>> {
     todo!()
 }

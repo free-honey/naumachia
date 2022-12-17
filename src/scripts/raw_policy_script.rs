@@ -1,6 +1,6 @@
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
-use crate::scripts::{as_failed_to_execute, MintingPolicy, ScriptResult, TxContext};
+use crate::scripts::{MintingPolicy, ScriptResult, TxContext};
 use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script, PlutusV2Script};
 use minicbor::Decoder;
@@ -84,9 +84,17 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
         let cbor_hex = hex::encode(new_cbor);
         let script_bytes =
             hex::decode(&cbor_hex).map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-        let v2 = PlutusV2Script::from_bytes(script_bytes)
-            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-        let cml_script = PlutusScript::from_v2(&v2);
+        let cml_script = match self.version {
+            TransactionVersion::V1 => {
+                todo!()
+            }
+            TransactionVersion::V2 => {
+                let v2 = PlutusV2Script::from_bytes(script_bytes)
+                    .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
+                PlutusScript::from_v2(&v2)
+            }
+        };
+
         let policy = RawPolicy {
             cbor_hex,
             cml_script,

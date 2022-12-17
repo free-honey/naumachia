@@ -1,7 +1,6 @@
 use aiken_project::script::EvalInfo;
 use aiken_project::{config::Config, pretty, telemetry, Project};
 use std::collections::BTreeMap;
-use std::env;
 
 use owo_colors::OwoColorize;
 use uplc::machine::cost_model::ExBudget;

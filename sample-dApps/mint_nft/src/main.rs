@@ -2,7 +2,6 @@ use clap::Parser;
 use mint_nft::logic::{MintNFTEndpoints, MintNFTLogic};
 use naumachia::{
     backend::Backend,
-    output::OutputId,
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };

@@ -11,17 +11,11 @@ use minicbor::Decoder;
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
-use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use std::marker::PhantomData;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
-    tx::script_context::{
-        ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
-    },
-    tx::to_plutus_data::{MintValue, ToPlutusData},
     BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
-    PostAlonzoTransactionOutput, TransactionInput, TransactionOutput, Value,
 };
 
 pub mod plutus_data;
