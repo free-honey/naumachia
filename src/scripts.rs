@@ -23,7 +23,7 @@ pub trait MintingPolicy<R>: Send + Sync {
     fn execute(&self, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
     // TODO: Add network param!
     fn id(&self) -> String;
-    fn script_hex(&self) -> ScriptResult<&str>;
+    fn script_hex(&self) -> ScriptResult<String>;
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

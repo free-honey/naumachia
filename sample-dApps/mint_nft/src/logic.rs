@@ -22,9 +22,9 @@ pub enum MintNFTEndpoints {
 }
 
 #[derive(Debug, Error)]
-pub enum AlwaysSucceedsError {
-    #[error("Could not find an output with id: {0:?}")]
-    OutputNotFound(OutputId),
+pub enum MintNFTError {
+    #[error("Could not find any UTxO to use as the input for NFT policy")]
+    InputNotFound,
 }
 
 #[async_trait]
@@ -66,10 +66,23 @@ async fn impl_mint<LC: LedgerClient<(), ()>>(
         .map_err(|e| ScriptError::FailedToConstruct(format!("{:?}", e)))
         .map_err(SCLogicError::PolicyScript)?;
     let policy = Box::new(script);
-    let actions = TxActions::v2().with_mint(1, None, &recipient, (), policy);
+    let actions = TxActions::v2()
+        .with_mint(1, None, &recipient, (), policy)
+        .with_specific_input(my_input);
     Ok(actions)
 }
 
-async fn any_input<LC: LedgerClient<(), ()>>(_ledger_client: &LC) -> SCLogicResult<Output<()>> {
-    todo!()
+async fn any_input<LC: LedgerClient<(), ()>>(ledger_client: &LC) -> SCLogicResult<Output<()>> {
+    let me = ledger_client
+        .signer()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    ledger_client
+        .outputs_at_address(&me, 1)
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .pop()
+        .ok_or(SCLogicError::Endpoint(Box::new(
+            MintNFTError::InputNotFound,
+        )))
 }
