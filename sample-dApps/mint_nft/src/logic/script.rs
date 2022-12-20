@@ -1,6 +1,6 @@
 use hex;
 use naumachia::output::Output as NauOutput;
-use naumachia::scripts::raw_policy_script::OneParamRawPolicy;
+use naumachia::scripts::raw_policy_script::{OneParamRawPolicy, RawPolicy};
 use naumachia::scripts::raw_script::PlutusScriptFile;
 use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
 use naumachia::scripts::{ScriptError, ScriptResult};
@@ -37,12 +37,18 @@ impl<T> From<&NauOutput<T>> for OutputReference {
 impl From<OutputReference> for PlutusData {
     fn from(out_ref: OutputReference) -> Self {
         let tx_id_bytes = out_ref.transaction_id;
-        let transaction_id = PlutusData::BoundedBytes(tx_id_bytes);
+        let transaction_id = PlutusData::Constr(Constr {
+            tag: 121,
+            any_constructor: None,
+            fields: vec![PlutusData::BoundedBytes(tx_id_bytes)],
+        });
+        // let transaction_id = PlutusData::BoundedBytes(tx_id_bytes);
         let output_index = PlutusData::BigInt((out_ref.output_index as i64).into()); // TODO: panic
         PlutusData::Constr(Constr {
             tag: 121,
             any_constructor: None,
             fields: vec![transaction_id, output_index],
+            // fields: vec![],
         })
     }
 }
@@ -55,7 +61,15 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
     Ok(raw_script_validator)
 }
 
-#[ignore]
+pub fn get_script() -> ScriptResult<RawPolicy<()>> {
+    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+        .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
+    dbg!(&script_file);
+    let raw_script_validator = RawPolicy::new_v2(script_file)
+        .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
+    Ok(raw_script_validator)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,8 +94,12 @@ mod tests {
 
         let param_script = get_parameterized_script().unwrap();
         let script = param_script.apply(out_ref).unwrap();
+        // let script = param_script.apply(69).unwrap();
+        // let script = get_script().unwrap();
 
         let ctx = TxContext { signer: owner };
+        let cbor = script.script_hex().unwrap();
+        dbg!(&cbor);
         let eval = script.execute((), ctx).unwrap();
     }
 }

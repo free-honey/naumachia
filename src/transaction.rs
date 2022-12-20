@@ -9,6 +9,7 @@ use crate::{
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 pub(crate) mod nested_value_map;
 
@@ -222,6 +223,7 @@ fn create_outputs_for<Datum>(
     Ok(outputs)
 }
 
+#[derive(Clone)]
 pub enum TransactionVersion {
     V1,
     V2,

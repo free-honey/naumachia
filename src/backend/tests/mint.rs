@@ -22,7 +22,7 @@ impl<R> MintingPolicy<R> for AliceCanMintPolicy {
         "OnlyAliceCanMint".to_string()
     }
 
-    fn script_hex(&self) -> ScriptResult<&str> {
+    fn script_hex(&self) -> ScriptResult<String> {
         todo!()
     }
 }

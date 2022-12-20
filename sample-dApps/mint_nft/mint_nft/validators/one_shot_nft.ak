@@ -10,3 +10,8 @@ pub fn mint(input_ref: OutputReference, _redeemer, ctx: ScriptContext<mint.Mint>
     }
     any_in_list(inputs, ref_matches_input)
 }
+
+/// pub fn mint(input_ref: OutputReference, _redeemer, ctx: ScriptContext<mint.Mint>) -> Bool {
+///     input_ref == input_ref
+/// }
+

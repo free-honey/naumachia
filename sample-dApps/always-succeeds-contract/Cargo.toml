@@ -17,7 +17,11 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-aiken-project = { git = "https://github.com/txpipe/aiken.git", branch = "main"}
+aiken-project = { git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+uplc = { git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+
+miette = { version = "5.3.0", features = ["fancy"] }
+owo-colors = "3.5.0"
 
 [dependencies]
 async-trait = "0.1.57"

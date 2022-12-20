@@ -230,7 +230,7 @@ where
         enterprise_addr.to_address()
     }
 
-    async fn build_v1_cml_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn build_v1_cml_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
@@ -264,7 +264,7 @@ where
         Ok(cml_input)
     }
 
-    async fn build_v2_cml_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn build_v2_cml_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
@@ -305,7 +305,9 @@ where
         redeemer: &Redeemer,
         script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
-        let cml_input = self.build_v1_cml_input(input, redeemer, script).await?;
+        let cml_input = self
+            .build_v1_cml_script_input(input, redeemer, script)
+            .await?;
         tx_builder
             .add_input(&cml_input)
             .map_err(|e| CMLLCError::JsError(e.to_string()))
@@ -320,7 +322,9 @@ where
         redeemer: &Redeemer,
         script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
-        let cml_input = self.build_v2_cml_input(input, redeemer, script).await?;
+        let cml_input = self
+            .build_v2_cml_script_input(input, redeemer, script)
+            .await?;
         tx_builder
             .add_input(&cml_input)
             .map_err(|e| CMLLCError::JsError(e.to_string()))
@@ -448,18 +452,30 @@ where
         my_address: CMLAddress,
         priv_key: PrivateKey,
     ) -> LedgerClientResult<TxId> {
+        println!("V1 Tx");
         let mut tx_builder = vasil_v1_tx_builder()?;
+        println!("1");
         self.add_v1_script_inputs(&mut tx_builder, &tx).await?;
+        println!("2");
         self.add_tokens_for_v1_minting(&mut tx_builder, &tx).await?;
+        println!("3");
         specify_utxos_available_for_input_selection(&mut tx_builder, &my_address, &my_utxos)
             .await?;
+        println!("4");
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
+        println!("5");
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
+        println!("6");
         select_inputs_from_utxos(&mut tx_builder).await?;
+        println!("7");
         self.update_ex_units(&mut tx_builder, &my_address).await?;
+        println!("8");
         let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        println!("9");
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
+        println!("10");
         let tx_id = self.submit_tx(&tx).await?;
+        println!("11");
         Ok(tx_id)
     }
 
@@ -470,20 +486,67 @@ where
         my_address: CMLAddress,
         priv_key: PrivateKey,
     ) -> LedgerClientResult<TxId> {
+        println!("V2 Tx");
         let mut tx_builder = vasil_v2_tx_builder()?;
+        println!("1");
         self.add_v2_script_inputs(&mut tx_builder, &tx).await?;
+        println!("2");
         self.add_tokens_for_v2_minting(&mut tx_builder, &tx).await?;
+        println!("3");
         specify_utxos_available_for_input_selection(&mut tx_builder, &my_address, &my_utxos)
             .await?;
-        // self.add_specific_inputs().await?;
+        println!("4a");
+        self.add_specific_inputs(&mut tx_builder, &tx).await?;
+        println!("4b");
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
+        println!("5");
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
+        println!("6");
         select_inputs_from_utxos(&mut tx_builder).await?;
+        println!("7");
         self.update_ex_units(&mut tx_builder, &my_address).await?;
+        println!("8");
         let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        println!("9");
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
+        println!("10");
         let tx_id = self.submit_tx(&tx).await?;
+        println!("11");
         Ok(tx_id)
+    }
+
+    async fn add_specific_inputs<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<()> {
+        for specific_input in &tx.specific_wallet_inputs {
+            let transaction_id = input_tx_hash(&specific_input).await?;
+            let index = &specific_input.id().index().into();
+            let input = TransactionInput::new(&transaction_id, &index);
+            let address = self
+                .keys
+                .addr_from_bech_32(specific_input.owner().to_str())
+                .await
+                .map_err(|e| CMLLCError::JsError(e.to_string()))
+                .map_err(as_failed_to_issue_tx)?;
+            let amount = specific_input
+                .values()
+                .clone()
+                .try_into()
+                .map_err(as_failed_to_issue_tx)?;
+            let utxo_info = TransactionOutput::new(&address, &amount);
+            let input_builder = SingleInputBuilder::new(&input, &utxo_info);
+            let res = input_builder
+                .payment_key()
+                .map_err(|e| CMLLCError::JsError(e.to_string()))
+                .map_err(as_failed_to_issue_tx)?;
+            tx_builder
+                .add_input(&res)
+                .map_err(|e| CMLLCError::JsError(e.to_string()))
+                .map_err(as_failed_to_issue_tx)?;
+        }
+        Ok(())
     }
 }
 

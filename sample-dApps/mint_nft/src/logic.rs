@@ -63,11 +63,12 @@ async fn impl_mint<LC: LedgerClient<(), ()>>(
     let param_script = get_parameterized_script().map_err(SCLogicError::PolicyScript)?;
     let script = param_script
         .apply(OutputReference::from(&my_input))
+        // .apply(69)
         .map_err(|e| ScriptError::FailedToConstruct(format!("{:?}", e)))
         .map_err(SCLogicError::PolicyScript)?;
     let policy = Box::new(script);
     let actions = TxActions::v2()
-        .with_mint(1, None, &recipient, (), policy)
+        .with_mint(1, Some("OneShot".to_string()), &recipient, (), policy)
         .with_specific_input(my_input);
     Ok(actions)
 }
@@ -77,12 +78,14 @@ async fn any_input<LC: LedgerClient<(), ()>>(ledger_client: &LC) -> SCLogicResul
         .signer()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    ledger_client
+    let input = ledger_client
         .outputs_at_address(&me, 1)
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
         .pop()
         .ok_or(SCLogicError::Endpoint(Box::new(
             MintNFTError::InputNotFound,
-        )))
+        )))?;
+    println!("input id: {:?}", input.id());
+    Ok(input)
 }

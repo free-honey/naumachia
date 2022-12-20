@@ -11,8 +11,10 @@ use minicbor::Decoder;
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use std::marker::PhantomData;
+use uplc::machine::cost_model::ExBudget;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
@@ -25,6 +27,7 @@ mod tests;
 
 // TODO: Maybe make V1 and V2 different types? We want to protect the end user better!
 pub struct RawPlutusValidator<Datum, Redeemer> {
+    version: TransactionVersion,
     cbor_hex: String,
     cml_script: PlutusScript,
     _datum: PhantomData<Datum>,
@@ -39,6 +42,7 @@ impl<D, R> RawPlutusValidator<D, R> {
             .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
         let cml_script = PlutusScript::from_v1(&v1);
         let v1_val = RawPlutusValidator {
+            version: TransactionVersion::V1,
             cbor_hex: script_file.cborHex,
             cml_script,
             _datum: Default::default(),
@@ -54,6 +58,7 @@ impl<D, R> RawPlutusValidator<D, R> {
             .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
         let cml_script = PlutusScript::from_v2(&v2);
         let v2_val = RawPlutusValidator {
+            version: TransactionVersion::V2,
             cbor_hex: script_file.cborHex,
             cml_script,
             _datum: Default::default(),
@@ -120,29 +125,22 @@ where
         let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
         let mut flat_decoder = Decoder::new(outer);
         let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
-        // println!("hex: {:?}", hex::encode(&flat));
         let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(flat)
             .map_err(as_failed_to_execute)?
             .into();
-        // println!("whole: {}", &program);
         let datum_data: PlutusData = datum.into();
         let datum_term = Term::Constant(Constant::Data(datum_data.into()));
-        // dbg!(&datum_term);
         let program = program.apply_term(&datum_term);
-        // println!("apply datum: {}", &program);
         let redeemer_data: PlutusData = redeemer.into();
         let redeemer_term = Term::Constant(Constant::Data(redeemer_data.into()));
-        // dbg!(&redeemer_term);
         let program = program.apply_term(&redeemer_term);
-        // println!("apply redeemer: {}", &program);
         let ctx_data: PlutusData = ctx.into();
         let ctx_term = Term::Constant(Constant::Data(ctx_data.into()));
-        // dbg!(&ctx_term);
         let program = program.apply_term(&ctx_term);
-        // println!("apply ctx: {}", &program);
-        let (term, _cost, logs) = program.eval_v1();
-        // println!("{:?}", &term);
-        // println!("{:?}", &logs);
+        let (term, _cost, logs) = match self.version {
+            TransactionVersion::V1 => program.eval_v1(),
+            TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
+        };
         term.map_err(|e| RawPlutusScriptError::AikenEval {
             error: format!("{:?}", e),
             logs,
