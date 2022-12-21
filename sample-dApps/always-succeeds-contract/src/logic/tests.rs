@@ -15,7 +15,7 @@ async fn lock_and_claim() {
 
     let amount = 10_000_000;
     let endpoint = AlwaysSucceedsEndpoints::Lock { amount };
-    let script = AlwaysSucceedsScript::try_new().unwrap();
+    let script = get_script().unwrap();
     let contract = SmartContract::new(&AlwaysSucceedsLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     {

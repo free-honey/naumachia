@@ -6,10 +6,9 @@ use crate::trireme_ledger_client::cml_client::{
 use async_trait::async_trait;
 use blockfrost_http_client::models::ExecutionType;
 use blockfrost_http_client::{models::UTxO as BFUTxO, BlockFrostHttp, BlockFrostHttpTrait};
+use cardano_multiplatform_lib::plutus::encode_json_str_to_plutus_datum;
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress,
-    crypto::TransactionHash,
-    plutus::{encode_json_value_to_plutus_datum, PlutusDatumSchema},
+    address::Address as CMLAddress, crypto::TransactionHash, plutus::PlutusDatumSchema,
     Transaction as CMLTransaction,
 };
 use futures::future;
@@ -42,8 +41,9 @@ impl BlockFrostLedger {
                 .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
             if let Some(inner) = json_datum.as_object() {
                 if inner.get("error").is_none() {
-                    let plutus_data = encode_json_value_to_plutus_datum(
-                        json_datum["json_value"].clone(), // TODO: Make this safer!
+                    let ser = json_datum["json_value"].to_string();
+                    let plutus_data = encode_json_str_to_plutus_datum(
+                        &ser, // TODO: Make this safer!
                         PlutusDatumSchema::DetailedSchema,
                     )
                     .map_err(|e| JsError(e.to_string()))?;

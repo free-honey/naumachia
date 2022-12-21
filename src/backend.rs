@@ -51,7 +51,7 @@ where
         // TODO: Move this to ledger client impls
         // can_mint_tokens(&tx, &self.ledger_client.signer().await?)?;
         let tx_id = self.ledger_client.issue(tx).await?;
-        dbg!(&tx_id);
+        println!("Transaction Submitted: {:?}", &tx_id);
         Ok(())
     }
 

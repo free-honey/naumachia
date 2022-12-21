@@ -9,6 +9,7 @@ use crate::{
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 pub(crate) mod nested_value_map;
 
@@ -36,26 +37,29 @@ pub enum Action<Datum, Redeemer> {
         redeemer: Redeemer,
         script: Box<dyn ValidatorCode<Datum, Redeemer>>, // Is there a way to do this without `dyn`?
     },
+    SpecificInput {
+        input: Output<Datum>,
+    },
 }
 
 // TODO: Maybe we should make V1 and V2 TxActions be completely different types,
 //   since they have different options e.g. inline datum etc
 pub struct TxActions<Datum, Redeemer> {
-    pub script_version: ScriptVersion,
+    pub script_version: TransactionVersion,
     pub actions: Vec<Action<Datum, Redeemer>>,
 }
 
 impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
     pub fn v1() -> Self {
         TxActions {
-            script_version: ScriptVersion::V1,
+            script_version: TransactionVersion::V1,
             actions: Vec::new(),
         }
     }
 
     pub fn v2() -> Self {
         TxActions {
-            script_version: ScriptVersion::V2,
+            script_version: TransactionVersion::V2,
             actions: Vec::new(),
         }
     }
@@ -72,6 +76,8 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         self
     }
 
+    // TODO: I don't know if that recipient makes any sense. It can just be included in the default
+    //   outputs or specified outputs (anything unspecified will just go to creator)
     pub fn with_mint(
         mut self,
         amount: u64,
@@ -117,6 +123,12 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         self
     }
 
+    pub fn with_specific_input(mut self, input: Output<Datum>) -> Self {
+        let action = Action::SpecificInput { input };
+        self.actions.push(action);
+        self
+    }
+
     pub fn to_unbuilt_tx(self) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
         let TxActions {
             script_version,
@@ -126,6 +138,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         let mut minting = Vec::new();
         let mut script_inputs: Vec<RedemptionDetails<Datum, Redeemer>> = Vec::new();
         let mut specific_outputs: Vec<UnbuiltOutput<Datum>> = Vec::new();
+        let mut specific_wallet_inputs: Vec<Output<Datum>> = Vec::new();
 
         for action in actions {
             match action {
@@ -143,7 +156,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
                     policy,
                     recipient,
                 } => {
-                    let id = policy.id();
+                    let id = policy.id()?;
                     let policy_id = PolicyId::native_token(&id, &asset_name);
                     minting.push((amount, asset_name, redeemer, policy));
                     add_amount_to_nested_map(
@@ -173,6 +186,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
                 } => {
                     script_inputs.push((output.clone(), redeemer, script));
                 }
+                Action::SpecificInput { input } => specific_wallet_inputs.push(input),
             }
         }
 
@@ -185,6 +199,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
             script_inputs,
             unbuilt_outputs: outputs,
             minting,
+            specific_wallet_inputs,
         };
         Ok(tx)
     }
@@ -208,13 +223,14 @@ fn create_outputs_for<Datum>(
     Ok(outputs)
 }
 
-pub enum ScriptVersion {
+#[derive(Clone)]
+pub enum TransactionVersion {
     V1,
     V2,
 }
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {
-    pub script_version: ScriptVersion,
+    pub script_version: TransactionVersion,
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
     pub unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
     #[allow(clippy::type_complexity)]
@@ -224,6 +240,7 @@ pub struct UnbuiltTransaction<Datum, Redeemer> {
         Redeemer,
         Box<dyn MintingPolicy<Redeemer>>,
     )>,
+    pub specific_wallet_inputs: Vec<Output<Datum>>,
 }
 
 impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {

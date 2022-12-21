@@ -1,55 +1,33 @@
-use cardano_multiplatform_lib::{
-    address::{EnterpriseAddress, StakeCredential},
-    plutus::{PlutusScript, PlutusV1Script},
-};
 use naumachia::scripts::raw_script::PlutusScriptFile;
-use naumachia::{
-    address::Address,
-    scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode},
-};
+use naumachia::scripts::raw_validator_script::RawPlutusValidator;
+use naumachia::scripts::{ScriptError, ScriptResult};
 
-const SCRIPT_RAW: &str = include_str!("../../plutus/always-succeeds-spending.plutus");
+const SCRIPT_RAW: &str =
+    include_str!("../../always_succeeds/assets/always_true/spend/payment_script.json");
 
-// TODO: This whole type won't be necessary once Aiken eval is added to Naumachia
-pub struct AlwaysSucceedsScript {
-    script_hex: String,
-    cml_script: PlutusScript,
+pub fn get_script() -> ScriptResult<RawPlutusValidator<(), ()>> {
+    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+        .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
+    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
+        .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
+    Ok(raw_script_validator)
 }
 
-impl AlwaysSucceedsScript {
-    pub fn try_new() -> ScriptResult<Self> {
-        let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
-            .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-        let script_hex = script_file.cborHex;
-        let script_bytes =
-            hex::decode(&script_hex).map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-        let v1 = PlutusV1Script::from_bytes(script_bytes)
-            .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-        let cml_script = PlutusScript::from_v1(&v1);
-        let v1_val = AlwaysSucceedsScript {
-            script_hex,
-            cml_script,
-        };
-        Ok(v1_val)
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use naumachia::address::Address;
+    use naumachia::scripts::{TxContext, ValidatorCode};
 
-impl ValidatorCode<(), ()> for AlwaysSucceedsScript {
-    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
-        Ok(())
-    }
+    #[test]
+    fn test() {
+        let script = get_script().unwrap();
 
-    fn address(&self, network: u8) -> ScriptResult<Address> {
-        let script_hash = self.cml_script.hash();
-        let stake_cred = StakeCredential::from_scripthash(&script_hash);
-        let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);
-        let cml_script_address = enterprise_addr.to_address();
-        let script_address_str = cml_script_address.to_bech32(None).unwrap();
-        let address = Address::Script(script_address_str);
-        Ok(address)
-    }
+        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
 
-    fn script_hex(&self) -> ScriptResult<&str> {
-        Ok(&self.script_hex)
+        let ctx = TxContext { signer: owner };
+        let cbor = script.script_hex().unwrap();
+        dbg!(&cbor);
+        let _eval = script.execute((), (), ctx).unwrap();
     }
 }

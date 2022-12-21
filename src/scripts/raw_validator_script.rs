@@ -11,16 +11,13 @@ use minicbor::Decoder;
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use std::marker::PhantomData;
+use uplc::machine::cost_model::ExBudget;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
-    tx::script_context::{
-        ScriptContext, ScriptPurpose, TimeRange, TxInInfo, TxInfo, TxInfoV1, TxOut,
-    },
-    tx::to_plutus_data::{MintValue, ToPlutusData},
     BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
-    PostAlonzoTransactionOutput, TransactionInput, TransactionOutput, Value,
 };
 
 pub mod plutus_data;
@@ -30,7 +27,9 @@ mod tests;
 
 // TODO: Maybe make V1 and V2 different types? We want to protect the end user better!
 pub struct RawPlutusValidator<Datum, Redeemer> {
-    script_file: PlutusScriptFile,
+    version: TransactionVersion,
+    cbor_hex: String,
+    // TODO: Remove like on RawPolicy to enable params
     cml_script: PlutusScript,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
@@ -44,7 +43,8 @@ impl<D, R> RawPlutusValidator<D, R> {
             .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
         let cml_script = PlutusScript::from_v1(&v1);
         let v1_val = RawPlutusValidator {
-            script_file,
+            version: TransactionVersion::V1,
+            cbor_hex: script_file.cborHex,
             cml_script,
             _datum: Default::default(),
             _redeemer: Default::default(),
@@ -59,64 +59,13 @@ impl<D, R> RawPlutusValidator<D, R> {
             .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
         let cml_script = PlutusScript::from_v2(&v2);
         let v2_val = RawPlutusValidator {
-            script_file,
+            version: TransactionVersion::V2,
+            cbor_hex: script_file.cborHex,
             cml_script,
             _datum: Default::default(),
             _redeemer: Default::default(),
         };
         Ok(v2_val)
-    }
-}
-
-pub trait AikenTermInterop: Sized {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>>;
-}
-
-// TODO: Use real values https://github.com/MitchTurner/naumachia/issues/39
-impl AikenTermInterop for TxContext {
-    fn to_term(&self) -> RawPlutusScriptResult<Term<NamedDeBruijn>> {
-        let fake_tx_input = TransactionInput {
-            transaction_id: uplc::Hash::new([4; 32]),
-            index: 0,
-        };
-        let address = vec![0; 57];
-        let post_alonzo_txo = PostAlonzoTransactionOutput {
-            address: address.into(),
-            value: Value::Coin(1),
-            datum_option: None,
-            script_ref: None,
-        };
-        let tx_output = TransactionOutput::PostAlonzo(post_alonzo_txo);
-        let tx_out = TxOut::V1(tx_output);
-        let tx_in_info = TxInInfo {
-            out_ref: fake_tx_input.clone(),
-            resolved: tx_out.clone(),
-        };
-        let tx_info_inner = TxInfoV1 {
-            inputs: vec![tx_in_info],
-            outputs: vec![tx_out],
-            fee: Value::Coin(100000),
-            mint: MintValue {
-                mint_value: Vec::new().into(),
-            },
-            dcert: Vec::new(),
-            wdrl: vec![],
-            valid_range: TimeRange {
-                lower_bound: None,
-                upper_bound: None,
-            },
-            signatories: vec![],
-            data: vec![],
-            id: uplc::Hash::new([1; 32]),
-        };
-
-        let tx_info = TxInfo::V1(tx_info_inner);
-        let script_context = ScriptContext {
-            tx_info,
-            purpose: ScriptPurpose::Spending(fake_tx_input),
-        };
-        let plutus_data = script_context.to_plutus_data();
-        Ok(Term::Constant(Constant::Data(plutus_data)))
     }
 }
 
@@ -166,39 +115,33 @@ impl From<BigInt> for AikenBigInt {
     }
 }
 
-impl<Datum: Into<PlutusData> + Send + Sync, Redeemer: Into<PlutusData> + Send + Sync>
-    ValidatorCode<Datum, Redeemer> for RawPlutusValidator<Datum, Redeemer>
+impl<Datum, Redeemer> ValidatorCode<Datum, Redeemer> for RawPlutusValidator<Datum, Redeemer>
+where
+    Datum: Into<PlutusData> + Send + Sync,
+    Redeemer: Into<PlutusData> + Send + Sync,
 {
     fn execute(&self, datum: Datum, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
-        let cbor = hex::decode(&self.script_file.cborHex).map_err(as_failed_to_execute)?;
+        let cbor = hex::decode(&self.cbor_hex).map_err(as_failed_to_execute)?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
         let mut flat_decoder = Decoder::new(outer);
         let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
-        // println!("hex: {:?}", hex::encode(&flat));
         let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(flat)
-            .unwrap()
-            .try_into()
-            .map_err(as_failed_to_execute)?;
-        // println!("whole: {}", &program);
+            .map_err(as_failed_to_execute)?
+            .into();
         let datum_data: PlutusData = datum.into();
         let datum_term = Term::Constant(Constant::Data(datum_data.into()));
-        // dbg!(&datum_term);
         let program = program.apply_term(&datum_term);
-        // println!("apply datum: {}", &program);
         let redeemer_data: PlutusData = redeemer.into();
         let redeemer_term = Term::Constant(Constant::Data(redeemer_data.into()));
-        // dbg!(&redeemer_term);
         let program = program.apply_term(&redeemer_term);
-        // println!("apply redeemer: {}", &program);
         let ctx_data: PlutusData = ctx.into();
         let ctx_term = Term::Constant(Constant::Data(ctx_data.into()));
-        // dbg!(&ctx_term);
         let program = program.apply_term(&ctx_term);
-        // println!("apply ctx: {}", &program);
-        let (term, _cost, logs) = program.eval_v1();
-        // println!("{:?}", &term);
-        // println!("{:?}", &logs);
+        let (term, _cost, logs) = match self.version {
+            TransactionVersion::V1 => program.eval_v1(),
+            TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
+        };
         term.map_err(|e| RawPlutusScriptError::AikenEval {
             error: format!("{:?}", e),
             logs,
@@ -218,6 +161,6 @@ impl<Datum: Into<PlutusData> + Send + Sync, Redeemer: Into<PlutusData> + Send + 
     }
 
     fn script_hex(&self) -> ScriptResult<&str> {
-        Ok(&self.script_file.cborHex)
+        Ok(&self.cbor_hex)
     }
 }

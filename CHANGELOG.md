@@ -4,7 +4,11 @@
 
 ### Added
 
-**naumachia**: Add V2 Support for CML client
+**sample-dApps/mint_nft**: Create one-shot Aiken contract
+**naumachia**: Add parameterized policies
+**naumachia**: Add specific input action
+**always-succeeds-contract**: Convert to Aiken :)  
+**naumachia**: Add V2 Support for CML client  
 **naumachia**: Remove dupe Blockfrost Client
 
 ## [v0.2.0] - 2022-11-20

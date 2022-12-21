@@ -37,7 +37,13 @@ impl SCLogic for FreeMintingLogic {
                     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
                 let inner_policy = get_policy().map_err(SCLogicError::PolicyScript)?;
                 let policy = Box::new(inner_policy);
-                let actions = TxActions::v1().with_mint(amount, None, &recipient, (), policy);
+                let actions = TxActions::v1().with_mint(
+                    amount,
+                    Some("FREEEEEE".to_string()),
+                    &recipient,
+                    (),
+                    policy,
+                );
                 Ok(actions)
             }
         }

@@ -365,7 +365,10 @@ impl TryFrom<Values> for CMLValue {
     type Error = CMLLCError;
 
     fn try_from(vals: Values) -> Result<Self> {
-        let mut ada = 1120600u64; // TODO: This is kinda buried. Maybe ref the CML value
+        // TODO: This is broken :((( I got an error message complaining about 1120600 and wanting
+        //   1155080. Please look into
+        // let mut ada = 1120600u64; // TODO: This is kinda buried. Maybe ref the CML value
+        let mut ada = 1155080u64; // TODO: This is kinda buried. Maybe ref the CML value
         let mut nau_assets: BTreeMap<String, BTreeMap<Option<String>, u64>> = BTreeMap::new();
         for (policy_id, amount) in vals.as_iter() {
             match policy_id {
@@ -458,7 +461,7 @@ fn as_nau_values(cml_value: &CMLValue) -> LedgerClientResult<Values> {
     Ok(values)
 }
 
-pub(crate) async fn specify_utxos_available_for_selection(
+pub(crate) async fn specify_utxos_available_for_input_selection(
     tx_builder: &mut TransactionBuilder,
     my_address: &CMLAddress,
     my_utxos: &[UTxO],
@@ -618,10 +621,10 @@ pub(crate) async fn cml_v2_script_from_nau_policy<Redeemer>(
 ) -> LedgerClientResult<PlutusScript> {
     let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
     let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
-    let v1 = PlutusV2Script::from_bytes(script_bytes)
+    let v2 = PlutusV2Script::from_bytes(script_bytes)
         .map_err(|e| CMLLCError::Deserialize(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
-    let cml_script = PlutusScript::from_v2(&v1);
+    let cml_script = PlutusScript::from_v2(&v2);
     Ok(cml_script)
 }
 

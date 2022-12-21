@@ -1,6 +1,6 @@
 [package]
-name = "always-succeeds-contract"
-description = "Always-Succeeds Script Cardano dApp"
+name = "mint-nft"
+description = "dApp for minting simple one-shot nfts"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -13,6 +13,8 @@ path = "src/lib.rs"
 [[bin]]
 name = "always-cli"
 path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
 aiken-project = "0.0.26"
@@ -28,3 +30,4 @@ naumachia = {path = "../..", version = "0.2.0"}
 serde_json = "1.0"
 thiserror = "1.0.24"
 tokio = { version = "1.20.1", features = ["full"] }
+hex = "0.4.3"

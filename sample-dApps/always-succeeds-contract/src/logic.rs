@@ -1,4 +1,4 @@
-use crate::logic::script::AlwaysSucceedsScript;
+use crate::logic::script::get_script;
 use async_trait::async_trait;
 use naumachia::{
     address::PolicyId,
@@ -75,11 +75,11 @@ impl SCLogic for AlwaysSucceedsLogic {
 fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
-    let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
+    let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
-    let tx_actions = TxActions::v1().with_script_init((), values, address);
+    let tx_actions = TxActions::v2().with_script_init((), values, address);
     Ok(tx_actions)
 }
 
@@ -87,7 +87,7 @@ async fn impl_claim<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
     output_id: OutputId,
 ) -> SCLogicResult<TxActions<(), ()>> {
-    let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
+    let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
@@ -101,7 +101,7 @@ async fn impl_claim<LC: LedgerClient<(), ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let redeemer = ();
     let script_box = Box::new(script);
-    let tx_actions = TxActions::v1().with_script_redeem(output, redeemer, script_box);
+    let tx_actions = TxActions::v2().with_script_redeem(output, redeemer, script_box);
     Ok(tx_actions)
 }
 
@@ -109,7 +109,7 @@ async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
     count: usize,
 ) -> SCLogicResult<AlwaysSucceedsLookupResponses> {
-    let script = AlwaysSucceedsScript::try_new().map_err(SCLogicError::ValidatorScript)?;
+    let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
