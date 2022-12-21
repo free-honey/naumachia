@@ -1,7 +1,9 @@
-name = "mint_nft"
+name = "sample-dApps/mint_nft"
 version = "0.1.0"
 licences = ["Apache-2.0"]
 description = "Aiken contracts"
 
-[dependencies]
+dependencies = [
+    { name = "aiken-lang/stdlib", version = "main", source = "github" },
+]
 

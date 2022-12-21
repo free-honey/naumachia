@@ -5,7 +5,6 @@ use naumachia::scripts::ScriptError;
 use naumachia::{
     ledger_client::LedgerClient,
     logic::{SCLogic, SCLogicError, SCLogicResult},
-    output::OutputId,
     transaction::TxActions,
 };
 use thiserror::Error;
@@ -63,7 +62,6 @@ async fn impl_mint<LC: LedgerClient<(), ()>>(
     let param_script = get_parameterized_script().map_err(SCLogicError::PolicyScript)?;
     let script = param_script
         .apply(OutputReference::from(&my_input))
-        // .apply(69)
         .map_err(|e| ScriptError::FailedToConstruct(format!("{:?}", e)))
         .map_err(SCLogicError::PolicyScript)?;
     let policy = Box::new(script);

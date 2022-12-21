@@ -61,9 +61,3 @@ clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
 sha2 = "0.10.6"
-
-[patch."https://github.com/dcSpark/cardano-multiplatform-lib.git"]
-cardano-multiplatform-lib = { version = "3.1.1", path = "../forks/cardano-multiplatform-lib/rust"}
-
-[patch."https://github.com/aiken-lang/aiken.git"]
-uplc = {path = "../aiken-lang/aiken/crates/uplc"}
