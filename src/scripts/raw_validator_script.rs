@@ -29,6 +29,7 @@ mod tests;
 pub struct RawPlutusValidator<Datum, Redeemer> {
     version: TransactionVersion,
     cbor_hex: String,
+    // TODO: Remove like on RawPolicy to enable params
     cml_script: PlutusScript,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,

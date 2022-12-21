@@ -1,3 +1,4 @@
+use crate::scripts::ScriptError;
 use crate::{
     scripts::{
         as_failed_to_execute,
@@ -125,31 +126,31 @@ where
         Ok(())
     }
 
-    fn id(&self) -> String {
+    fn id(&self) -> ScriptResult<String> {
         let cbor = self.script_hex().unwrap();
         let script = match self.version {
             TransactionVersion::V1 => {
-                let script_bytes = hex::decode(&cbor).unwrap(); // TODO: unwrap
-                                                                // .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-                let v1 = PlutusV1Script::from_bytes(script_bytes).unwrap(); // TODO: unwrap
-                                                                            // .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
+                let script_bytes =
+                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let v1 = PlutusV1Script::from_bytes(script_bytes)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 PlutusScript::from_v1(&v1)
             }
             TransactionVersion::V2 => {
-                let script_bytes = hex::decode(&cbor).unwrap();
-                // .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-                let v2 = PlutusV2Script::from_bytes(script_bytes).unwrap();
-                // .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
+                let script_bytes =
+                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let v2 = PlutusV2Script::from_bytes(script_bytes)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 PlutusScript::from_v2(&v2)
             }
         };
-        script.hash().to_string()
+        Ok(script.hash().to_string())
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
         let wrap = Encoder::new(Vec::new())
             .bytes(&self.cbor)
-            .unwrap() // TODO: unwrap
+            .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?
             .clone()
             .into_writer();
 

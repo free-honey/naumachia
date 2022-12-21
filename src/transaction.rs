@@ -156,7 +156,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
                     policy,
                     recipient,
                 } => {
-                    let id = policy.id();
+                    let id = policy.id()?;
                     let policy_id = PolicyId::native_token(&id, &asset_name);
                     minting.push((amount, asset_name, redeemer, policy));
                     add_amount_to_nested_map(

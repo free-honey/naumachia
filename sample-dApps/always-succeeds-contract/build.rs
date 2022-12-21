@@ -1,5 +1,5 @@
 use aiken_project::script::EvalInfo;
-use aiken_project::{config::Config, pretty, telemetry, Project};
+use aiken_project::{pretty, telemetry, Project};
 use std::collections::BTreeMap;
 
 use owo_colors::OwoColorize;
@@ -8,8 +8,8 @@ use uplc::machine::cost_model::ExBudget;
 const PROJECT: &str = "./always_succeeds";
 
 fn main() {
-    let config = Config::load(PROJECT.into()).unwrap();
-    let mut project = Project::new(config, PROJECT.into(), Terminal::default());
+    let mut project = Project::new(PROJECT.into(), Terminal::default())
+        .expect(&format!("Project not found: {:?}", PROJECT));
     let build_result = project.build(false);
 
     if let Err(err) = build_result {
@@ -32,27 +32,53 @@ impl telemetry::EventListener for Terminal {
             } => {
                 println!(
                     "{} {} {} ({})",
-                    "Compiling".bold().purple(),
+                    "    Compiling".bold().purple(),
+                    name.bold(),
+                    version,
+                    root.display().bright_blue()
+                );
+            }
+            telemetry::Event::BuildingDocumentation {
+                name,
+                version,
+                root,
+            } => {
+                println!(
+                    "{} {} {} ({})",
+                    "   Generating documentation".bold().purple(),
                     name.bold(),
                     version,
                     root.to_str().unwrap_or("").bright_blue()
                 );
             }
-            telemetry::Event::ParsingProjectFiles => {
-                println!("{}", "...Parsing project files".bold().purple());
+            telemetry::Event::WaitingForBuildDirLock => {
+                println!("{}", "Waiting for build directory lock ...".bold().purple());
             }
-            telemetry::Event::TypeChecking => {
-                println!("{}", "...Type-checking project".bold().purple());
+            telemetry::Event::GeneratingUPLC { output_path, name } => {
+                println!(
+                    "{} {} in {}",
+                    "   Generating".bold().purple(),
+                    name.bold(),
+                    output_path.display().bright_blue()
+                );
             }
-            telemetry::Event::GeneratingUPLC { output_path } => {
+            telemetry::Event::GeneratingDocFiles { output_path } => {
                 println!(
                     "{} in {}",
-                    "...Generating Untyped Plutus Core".bold().purple(),
+                    "   Generating documentation files".bold().purple(),
                     output_path.to_str().unwrap_or("").bright_blue()
                 );
             }
+            telemetry::Event::GeneratingUPLCFor { name, path } => {
+                println!(
+                    "{} {}.{{{}}}",
+                    "   Generating Untyped Plutus Core for".bold().purple(),
+                    path.to_str().unwrap_or("").blue(),
+                    name.bright_blue(),
+                );
+            }
             telemetry::Event::EvaluatingFunction { results } => {
-                println!("{}\n", "...Evaluating function".bold().purple());
+                println!("{}\n", "  Evaluating function ...".bold().purple());
 
                 let (max_mem, max_cpu) = find_max_execution_units(&results);
 
@@ -61,7 +87,7 @@ impl telemetry::EventListener for Terminal {
                 }
             }
             telemetry::Event::RunningTests => {
-                println!("{}\n", "...Running tests".bold().purple());
+                println!("{} {}\n", "      Testing".bold().purple(), "...".bold());
             }
             telemetry::Event::FinishedTests { tests } => {
                 let (max_mem, max_cpu) = find_max_execution_units(&tests);
@@ -92,6 +118,22 @@ impl telemetry::EventListener for Terminal {
                     );
                 }
             }
+            telemetry::Event::DownloadingPackage { name } => {
+                println!("{} {}", "  Downloading".bold().purple(), name.bold())
+            }
+            telemetry::Event::PackagesDownloaded { start, count } => {
+                let elapsed = format!("{:.2}s", start.elapsed().as_millis() as f32 / 1000.);
+
+                let msg = match count {
+                    1 => format!("1 package in {}", elapsed),
+                    _ => format!("{} packages in {}", count, elapsed),
+                };
+
+                println!("{} {}", "   Downloaded".bold().purple(), msg.bold())
+            }
+            telemetry::Event::ResolvingVersions => {
+                println!("{}", "    Resolving versions".bold().purple(),)
+            }
         }
     }
 }
@@ -104,7 +146,7 @@ fn fmt_test(eval_info: &EvalInfo, max_mem: usize, max_cpu: usize, styled: bool) 
         ..
     } = eval_info;
 
-    let ExBudget { mem, cpu } = *spent_budget;
+    let ExBudget { mem, cpu } = spent_budget;
     let mem_pad = pretty::pad_left(mem.to_string(), max_mem, " ");
     let cpu_pad = pretty::pad_left(cpu.to_string(), max_cpu, " ");
 
