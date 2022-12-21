@@ -18,8 +18,8 @@ impl<R> MintingPolicy<R> for AliceCanMintPolicy {
         }
     }
 
-    fn id(&self) -> String {
-        "OnlyAliceCanMint".to_string()
+    fn id(&self) -> ScriptResult<String> {
+        Ok("OnlyAliceCanMint".to_string())
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -44,7 +44,7 @@ async fn mint__alice_can_mint() {
 
     backend.process(u_tx).await.unwrap();
 
-    let id = <AliceCanMintPolicy as MintingPolicy<()>>::id(&AliceCanMintPolicy);
+    let id = <AliceCanMintPolicy as MintingPolicy<()>>::id(&AliceCanMintPolicy).unwrap();
     let policy_id = PolicyId::native_token(&id, &asset_name);
 
     let expected = 100;

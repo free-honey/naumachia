@@ -22,11 +22,11 @@ impl<R> MintingPolicy<R> for AlwaysMintsPolicy {
         Ok(())
     }
 
-    fn id(&self) -> String {
-        MINT_POLICY_ID.to_string()
+    fn id(&self) -> ScriptResult<String> {
+        Ok(MINT_POLICY_ID.to_string())
     }
 
-    fn script_hex(&self) -> ScriptResult<&str> {
+    fn script_hex(&self) -> ScriptResult<String> {
         todo!()
     }
 }

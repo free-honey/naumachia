@@ -34,7 +34,7 @@ futures = "0.3.23"
 async-trait = "0.1.57"
 hex = "0.4.3"
 dirs = "4.0.0"
-uplc = { git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+uplc = "0.0.25"
 tempfile = "3.3.0"
 minicbor = "0.18.0"
 
@@ -61,3 +61,7 @@ clap = { version = "3.2.16", features = ["derive"] }
 proptest = "1.0.0"
 rand = "0.8.5"
 sha2 = "0.10.6"
+
+[patch.crates-io]
+uplc = { version = "0.0.25", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+aiken-project = { version = "0.0.26", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}

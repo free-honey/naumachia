@@ -28,6 +28,6 @@ mod tests {
         let ctx = TxContext { signer: owner };
         let cbor = script.script_hex().unwrap();
         dbg!(&cbor);
-        let eval = script.execute((), (), ctx).unwrap();
+        let _eval = script.execute((), (), ctx).unwrap();
     }
 }

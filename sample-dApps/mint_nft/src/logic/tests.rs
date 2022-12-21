@@ -1,8 +1,3 @@
-use super::*;
-use naumachia::address::{Address, PolicyId};
-use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
-use naumachia::smart_contract::{SmartContract, SmartContractTrait};
-
 // #[tokio::test]
 // async fn lock_and_claim() {
 //     let me = Address::new("me");

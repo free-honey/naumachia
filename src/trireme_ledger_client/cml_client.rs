@@ -496,8 +496,8 @@ where
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
         for specific_input in &tx.specific_wallet_inputs {
-            let transaction_id = input_tx_hash(&specific_input).await?;
-            let index = &specific_input.id().index().into();
+            let transaction_id = input_tx_hash(specific_input).await?;
+            let index = specific_input.id().index().into();
             let input = TransactionInput::new(&transaction_id, &index);
             let address = self
                 .keys

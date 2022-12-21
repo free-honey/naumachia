@@ -77,6 +77,7 @@ mod tests {
     use naumachia::output::{Output, OutputId};
     use naumachia::scripts::{MintingPolicy, TxContext};
 
+    #[ignore]
     #[test]
     fn plutus_data_conversion_works() {
         let id = OutputId::new(
@@ -100,6 +101,6 @@ mod tests {
         let ctx = TxContext { signer: owner };
         let cbor = script.script_hex().unwrap();
         dbg!(&cbor);
-        let eval = script.execute((), ctx).unwrap();
+        let _eval = script.execute((), ctx).unwrap();
     }
 }
