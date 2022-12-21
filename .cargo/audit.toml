@@ -1,0 +1,6 @@
+[advisories]
+ignore = [
+    "RUSTSEC-2020-0071",
+] # advisory IDs to ignore e.g. ["RUSTSEC-2019-0001", ...]
+informational_warnings = ["unmaintained"] # warn for categories of informational advisories
+severity_threshold = "low" # CVSS severity ("none", "low", "medium", "high", "critical")
