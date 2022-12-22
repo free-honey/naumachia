@@ -6,10 +6,9 @@
   - [x] Mint
   - [x] InitScript
   - [x] RedeemScriptOutput
-  - [ ] Spend Specific Output (e.g. for one-time mintings) 
+  - [x] Spend Specific Output (e.g. for one-time mintings) 
   - [ ] Specify valid range
   - [ ] Create Multi-Sig Tx?
-  - [ ]
 - In-memory Ledger Client
   - [x] Transfer
   - [ ] Mint
@@ -48,7 +47,7 @@
           - [ ] Use Datum/Redeemers (Might work, just not tested)
         - [x] InitScript
         - [x] RedeemScriptOutput
-        - [ ] Spend Specific Output (e.g. for one-time mintings)
+        - [x] Spend Specific Output (e.g. for one-time mintings)
         - [ ] Specify valid range
         - [ ] Create Multi-Sig Tx?
     - Ledger Data Source
