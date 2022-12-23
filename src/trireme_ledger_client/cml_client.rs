@@ -118,6 +118,7 @@ impl UTxO {
     }
 }
 
+#[derive(Debug)]
 pub struct ExecutionCost {
     execution_type: ExecutionType,
     memory: u64,
@@ -191,6 +192,7 @@ where
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
+        dbg!(&tx.unbuilt_outputs());
         for unbuilt_output in tx.unbuilt_outputs().iter() {
             let cml_values: CMLValue = unbuilt_output
                 .values()
@@ -421,7 +423,6 @@ where
         let algo = ChangeSelectionAlgo::Default;
         let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, my_address).unwrap(); // TODO: unwrap
         let transaction = tx_redeemer_builder.draft_tx();
-        println!("{}", &transaction.to_json().unwrap());
         let res = self.ledger.calculate_ex_units(&transaction).await.unwrap(); // TODO: unwrap
         for (index, spend) in res.iter() {
             let tag = match spend.execution_type {

@@ -71,9 +71,9 @@ impl SCLogic for AlwaysMintsSmartContract {
     }
 }
 
-fn mint(amount: u64, recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
+fn mint(amount: u64, _recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
     let policy = Box::new(AlwaysMintsPolicy);
-    let utx = TxActions::v1().with_mint(amount, None, &recipient, (), policy);
+    let utx = TxActions::v1().with_mint(amount, None, (), policy);
     Ok(utx)
 }
 
