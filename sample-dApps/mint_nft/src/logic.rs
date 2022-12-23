@@ -53,10 +53,6 @@ impl SCLogic for MintNFTLogic {
 async fn impl_mint<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
 ) -> SCLogicResult<TxActions<(), ()>> {
-    let recipient = ledger_client
-        .signer()
-        .await
-        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let my_input = select_any_above_min(ledger_client).await?;
     let param_script = get_parameterized_script().map_err(SCLogicError::PolicyScript)?;
     let script = param_script
@@ -65,7 +61,7 @@ async fn impl_mint<LC: LedgerClient<(), ()>>(
         .map_err(SCLogicError::PolicyScript)?;
     let policy = Box::new(script);
     let actions = TxActions::v2()
-        .with_mint(1, Some("OneShot".to_string()), &recipient, (), policy)
+        .with_mint(1, Some("OneShot".to_string()), (), policy)
         .with_specific_input(my_input);
     Ok(actions)
 }
