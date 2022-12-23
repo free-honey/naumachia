@@ -123,6 +123,8 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         self
     }
 
+    // **NOTE**: if you are using CML, this can break if your input is too small and you don't
+    // specify any specific OUTPUTs: https://github.com/MitchTurner/naumachia/issues/73
     pub fn with_specific_input(mut self, input: Output<Datum>) -> Self {
         let action = Action::SpecificInput { input };
         self.actions.push(action);
@@ -159,12 +161,12 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
                     let id = policy.id()?;
                     let policy_id = PolicyId::native_token(&id, &asset_name);
                     minting.push((amount, asset_name, redeemer, policy));
-                    add_amount_to_nested_map(
-                        &mut min_output_values,
-                        amount,
-                        &recipient,
-                        &policy_id,
-                    );
+                    // add_amount_to_nested_map(
+                    //     &mut min_output_values,
+                    //     amount,
+                    //     &recipient,
+                    //     &policy_id,
+                    // );
                 }
                 Action::InitScript {
                     datum,

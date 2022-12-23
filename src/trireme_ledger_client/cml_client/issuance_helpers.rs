@@ -509,16 +509,17 @@ pub(crate) fn select_collateral_utxo(
     min_amount: u64,
 ) -> LedgerClientResult<InputBuilderResult> {
     let mut smallest_utxo_meets_qual = None;
-    let mut smallest_amount = min_amount;
+    let mut smallest_amount = u64::MAX;
     for utxo in my_utxos {
         if utxo.amount().multiasset().is_none() {
             let amount: u64 = utxo.amount().coin().into();
-            if amount < smallest_amount {
+            if amount < smallest_amount && amount > min_amount {
                 smallest_utxo_meets_qual = Some(utxo);
                 smallest_amount = amount;
             }
         }
     }
+    dbg!(&smallest_utxo_meets_qual);
     let res = if let Some(utxo) = smallest_utxo_meets_qual {
         let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index());
         let input_utxo = TransactionOutputBuilder::new()

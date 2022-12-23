@@ -118,6 +118,7 @@ impl UTxO {
     }
 }
 
+#[derive(Debug)]
 pub struct ExecutionCost {
     execution_type: ExecutionType,
     memory: u64,
@@ -191,6 +192,7 @@ where
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
+        dbg!(&tx.unbuilt_outputs());
         for unbuilt_output in tx.unbuilt_outputs().iter() {
             let cml_values: CMLValue = unbuilt_output
                 .values()
@@ -419,15 +421,21 @@ where
         my_address: &CMLAddress,
     ) -> LedgerClientResult<()> {
         let algo = ChangeSelectionAlgo::Default;
+        println!("{:?}", &tx_builder);
+        println!("a");
         let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, my_address).unwrap(); // TODO: unwrap
+        println!("b");
         let transaction = tx_redeemer_builder.draft_tx();
+        println!("c");
         println!("{}", &transaction.to_json().unwrap());
         let res = self.ledger.calculate_ex_units(&transaction).await.unwrap(); // TODO: unwrap
+        println!("d");
         for (index, spend) in res.iter() {
             let tag = match spend.execution_type {
                 ExecutionType::Spend => RedeemerTag::new_spend(),
                 ExecutionType::Mint => RedeemerTag::new_mint(),
             };
+            println!("index: {}, spend: {:?}", index, spend);
             tx_builder.set_exunits(
                 &RedeemerWitnessKey::new(&tag, &BigNum::from(*index)),
                 &ExUnits::new(&spend.memory().into(), &spend.steps().into()),
@@ -483,9 +491,13 @@ where
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
         select_inputs_from_utxos(&mut tx_builder).await?;
+        println!("1");
         self.update_ex_units(&mut tx_builder, &my_address).await?;
+        println!("2");
         let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        println!("3");
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
+        println!("4");
         let tx_id = self.submit_tx(&tx).await?;
         Ok(tx_id)
     }
