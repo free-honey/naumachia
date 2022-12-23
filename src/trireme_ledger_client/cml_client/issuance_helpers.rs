@@ -519,7 +519,6 @@ pub(crate) fn select_collateral_utxo(
             }
         }
     }
-    dbg!(&smallest_utxo_meets_qual);
     let res = if let Some(utxo) = smallest_utxo_meets_qual {
         let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index());
         let input_utxo = TransactionOutputBuilder::new()
