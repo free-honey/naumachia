@@ -3,8 +3,6 @@ version = "0.1.0"
 licences = ["Apache-2.0"]
 description = "Aiken contracts"
 
-dependencies = [
-    { name = "aiken-lang/stdlib", version = "main", source = "github" },
-]
+dependencies = []
 
 
