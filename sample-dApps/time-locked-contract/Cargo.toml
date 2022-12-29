@@ -1,0 +1,31 @@
+[package]
+name = "time-locked-contract"
+description = "Time Locked Script Cardano dApp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "always-cli"
+path = "src/main.rs"
+
+[build-dependencies]
+aiken = "0.0.26"
+aiken-project = "0.0.26"
+uplc = "0.0.25"
+
+miette = { version = "5.3.0", features = ["fancy"] }
+owo-colors = "3.5.0"
+
+[dependencies]
+async-trait = "0.1.57"
+clap = { version = "3.2.16", features = ["derive"] }
+naumachia = {path = "../..", version = "0.2.0"}
+serde_json = "1.0"
+thiserror = "1.0.24"
+tokio = { version = "1.20.1", features = ["full"] }
