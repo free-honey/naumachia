@@ -1,4 +1,4 @@
-use crate::logic::script::get_script;
+use crate::logic::script::{get_script, Timestamp};
 use async_trait::async_trait;
 use naumachia::{
     address::PolicyId,
@@ -12,8 +12,6 @@ use naumachia::{
 use thiserror::Error;
 
 pub mod script;
-#[cfg(test)]
-mod tests;
 
 // TODO: Pass through someplace, do not hardcode!
 const NETWORK: u8 = 0;
@@ -22,7 +20,7 @@ const NETWORK: u8 = 0;
 pub struct TimeLockedLogic;
 
 pub enum TimeLockedEndpoints {
-    Lock { amount: u64 },
+    Lock { amount: u64, timestamp: i64 },
     Claim { output_id: OutputId },
 }
 
@@ -31,7 +29,7 @@ pub enum TimeLockedLookups {
 }
 
 pub enum TimeLockedLookupResponses {
-    ActiveContracts(Vec<Output<()>>),
+    ActiveContracts(Vec<Output<i64>>),
 }
 
 #[derive(Debug, Error)]
@@ -45,7 +43,7 @@ impl SCLogic for TimeLockedLogic {
     type Endpoints = TimeLockedEndpoints;
     type Lookups = TimeLockedLookups;
     type LookupResponses = TimeLockedLookupResponses;
-    type Datums = ();
+    type Datums = i64;
     type Redeemers = ();
 
     async fn handle_endpoint<LC: LedgerClient<Self::Datums, Self::Redeemers>>(
@@ -53,7 +51,7 @@ impl SCLogic for TimeLockedLogic {
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
-            TimeLockedEndpoints::Lock { amount } => impl_lock(amount),
+            TimeLockedEndpoints::Lock { amount, timestamp } => impl_lock(amount, timestamp),
             TimeLockedEndpoints::Claim { output_id } => impl_claim(ledger_client, output_id).await,
         }
     }
@@ -70,21 +68,22 @@ impl SCLogic for TimeLockedLogic {
     }
 }
 
-fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
+fn impl_lock(amount: u64, timestamp: i64) -> SCLogicResult<TxActions<i64, ()>> {
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
-    let tx_actions = TxActions::v2().with_script_init((), values, address);
+    // let datum = Timestamp::new(timestamp);
+    let tx_actions = TxActions::v2().with_script_init(timestamp, values, address);
     Ok(tx_actions)
 }
 
-async fn impl_claim<LC: LedgerClient<(), ()>>(
+async fn impl_claim<LC: LedgerClient<i64, ()>>(
     ledger_client: &LC,
     output_id: OutputId,
-) -> SCLogicResult<TxActions<(), ()>> {
+) -> SCLogicResult<TxActions<i64, ()>> {
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
@@ -103,7 +102,7 @@ async fn impl_claim<LC: LedgerClient<(), ()>>(
     Ok(tx_actions)
 }
 
-async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
+async fn impl_list_active_contracts<LC: LedgerClient<i64, ()>>(
     ledger_client: &LC,
     count: usize,
 ) -> SCLogicResult<TimeLockedLookupResponses> {

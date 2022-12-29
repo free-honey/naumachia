@@ -7,8 +7,6 @@ use naumachia::{
 };
 
 pub mod script;
-#[cfg(test)]
-mod tests;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FreeMintingLogic;

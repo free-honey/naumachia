@@ -75,7 +75,7 @@ mod tests {
     use super::*;
     use naumachia::address::Address;
     use naumachia::output::{Output, OutputId};
-    use naumachia::scripts::{MintingPolicy, TxContext};
+    use naumachia::scripts::{ContextBuilder, MintingPolicy, TxContext};
 
     #[ignore]
     #[test]
@@ -98,7 +98,7 @@ mod tests {
         // let script = param_script.apply(69).unwrap();
         // let script = get_script().unwrap();
 
-        let ctx = TxContext { signer: owner };
+        let ctx = ContextBuilder::new(owner).build();
         let cbor = script.script_hex().unwrap();
         dbg!(&cbor);
         let _eval = script.execute((), ctx).unwrap();

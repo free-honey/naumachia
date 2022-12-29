@@ -39,6 +39,8 @@ async fn main() {
         ActionParams::Lock { amount } => contract
             .hit_endpoint(TimeLockedEndpoints::Lock {
                 amount: (amount * 1_000_000.) as u64,
+                // TODO
+                timestamp: 0,
             })
             .await
             .unwrap(),

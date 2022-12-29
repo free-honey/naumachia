@@ -207,9 +207,13 @@ where
                 .map_err(as_failed_to_issue_tx)?;
             let mut output = TransactionOutput::new(&recp_addr, &cml_values);
             let res = if let UnbuiltOutput::Validator { datum, .. } = unbuilt_output {
+                dbg!(&datum);
                 let data = datum.to_plutus_data();
+                dbg!(&data);
                 let data_hash = hash_plutus_data(&data);
+                dbg!(&data_hash);
                 let cml_datum = CMLDatum::new_data_hash(&data_hash);
+                dbg!(&cml_datum);
                 output.set_datum(&cml_datum);
                 let mut res = SingleOutputBuilderResult::new(&output);
                 res.set_communication_datum(&data);

@@ -1,7 +1,7 @@
 use aiken::Terminal;
 use aiken_project::Project;
 
-const PROJECT: &str = "./time_locked";
+const PROJECT: &str = "./always_succeeds";
 
 fn main() {
     let mut project = Project::new(PROJECT.into(), Terminal::default())

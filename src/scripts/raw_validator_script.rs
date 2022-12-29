@@ -7,10 +7,11 @@ use cardano_multiplatform_lib::{
     address::{EnterpriseAddress, StakeCredential},
     plutus::{PlutusScript, PlutusV1Script},
 };
-use minicbor::Decoder;
+use minicbor::{Decoder, Encode, Encoder};
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use crate::scripts::ScriptError;
 use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use std::marker::PhantomData;
@@ -28,44 +29,42 @@ mod tests;
 // TODO: Maybe make V1 and V2 different types? We want to protect the end user better!
 pub struct RawPlutusValidator<Datum, Redeemer> {
     version: TransactionVersion,
-    cbor_hex: String,
-    // TODO: Remove like on RawPolicy to enable params
-    cml_script: PlutusScript,
+    cbor: Vec<u8>,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
 }
 
 impl<D, R> RawPlutusValidator<D, R> {
     pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
-        let script_bytes = hex::decode(&script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-        let v1 = PlutusV1Script::from_bytes(script_bytes)
-            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-        let cml_script = PlutusScript::from_v1(&v1);
-        let v1_val = RawPlutusValidator {
+        let cbor = hex::decode(&script_file.cborHex)
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let mut outer_decoder = Decoder::new(&cbor);
+        let outer = outer_decoder
+            .bytes()
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v1_policy = RawPlutusValidator {
             version: TransactionVersion::V1,
-            cbor_hex: script_file.cborHex,
-            cml_script,
+            cbor: outer.to_vec(),
             _datum: Default::default(),
             _redeemer: Default::default(),
         };
-        Ok(v1_val)
+        Ok(v1_policy)
     }
 
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
-        let script_bytes = hex::decode(&script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-        let v2 = PlutusV2Script::from_bytes(script_bytes)
-            .map_err(|e| RawPlutusScriptError::CMLError(e.to_string()))?;
-        let cml_script = PlutusScript::from_v2(&v2);
-        let v2_val = RawPlutusValidator {
+        let cbor = hex::decode(&script_file.cborHex)
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let mut outer_decoder = Decoder::new(&cbor);
+        let outer = outer_decoder
+            .bytes()
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = RawPlutusValidator {
             version: TransactionVersion::V2,
-            cbor_hex: script_file.cborHex,
-            cml_script,
+            cbor: outer.to_vec(),
             _datum: Default::default(),
             _redeemer: Default::default(),
         };
-        Ok(v2_val)
+        Ok(v2_policy)
     }
 }
 
@@ -121,16 +120,15 @@ where
     Redeemer: Into<PlutusData> + Send + Sync,
 {
     fn execute(&self, datum: Datum, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
-        let cbor = hex::decode(&self.cbor_hex).map_err(as_failed_to_execute)?;
-        let mut outer_decoder = Decoder::new(&cbor);
-        let outer = outer_decoder.bytes().map_err(as_failed_to_execute)?;
-        let mut flat_decoder = Decoder::new(outer);
-        let flat = flat_decoder.bytes().map_err(as_failed_to_execute)?;
-        let program: Program<NamedDeBruijn> = Program::<FakeNamedDeBruijn>::from_flat(flat)
-            .map_err(as_failed_to_execute)?
-            .into();
+        let program: Program<NamedDeBruijn> =
+            Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
+                .map_err(as_failed_to_execute)?
+                .into();
         let datum_data: PlutusData = datum.into();
-        let datum_term = Term::Constant(Constant::Data(datum_data.into()));
+        let aiken_datum_data: uplc::PlutusData = datum_data.into();
+        // let bytes = aiken_datum_data.encode();
+        // dbg!(aiken_datum_data.to_bytes());
+        let datum_term = Term::Constant(Constant::Data(aiken_datum_data));
         let program = program.apply_term(&datum_term);
         let redeemer_data: PlutusData = redeemer.into();
         let redeemer_term = Term::Constant(Constant::Data(redeemer_data.into()));
@@ -151,16 +149,42 @@ where
     }
 
     fn address(&self, network: u8) -> ScriptResult<Address> {
-        let script_hash = self.cml_script.hash();
+        let cbor = self.script_hex().unwrap();
+        let script = match self.version {
+            TransactionVersion::V1 => {
+                let script_bytes =
+                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let v1 = PlutusV1Script::from_bytes(script_bytes)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                PlutusScript::from_v1(&v1)
+            }
+            TransactionVersion::V2 => {
+                let script_bytes =
+                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let v2 = PlutusV2Script::from_bytes(script_bytes)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                PlutusScript::from_v2(&v2)
+            }
+        };
+        let script_hash = script.hash();
         let stake_cred = StakeCredential::from_scripthash(&script_hash);
         let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);
         let cml_script_address = enterprise_addr.to_address();
-        let script_address_str = cml_script_address.to_bech32(None).unwrap(); // TODO: unwrap
+        let script_address_str = cml_script_address
+            .to_bech32(None)
+            .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?; // TODO: unwrap
         let address = Address::Script(script_address_str);
         Ok(address)
     }
 
-    fn script_hex(&self) -> ScriptResult<&str> {
-        Ok(&self.cbor_hex)
+    fn script_hex(&self) -> ScriptResult<String> {
+        let wrap = Encoder::new(Vec::new())
+            .bytes(&self.cbor)
+            .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?
+            .clone()
+            .into_writer();
+
+        let hex = hex::encode(&wrap);
+        Ok(hex)
     }
 }
