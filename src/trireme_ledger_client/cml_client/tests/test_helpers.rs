@@ -25,6 +25,7 @@ pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()
         unbuilt_outputs: vec![output],
         minting: Default::default(),
         specific_wallet_inputs: vec![],
+        valid_range: (None, None),
     }
 }
 
@@ -39,6 +40,7 @@ pub fn lock_at_always_succeeds_tx(amount: u64) -> UnbuiltTransaction<(), ()> {
         unbuilt_outputs: vec![output],
         minting: Default::default(),
         specific_wallet_inputs: vec![],
+        valid_range: (None, None),
     }
 }
 
@@ -63,7 +65,7 @@ pub fn always_succeeds_hex() -> PlutusScriptFile {
 pub fn always_succeeds_script() -> PlutusScript {
     let script_file = read_script_from_file("./plutus/always-succeeds-spending.plutus");
     let script_hex = script_file.cborHex;
-    let script_bytes = hex::decode(&script_hex).unwrap();
+    let script_bytes = hex::decode(script_hex).unwrap();
     let v1 = PlutusV1Script::from_bytes(script_bytes).unwrap();
     PlutusScript::from_v1(&v1)
 }
@@ -84,6 +86,7 @@ pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTrans
         unbuilt_outputs: vec![],
         minting: Default::default(),
         specific_wallet_inputs: vec![],
+        valid_range: (None, None),
     }
 }
 

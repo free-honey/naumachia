@@ -1,7 +1,8 @@
 use crate::scripts::raw_script::PlutusScriptFile;
 use crate::scripts::raw_validator_script::RawPlutusValidator;
+use crate::scripts::ContextBuilder;
 use crate::{
-    scripts::{ScriptError, TxContext, ValidatorCode},
+    scripts::{ScriptError, ValidatorCode},
     Address,
 };
 
@@ -19,6 +20,9 @@ fn hello_script_file() -> PlutusScriptFile {
     }
 }
 
+// TODO: The Redeemer and Datum need to be wrapped in Constrs
+//  https://github.com/MitchTurner/naumachia/issues/80
+#[ignore]
 #[test]
 fn execute_hello_passes() {
     let script_file = hello_script_file();
@@ -26,14 +30,14 @@ fn execute_hello_passes() {
 
     let datum = 50;
     let redeemer = 49;
-    let ctx = TxContext {
-        signer: Address::Raw("placeholder".to_string()),
-    };
-
-    let res = script.execute(datum, redeemer, ctx);
-    assert!(res.is_ok());
+    let signer = Address::new("placeholder");
+    let ctx = ContextBuilder::new(signer).build();
+    script.execute(datum, redeemer, ctx).unwrap();
 }
 
+// TODO: The Redeemer and Datum need to be wrapped in Constrs
+//  https://github.com/MitchTurner/naumachia/issues/80
+#[ignore]
 #[test]
 fn execute_hello_fails() {
     let script_file = hello_script_file();
@@ -41,9 +45,9 @@ fn execute_hello_fails() {
 
     let datum = 50;
     let redeemer = 51;
-    let ctx = TxContext {
-        signer: Address::Raw("placeholder".to_string()),
-    };
+
+    let signer = Address::new("placeholder");
+    let ctx = ContextBuilder::new(signer).build();
 
     // PT5: 'check' input is 'False'
     assert_eq!(

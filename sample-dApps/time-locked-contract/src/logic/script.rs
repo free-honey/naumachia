@@ -71,7 +71,7 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<i64, ()>> {
 mod tests {
     use super::*;
     use naumachia::address::Address;
-    use naumachia::scripts::{ContextBuilder, TxContext, ValidatorCode};
+    use naumachia::scripts::{ContextBuilder, ValidatorCode};
 
     #[test]
     fn test_in_range_succeeds() {
@@ -82,7 +82,6 @@ mod tests {
         let ctx = ContextBuilder::new(owner)
             .with_range(Some((80, true)), None)
             .build();
-        let cbor = script.script_hex().unwrap();
 
         let datum = 69_i64;
         script.execute(datum, (), ctx).unwrap();
@@ -97,7 +96,6 @@ mod tests {
         let ctx = ContextBuilder::new(owner)
             .with_range(Some((10, true)), None)
             .build();
-        let cbor = script.script_hex().unwrap();
 
         let datum = 69_i64;
         let error = script.execute(datum, (), ctx);

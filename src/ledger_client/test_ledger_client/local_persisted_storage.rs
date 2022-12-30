@@ -79,7 +79,7 @@ impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
 
     pub(crate) fn get_data(&self) -> LedgerData<Datum> {
         let path = self.tmp_dir.path().join(DATA);
-        let mut file = File::open(&path).unwrap();
+        let mut file = File::open(path).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).expect("Could not read");
         serde_json::from_str(&contents).unwrap()
@@ -90,7 +90,7 @@ impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
         let mut data = self.get_data();
         data.outputs = new_outputs;
         let serialized = serde_json::to_string(&data).unwrap();
-        let mut file = File::create(&path).unwrap();
+        let mut file = File::create(path).unwrap();
         file.write_all(&serialized.into_bytes()).unwrap();
     }
 }
@@ -213,6 +213,7 @@ mod tests {
             unbuilt_outputs: vec![new_output],
             minting: Default::default(),
             specific_wallet_inputs: vec![],
+            valid_range: (None, None),
         };
         record.issue(tx).await.unwrap();
         let expected_bob = starting_amount;

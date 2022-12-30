@@ -53,14 +53,7 @@ impl From<i64> for PlutusData {
     fn from(num: i64) -> Self {
         let neg = num.is_negative();
         let val = num.unsigned_abs();
-        let inner_data = PlutusData::BigInt(BigInt::Int { neg, val });
-        // let constr = Constr {
-        //     tag: 121,
-        //     any_constructor: None,
-        //     fields: vec![inner_data],
-        // };
-        // PlutusData::Constr(constr)
-        inner_data
+        PlutusData::BigInt(BigInt::Int { neg, val })
     }
 }
 

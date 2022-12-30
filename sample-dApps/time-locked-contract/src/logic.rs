@@ -1,4 +1,4 @@
-use crate::logic::script::{get_script, Timestamp};
+use crate::logic::script::get_script;
 use async_trait::async_trait;
 use naumachia::{
     address::PolicyId,

@@ -45,7 +45,7 @@ pub enum Action<Datum, Redeemer> {
 pub struct TxActions<Datum, Redeemer> {
     pub script_version: TransactionVersion,
     pub actions: Vec<Action<Datum, Redeemer>>,
-    pub valid_range: (Option<(i64, bool)>, Option<(i64, bool)>),
+    pub valid_range: Range,
 }
 
 impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
@@ -234,6 +234,8 @@ pub enum TransactionVersion {
     V2,
 }
 
+type Range = (Option<(i64, bool)>, Option<(i64, bool)>);
+
 pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_version: TransactionVersion,
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
@@ -246,7 +248,7 @@ pub struct UnbuiltTransaction<Datum, Redeemer> {
         Box<dyn MintingPolicy<Redeemer>>,
     )>,
     pub specific_wallet_inputs: Vec<Output<Datum>>,
-    pub valid_range: (Option<(i64, bool)>, Option<(i64, bool)>),
+    pub valid_range: Range,
 }
 
 impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {

@@ -87,7 +87,7 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<HashedString, ClearString
 mod tests {
     use super::*;
     use naumachia::address::Address;
-    use naumachia::scripts::{ContextBuilder, TxContext, ValidatorCode};
+    use naumachia::scripts::{ContextBuilder, ValidatorCode};
 
     // This is broken. I think it might have to do with the script itself.
     #[ignore]

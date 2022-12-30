@@ -75,7 +75,7 @@ mod tests {
     use super::*;
     use naumachia::address::Address;
     use naumachia::output::{Output, OutputId};
-    use naumachia::scripts::{ContextBuilder, MintingPolicy, TxContext};
+    use naumachia::scripts::{ContextBuilder, MintingPolicy};
 
     #[ignore]
     #[test]

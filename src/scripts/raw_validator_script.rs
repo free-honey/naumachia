@@ -7,7 +7,7 @@ use cardano_multiplatform_lib::{
     address::{EnterpriseAddress, StakeCredential},
     plutus::{PlutusScript, PlutusV1Script},
 };
-use minicbor::{Decoder, Encode, Encoder};
+use minicbor::{Decoder, Encoder};
 
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
@@ -36,7 +36,7 @@ pub struct RawPlutusValidator<Datum, Redeemer> {
 
 impl<D, R> RawPlutusValidator<D, R> {
     pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
-        let cbor = hex::decode(&script_file.cborHex)
+        let cbor = hex::decode(script_file.cborHex)
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
@@ -52,7 +52,7 @@ impl<D, R> RawPlutusValidator<D, R> {
     }
 
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
-        let cbor = hex::decode(&script_file.cborHex)
+        let cbor = hex::decode(script_file.cborHex)
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
@@ -184,7 +184,7 @@ where
             .clone()
             .into_writer();
 
-        let hex = hex::encode(&wrap);
+        let hex = hex::encode(wrap);
         Ok(hex)
     }
 }

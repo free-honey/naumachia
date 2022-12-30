@@ -152,6 +152,7 @@ mod tests {
             unbuilt_outputs: vec![new_output],
             minting: Default::default(),
             specific_wallet_inputs: vec![],
+            valid_range: (None, None),
         };
         record.issue(tx).await.unwrap();
         let expected_bob = starting_amount;

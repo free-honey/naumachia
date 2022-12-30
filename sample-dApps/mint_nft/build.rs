@@ -1,10 +1,5 @@
 use aiken::Terminal;
-use aiken_project::script::EvalInfo;
-use aiken_project::{pretty, telemetry, Project};
-use std::collections::BTreeMap;
-
-use owo_colors::OwoColorize;
-use uplc::machine::cost_model::ExBudget;
+use aiken_project::Project;
 
 const PROJECT: &str = "./mint_nft";
 

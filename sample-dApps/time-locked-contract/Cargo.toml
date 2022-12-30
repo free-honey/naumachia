@@ -11,7 +11,7 @@ repository.workspace = true
 path = "src/lib.rs"
 
 [[bin]]
-name = "always-cli"
+name = "time-locked-cli"
 path = "src/main.rs"
 
 [build-dependencies]

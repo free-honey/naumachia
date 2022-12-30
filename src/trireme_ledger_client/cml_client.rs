@@ -492,12 +492,14 @@ where
         Ok(tx_id)
     }
 
+    // TODO: https://github.com/MitchTurner/naumachia/issues/79
     async fn set_valid_range<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
         // TODO: This only works on Testnet :(((((( and it's kinda hacky at that
+        //   https://github.com/MitchTurner/naumachia/issues/78
         fn slot_from_posix(posix: i64) -> BigNum {
             // From this time onward, each slot is 1 second
             const ARB_SLOT_POSIX: i64 = 1595967616;
