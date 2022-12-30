@@ -63,14 +63,14 @@ rand = "0.8.5"
 sha2 = "0.10.6"
 
 [patch.crates-io]
-#uplc = { version = "0.0.25", git = "https://github.com/aiken-lang/aiken.git", branch = "acceptance-test-last-fixes"}
-#aiken = { version = "0.0.26", git = "https://github.com/aiken-lang/aiken.git", branch = "acceptance-test-last-fixes"}
-#aiken-project = { version = "0.0.26", git = "https://github.com/aiken-lang/aiken.git", branch = "acceptance-test-last-fixes"}
-#
+uplc = { version = "0.0.25", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+aiken = { version = "0.0.26", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+aiken-project = { version = "0.0.26", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+
 #[patch."https://github.com/aiken-lang/aiken.git"]
-aiken = { version = "0.0.26", path = "../aiken-lang/aiken/crates/aiken"}
-aiken-project = { version = "0.0.26", path = "../aiken-lang/aiken/crates/aiken-project" }
-uplc = { version = "0.0.25", path = "../aiken-lang/aiken/crates/uplc" }
+#aiken = { version = "0.0.26", path = "../aiken-lang/aiken/crates/aiken"}
+#aiken-project = { version = "0.0.26", path = "../aiken-lang/aiken/crates/aiken-project" }
+#uplc = { version = "0.0.25", path = "../aiken-lang/aiken/crates/uplc" }
 
 #[patch."https://github.com/MitchTurner/blockfrost-http-client.git"]
 #blockfrost-http-client = { version = "0.0.10", path = "../blockfrost-http-client"}

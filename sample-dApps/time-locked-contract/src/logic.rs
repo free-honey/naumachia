@@ -75,7 +75,6 @@ fn impl_lock(amount: u64, timestamp: i64) -> SCLogicResult<TxActions<i64, ()>> {
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
-    // let datum = Timestamp::new(timestamp);
     let tx_actions = TxActions::v2().with_script_init(timestamp, values, address);
     Ok(tx_actions)
 }
@@ -98,7 +97,9 @@ async fn impl_claim<LC: LedgerClient<i64, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let redeemer = ();
     let script_box = Box::new(script);
-    let tx_actions = TxActions::v2().with_script_redeem(output, redeemer, script_box);
+    let tx_actions = TxActions::v2()
+        .with_script_redeem(output, redeemer, script_box)
+        .with_valid_range(Some((1595967616, true)), None);
     Ok(tx_actions)
 }
 

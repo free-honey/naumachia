@@ -35,6 +35,7 @@ async fn main() {
     let backend = Backend::new(ledger_client);
     let contract = SmartContract::new(&logic, &backend);
 
+    println!("hello world");
     match args.action {
         ActionParams::Lock { amount } => contract
             .hit_endpoint(TimeLockedEndpoints::Lock {

@@ -64,6 +64,7 @@ impl From<i64> for PlutusData {
     }
 }
 
+// TODO: This is bad!!! Should be a Try
 impl From<PlutusData> for i64 {
     fn from(value: PlutusData) -> Self {
         match value {
@@ -72,6 +73,7 @@ impl From<PlutusData> for i64 {
         }
     }
 }
+
 // TODO: Don't hardcode values!
 // TODO: THIS IS V2 only right now! Add V1!
 impl From<TxContext> for PlutusData {
