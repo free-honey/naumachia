@@ -1,7 +1,7 @@
 use aiken::Terminal;
 use aiken_project::Project;
 
-const PROJECT: &str = "./mint_nft";
+const PROJECT: &str = "./time_locked";
 
 fn main() {
     let mut project = Project::new(PROJECT.into(), Terminal::default())

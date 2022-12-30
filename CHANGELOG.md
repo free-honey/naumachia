@@ -4,9 +4,11 @@
 
 ### Added
 
-**sample-dApps/mint_nft**: Create one-shot Aiken contract
-**naumachia**: Add parameterized policies
-**naumachia**: Add specific input action
+**sample-dApps/time-locked-contract**: Create time locked validator contract  
+**naumachia**: Add time bound for Actions + partially for CML Client   
+**sample-dApps/mint_nft**: Create one-shot Aiken contract  
+**naumachia**: Add parameterized policies  
+**naumachia**: Add specific input action  
 **always-succeeds-contract**: Convert to Aiken :)  
 **naumachia**: Add V2 Support for CML client  
 **naumachia**: Remove dupe Blockfrost Client

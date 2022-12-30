@@ -1,4 +1,4 @@
-use crate::scripts::TxContext;
+use crate::scripts::{ScriptError, TxContext, ValidRange};
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -53,21 +53,27 @@ impl From<i64> for PlutusData {
     fn from(num: i64) -> Self {
         let neg = num.is_negative();
         let val = num.unsigned_abs();
-        let inner_data = PlutusData::BigInt(BigInt::Int { neg, val });
-        let constr = Constr {
-            tag: 121,
-            any_constructor: None,
-            fields: vec![inner_data],
-        };
-        PlutusData::Constr(constr)
+        PlutusData::BigInt(BigInt::Int { neg, val })
+    }
+}
+
+impl TryFrom<PlutusData> for i64 {
+    type Error = ScriptError;
+
+    fn try_from(data: PlutusData) -> Result<Self, Self::Error> {
+        match data {
+            PlutusData::BigInt(inner) => Ok(inner.into()),
+            _ => Err(ScriptError::DatumDeserialization(format!("{:?}", data))),
+        }
     }
 }
 
 // TODO: Don't hardcode values!
-// TODO: Cover V2 as well (this is V1)
+// TODO: THIS IS V2 only right now! Add V1!
 impl From<TxContext> for PlutusData {
-    fn from(_: TxContext) -> Self {
+    fn from(ctx: TxContext) -> Self {
         let inputs = PlutusData::Array(vec![]);
+        let reference_inputs = PlutusData::Array(vec![]);
         let outputs = PlutusData::Array(vec![]);
         let fee = PlutusData::Map(BTreeMap::from([(
             PlutusData::BoundedBytes(Vec::new()),
@@ -84,10 +90,14 @@ impl From<TxContext> for PlutusData {
             )])),
         )]));
         let dcert = PlutusData::Array(vec![]);
-        let wdrl = PlutusData::Array(vec![]);
-        let valid_range = no_time_bound();
+        // let wdrl = PlutusData::Array(vec![]);
+        let wdrl = PlutusData::Map(BTreeMap::new());
+        let valid_range = ctx.range.into();
         let signatories = PlutusData::Array(vec![]);
-        let data = PlutusData::Array(vec![]);
+        // let redeemers = PlutusData::Array(vec![]);
+        let redeemers = PlutusData::Map(BTreeMap::new());
+        // let data = PlutusData::Array(vec![]);
+        let data = PlutusData::Map(BTreeMap::new());
         let id = PlutusData::Constr(Constr {
             tag: 121,
             any_constructor: None,
@@ -98,6 +108,7 @@ impl From<TxContext> for PlutusData {
             any_constructor: None,
             fields: vec![
                 inputs,
+                reference_inputs,
                 outputs,
                 fee,
                 mint,
@@ -105,6 +116,7 @@ impl From<TxContext> for PlutusData {
                 wdrl,
                 valid_range,
                 signatories,
+                redeemers,
                 data,
                 id,
             ],
@@ -123,6 +135,17 @@ impl From<TxContext> for PlutusData {
     }
 }
 
+impl From<ValidRange> for PlutusData {
+    fn from(value: ValidRange) -> Self {
+        match (value.lower, value.upper) {
+            (None, None) => no_time_bound(),
+            (Some((bound, _)), None) => lower_bound(bound),
+            (None, Some(_)) => todo!(),
+            (Some(_), Some(_)) => todo!(),
+        }
+    }
+}
+
 fn no_time_bound() -> PlutusData {
     PlutusData::Constr(Constr {
         tag: 121,
@@ -137,6 +160,51 @@ fn no_time_bound() -> PlutusData {
                         tag: 121,
                         any_constructor: None,
                         fields: vec![],
+                    }),
+                    // Closure
+                    PlutusData::Constr(Constr {
+                        tag: 122,
+                        any_constructor: None,
+                        fields: vec![],
+                    }),
+                ],
+            }),
+            PlutusData::Constr(Constr {
+                tag: 121,
+                any_constructor: None,
+                fields: vec![
+                    // PosInf
+                    PlutusData::Constr(Constr {
+                        tag: 123,
+                        any_constructor: None,
+                        fields: vec![],
+                    }),
+                    // Closure
+                    PlutusData::Constr(Constr {
+                        tag: 122,
+                        any_constructor: None,
+                        fields: vec![],
+                    }),
+                ],
+            }),
+        ],
+    })
+}
+
+fn lower_bound(bound: i64) -> PlutusData {
+    PlutusData::Constr(Constr {
+        tag: 121,
+        any_constructor: None,
+        fields: vec![
+            PlutusData::Constr(Constr {
+                tag: 121,
+                any_constructor: None,
+                fields: vec![
+                    // Finite
+                    PlutusData::Constr(Constr {
+                        tag: 122,
+                        any_constructor: None,
+                        fields: vec![PlutusData::BigInt(bound.into())],
                     }),
                     // Closure
                     PlutusData::Constr(Constr {

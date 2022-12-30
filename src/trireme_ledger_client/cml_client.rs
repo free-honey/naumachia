@@ -192,7 +192,6 @@ where
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
     ) -> LedgerClientResult<()> {
-        dbg!(&tx.unbuilt_outputs());
         for unbuilt_output in tx.unbuilt_outputs().iter() {
             let cml_values: CMLValue = unbuilt_output
                 .values()
@@ -423,6 +422,7 @@ where
         let algo = ChangeSelectionAlgo::Default;
         let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, my_address).unwrap(); // TODO: unwrap
         let transaction = tx_redeemer_builder.draft_tx();
+        println!("{}", &transaction.to_json().unwrap());
         let res = self.ledger.calculate_ex_units(&transaction).await.unwrap(); // TODO: unwrap
         for (index, spend) in res.iter() {
             let tag = match spend.execution_type {
@@ -476,6 +476,7 @@ where
         priv_key: PrivateKey,
     ) -> LedgerClientResult<TxId> {
         let mut tx_builder = vasil_v2_tx_builder()?;
+        self.set_valid_range(&mut tx_builder, &tx).await?;
         self.add_v2_script_inputs(&mut tx_builder, &tx).await?;
         self.add_tokens_for_v2_minting(&mut tx_builder, &tx).await?;
         specify_utxos_available_for_input_selection(&mut tx_builder, &my_address, &my_utxos)
@@ -489,6 +490,33 @@ where
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
         let tx_id = self.submit_tx(&tx).await?;
         Ok(tx_id)
+    }
+
+    // TODO: https://github.com/MitchTurner/naumachia/issues/79
+    async fn set_valid_range<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+        &self,
+        tx_builder: &mut TransactionBuilder,
+        tx: &UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<()> {
+        // TODO: This only works on Testnet :(((((( and it's kinda hacky at that
+        //   https://github.com/MitchTurner/naumachia/issues/78
+        fn slot_from_posix(posix: i64) -> BigNum {
+            // From this time onward, each slot is 1 second
+            const ARB_SLOT_POSIX: i64 = 1595967616;
+            const ARB_SLOT: i64 = 1598400;
+            if posix < ARB_SLOT_POSIX {
+                todo!("posix too low!")
+            } else {
+                let delta = posix - ARB_SLOT_POSIX;
+                ((ARB_SLOT + delta) as u64).into()
+            }
+        }
+        let (lower, _upper) = tx.valid_range;
+        if let Some((posix, _)) = lower {
+            let slot = slot_from_posix(posix);
+            tx_builder.set_validity_start_interval(&slot);
+        }
+        Ok(())
     }
 
     async fn add_specific_inputs<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(

@@ -82,3 +82,27 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<HashedString, ClearString
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use naumachia::address::Address;
+    use naumachia::scripts::{ContextBuilder, ValidatorCode};
+
+    // This is broken. I think it might have to do with the script itself.
+    #[ignore]
+    #[test]
+    fn can_guess_correctly() {
+        let script = get_script().unwrap();
+
+        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
+
+        let ctx = ContextBuilder::new(owner).build();
+
+        let word = "hello";
+
+        let datum = HashedString::new(word);
+        let redeemer = ClearString::new(word);
+        script.execute(datum, redeemer, ctx).unwrap();
+    }
+}

@@ -24,7 +24,7 @@ pub struct RawPolicy<Redeemer> {
 
 impl<R> RawPolicy<R> {
     pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
-        let cbor = hex::decode(&script_file.cborHex)
+        let cbor = hex::decode(script_file.cborHex)
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
@@ -39,7 +39,7 @@ impl<R> RawPolicy<R> {
     }
 
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
-        let cbor = hex::decode(&script_file.cborHex)
+        let cbor = hex::decode(script_file.cborHex)
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
@@ -63,7 +63,7 @@ pub struct OneParamRawPolicy<One, Redeemer> {
 
 impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
-        let cbor = hex::decode(&script_file.cborHex)
+        let cbor = hex::decode(script_file.cborHex)
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
@@ -154,7 +154,7 @@ where
             .clone()
             .into_writer();
 
-        let hex = hex::encode(&wrap);
+        let hex = hex::encode(wrap);
         Ok(hex)
     }
 }

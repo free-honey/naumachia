@@ -41,7 +41,7 @@ impl From<ClearString> for PlutusData {
 }
 
 // TODO: Broken for some reason
-
+//  https://github.com/MitchTurner/naumachia/issues/80
 #[ignore]
 #[test]
 fn execute_game_passes() {
@@ -53,14 +53,14 @@ fn execute_game_passes() {
 
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(word);
-    let ctx = TxContext {
-        signer: Address::Raw("placeholder".to_string()),
-    };
+    let signer = Address::new("placeholder");
+    let ctx = ContextBuilder::new(signer).build();
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_ok());
 }
 
 // TODO: Broken for some reason
+//  https://github.com/MitchTurner/naumachia/issues/80
 #[ignore]
 #[test]
 fn execute_game_fails() {
@@ -73,9 +73,8 @@ fn execute_game_fails() {
 
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(bad_guess);
-    let ctx = TxContext {
-        signer: Address::Raw("placeholder".to_string()),
-    };
+    let signer = Address::new("placeholder");
+    let ctx = ContextBuilder::new(signer).build();
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_err()); // TODO: Make more specific
 }

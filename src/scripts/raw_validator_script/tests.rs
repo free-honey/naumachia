@@ -1,4 +1,5 @@
 use super::*;
+use crate::scripts::ContextBuilder;
 
 mod game;
 mod hello;
@@ -12,9 +13,9 @@ fn execute_always_succeeds() {
     };
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
-    let ctx = TxContext {
-        signer: Address::Raw("placeholder".to_string()),
-    };
+    let signer = Address::new("placeholder");
+
+    let ctx = ContextBuilder::new(signer).build();
 
     script.execute((), (), ctx).unwrap();
 }

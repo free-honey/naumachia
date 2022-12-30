@@ -1,6 +1,6 @@
 [package]
-name = "always-succeeds-contract"
-description = "Always-Succeeds Script Cardano dApp"
+name = "time-locked-contract"
+description = "Time Locked Script Cardano dApp"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -11,7 +11,7 @@ repository.workspace = true
 path = "src/lib.rs"
 
 [[bin]]
-name = "always-cli"
+name = "time-locked-cli"
 path = "src/main.rs"
 
 [build-dependencies]

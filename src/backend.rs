@@ -1,7 +1,6 @@
 use crate::scripts::ValidatorCode;
 use crate::{
-    address::Address, backend::tx_checks::can_spend_inputs, error::Result,
-    ledger_client::LedgerClient, output::Output, TxActions,
+    address::Address, error::Result, ledger_client::LedgerClient, output::Output, TxActions,
 };
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
@@ -47,7 +46,7 @@ where
         let tx = actions.to_unbuilt_tx()?;
         // TODO: I don't know that we need to check this here. That is more the business of the
         //   ledger implementation, I think.
-        can_spend_inputs(&tx, self.signer().await?)?;
+        // can_spend_inputs(&tx, self.signer().await?)?;
         // TODO: Move this to ledger client impls
         // can_mint_tokens(&tx, &self.ledger_client.signer().await?)?;
         let tx_id = self.ledger_client.issue(tx).await?;

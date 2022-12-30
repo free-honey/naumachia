@@ -45,6 +45,7 @@ pub enum Action<Datum, Redeemer> {
 pub struct TxActions<Datum, Redeemer> {
     pub script_version: TransactionVersion,
     pub actions: Vec<Action<Datum, Redeemer>>,
+    pub valid_range: Range,
 }
 
 impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
@@ -52,6 +53,7 @@ impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
         TxActions {
             script_version: TransactionVersion::V1,
             actions: Vec::new(),
+            valid_range: (None, None),
         }
     }
 
@@ -59,6 +61,7 @@ impl<Datum, Redeemer> TxActions<Datum, Redeemer> {
         TxActions {
             script_version: TransactionVersion::V2,
             actions: Vec::new(),
+            valid_range: (None, None),
         }
     }
 }
@@ -127,10 +130,20 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         self
     }
 
+    pub fn with_valid_range(
+        mut self,
+        lower: Option<(i64, bool)>,
+        upper: Option<(i64, bool)>,
+    ) -> Self {
+        self.valid_range = (lower, upper);
+        self
+    }
+
     pub fn to_unbuilt_tx(self) -> Result<UnbuiltTransaction<Datum, Redeemer>> {
         let TxActions {
             script_version,
             actions,
+            ..
         } = self;
         let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
         let mut minting = Vec::new();
@@ -189,6 +202,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
             unbuilt_outputs: outputs,
             minting,
             specific_wallet_inputs,
+            valid_range: self.valid_range,
         };
         Ok(tx)
     }
@@ -218,6 +232,8 @@ pub enum TransactionVersion {
     V2,
 }
 
+type Range = (Option<(i64, bool)>, Option<(i64, bool)>);
+
 pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_version: TransactionVersion,
     pub script_inputs: Vec<RedemptionDetails<Datum, Redeemer>>,
@@ -230,6 +246,7 @@ pub struct UnbuiltTransaction<Datum, Redeemer> {
         Box<dyn MintingPolicy<Redeemer>>,
     )>,
     pub specific_wallet_inputs: Vec<Output<Datum>>,
+    pub valid_range: Range,
 }
 
 impl<Datum, Redeemer> UnbuiltTransaction<Datum, Redeemer> {

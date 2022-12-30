@@ -7,7 +7,7 @@
   - [x] InitScript
   - [x] RedeemScriptOutput
   - [x] Spend Specific Output (e.g. for one-time mintings) 
-  - [ ] Specify valid range
+  - [x] Specify valid range
   - [ ] Create Multi-Sig Tx?
 - In-memory Ledger Client
   - [x] Transfer
@@ -49,6 +49,7 @@
         - [x] RedeemScriptOutput
         - [x] Spend Specific Output (e.g. for one-time mintings)
         - [ ] Specify valid range
+          - This is partially complete. CML only allows for setting a lower bound, and the conversion from POSIX -> Slot only works on Testnet
         - [ ] Create Multi-Sig Tx?
     - Ledger Data Source
       - [x] BlockFrost Client
