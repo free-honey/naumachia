@@ -18,7 +18,6 @@ pub fn get_policy<R>() -> ScriptResult<RawPolicy<R>> {
 mod tests {
     use super::*;
     use naumachia::address::Address;
-    use naumachia::output::{Output, OutputId};
     use naumachia::scripts::{ContextBuilder, MintingPolicy};
 
     #[test]

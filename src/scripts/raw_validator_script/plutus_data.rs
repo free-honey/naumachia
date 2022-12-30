@@ -1,4 +1,4 @@
-use crate::scripts::{TxContext, ValidRange};
+use crate::scripts::{ScriptError, TxContext, ValidRange};
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -57,12 +57,13 @@ impl From<i64> for PlutusData {
     }
 }
 
-// TODO: This is bad!!! Should be a Try
-impl From<PlutusData> for i64 {
-    fn from(value: PlutusData) -> Self {
-        match value {
-            PlutusData::BigInt(big_int) => big_int.into(),
-            _ => panic!("This isn't a big int"),
+impl TryFrom<PlutusData> for i64 {
+    type Error = ScriptError;
+
+    fn try_from(data: PlutusData) -> Result<Self, Self::Error> {
+        match data {
+            PlutusData::BigInt(inner) => Ok(inner.into()),
+            _ => Err(ScriptError::DatumDeserialization(format!("{:?}", data))),
         }
     }
 }

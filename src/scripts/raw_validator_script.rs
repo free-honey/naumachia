@@ -126,8 +126,6 @@ where
                 .into();
         let datum_data: PlutusData = datum.into();
         let aiken_datum_data: uplc::PlutusData = datum_data.into();
-        // let bytes = aiken_datum_data.encode();
-        // dbg!(aiken_datum_data.to_bytes());
         let datum_term = Term::Constant(Constant::Data(aiken_datum_data));
         let program = program.apply_term(&datum_term);
         let redeemer_data: PlutusData = redeemer.into();

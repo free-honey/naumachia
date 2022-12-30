@@ -135,7 +135,6 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         lower: Option<(i64, bool)>,
         upper: Option<(i64, bool)>,
     ) -> Self {
-        println!("beep");
         self.valid_range = (lower, upper);
         self
     }
@@ -197,7 +196,6 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         let mut outputs = create_outputs_for(out_vecs)?;
         outputs.extend(specific_outputs);
 
-        dbg!(&self.valid_range);
         let tx = UnbuiltTransaction {
             script_version,
             script_inputs,

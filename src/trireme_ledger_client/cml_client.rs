@@ -511,10 +511,8 @@ where
                 ((ARB_SLOT + delta) as u64).into()
             }
         }
-        dbg!(&tx.valid_range);
         let (lower, _upper) = tx.valid_range;
         if let Some((posix, _)) = lower {
-            dbg!(posix);
             let slot = slot_from_posix(posix);
             tx_builder.set_validity_start_interval(&slot);
         }

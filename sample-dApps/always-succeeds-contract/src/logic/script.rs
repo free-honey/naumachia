@@ -26,8 +26,6 @@ mod tests {
         let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
 
         let ctx = ContextBuilder::new(owner).build();
-        let cbor = script.script_hex().unwrap();
-        dbg!(&cbor);
-        let _eval = script.execute((), (), ctx).unwrap();
+        script.execute((), (), ctx).unwrap();
     }
 }
