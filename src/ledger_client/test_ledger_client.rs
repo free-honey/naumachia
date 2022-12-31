@@ -310,19 +310,19 @@ fn new_validator_output<Datum>(
 
 fn build_outputs<Datum>(
     unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
-    mut construction_ctx: &mut TxConstructionCtx,
+    construction_ctx: &mut TxConstructionCtx,
 ) -> Vec<Output<Datum>> {
     unbuilt_outputs
         .into_iter()
         .map(|output| match output {
             UnbuiltOutput::Wallet { owner, values } => {
-                new_wallet_output(&owner, &values, &mut construction_ctx)
+                new_wallet_output(&owner, &values, construction_ctx)
             }
             UnbuiltOutput::Validator {
                 script_address: owner,
                 values,
                 datum,
-            } => new_validator_output(&owner, &values, datum, &mut construction_ctx),
+            } => new_validator_output(&owner, &values, datum, construction_ctx),
         })
         .collect()
 }
