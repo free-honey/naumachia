@@ -6,14 +6,12 @@ use async_trait::async_trait;
 
 use crate::{
     address::Address,
-    output::{Output, OutputId, UnbuiltOutput},
+    output::{Output, OutputId},
     transaction::TxId,
     transaction::UnbuiltTransaction,
-    values::Values,
     PolicyId,
 };
 use std::error;
-use uuid::Uuid;
 
 // TODO: Having this bound to a specific Datum/Redeemer doesn't really make sense at this scope.
 //   It's convenient from the backend's perspective, but it's constricting else-wise.
@@ -74,35 +72,3 @@ pub enum LedgerClientError {
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;
-
-pub(crate) fn new_wallet_output<Datum>(addr: &Address, vals: &Values) -> Output<Datum> {
-    // TODO: Fix to not do tx_hash here maybe
-    let tx_hash = Uuid::new_v4().to_string();
-    let index = 0;
-    Output::new_wallet(tx_hash, index, addr.clone(), vals.clone())
-}
-
-pub(crate) fn new_validator_output<Datum>(
-    addr: &Address,
-    vals: &Values,
-    datum: Datum,
-) -> Output<Datum> {
-    // TODO: Fix to not do tx_hash here maybe
-    let tx_hash = Uuid::new_v4().to_string();
-    let index = 0;
-    Output::new_validator(tx_hash, index, addr.clone(), vals.clone(), datum)
-}
-
-fn build_outputs<Datum>(unbuilt_outputs: Vec<UnbuiltOutput<Datum>>) -> Vec<Output<Datum>> {
-    unbuilt_outputs
-        .into_iter()
-        .map(|output| match output {
-            UnbuiltOutput::Wallet { owner, values } => new_wallet_output(&owner, &values),
-            UnbuiltOutput::Validator {
-                script_address: owner,
-                values,
-                datum,
-            } => new_validator_output(&owner, &values, datum),
-        })
-        .collect()
-}

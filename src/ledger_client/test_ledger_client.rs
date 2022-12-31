@@ -6,13 +6,13 @@ use std::{
 };
 use uuid::Uuid;
 
-use crate::ledger_client::test_ledger_client::in_memory_storage::InMemoryStorage;
-use crate::ledger_client::LedgerClientError;
+use crate::output::UnbuiltOutput;
 use crate::{
     backend::Backend,
-    ledger_client::LedgerClientError::FailedToIssueTx,
-    ledger_client::{build_outputs, new_wallet_output},
-    ledger_client::{LedgerClient, LedgerClientResult},
+    ledger_client::{
+        test_ledger_client::in_memory_storage::InMemoryStorage, LedgerClient, LedgerClientError,
+        LedgerClientError::FailedToIssueTx, LedgerClientResult,
+    },
     output::Output,
     transaction::TxId,
     values::Values,
@@ -198,7 +198,7 @@ where
     }
 
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
-        // TODO: Have all matching Tx Id
+        let mut construction_ctx = TxConstructionCtx::new();
         let signer = self.signer().await?;
         let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
         tx.script_inputs()
@@ -243,10 +243,14 @@ where
 
         let mut combined_outputs = Vec::new();
         if let Some(remainder) = maybe_remainder {
-            combined_outputs.push(new_wallet_output(&signer, &remainder));
+            combined_outputs.push(new_wallet_output(
+                &signer,
+                &remainder,
+                &mut construction_ctx,
+            ));
         }
 
-        let built_outputs = build_outputs(tx.unbuilt_outputs);
+        let built_outputs = build_outputs(tx.unbuilt_outputs, &mut construction_ctx);
 
         combined_outputs.extend(built_outputs);
 
@@ -255,5 +259,164 @@ where
         }
 
         Ok(TxId::new("Not a real id"))
+    }
+}
+
+struct TxConstructionCtx {
+    tx_hash: String,
+    next_index: u64,
+}
+
+impl TxConstructionCtx {
+    pub fn new() -> Self {
+        let tx_hash = Uuid::new_v4().to_string();
+        TxConstructionCtx {
+            tx_hash,
+            next_index: 0,
+        }
+    }
+
+    pub fn tx_hash(&self) -> String {
+        self.tx_hash.clone()
+    }
+
+    pub fn next_index(&mut self) -> u64 {
+        let next_index = self.next_index;
+        self.next_index += 1;
+        next_index
+    }
+}
+
+fn new_wallet_output<Datum>(
+    addr: &Address,
+    vals: &Values,
+    construction_ctx: &mut TxConstructionCtx,
+) -> Output<Datum> {
+    let tx_hash = construction_ctx.tx_hash();
+    let index = construction_ctx.next_index();
+    Output::new_wallet(tx_hash, index, addr.clone(), vals.clone())
+}
+
+fn new_validator_output<Datum>(
+    addr: &Address,
+    vals: &Values,
+    datum: Datum,
+    construction_ctx: &mut TxConstructionCtx,
+) -> Output<Datum> {
+    let tx_hash = construction_ctx.tx_hash();
+    let index = construction_ctx.next_index();
+    Output::new_validator(tx_hash, index, addr.clone(), vals.clone(), datum)
+}
+
+fn build_outputs<Datum>(
+    unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
+    mut construction_ctx: &mut TxConstructionCtx,
+) -> Vec<Output<Datum>> {
+    unbuilt_outputs
+        .into_iter()
+        .map(|output| match output {
+            UnbuiltOutput::Wallet { owner, values } => {
+                new_wallet_output(&owner, &values, &mut construction_ctx)
+            }
+            UnbuiltOutput::Validator {
+                script_address: owner,
+                values,
+                datum,
+            } => new_validator_output(&owner, &values, datum, &mut construction_ctx),
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(non_snake_case)]
+    use super::*;
+    use crate::transaction::TransactionVersion;
+    use crate::{
+        ledger_client::{
+            test_ledger_client::{local_persisted_storage::starting_output, TestLedgerClient},
+            LedgerClient,
+        },
+        output::UnbuiltOutput,
+        PolicyId, UnbuiltTransaction,
+    };
+
+    #[tokio::test]
+    async fn outputs_at_address() {
+        let signer = Address::new("alice");
+        let starting_amount = 10_000_000;
+        let output = starting_output::<()>(&signer, starting_amount);
+        let outputs = vec![(signer.clone(), output)];
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_in_memory(signer.clone(), outputs);
+        let mut outputs = record.all_outputs_at_address(&signer).await.unwrap();
+        assert_eq!(outputs.len(), 1);
+        let first_output = outputs.pop().unwrap();
+        let expected = starting_amount;
+        let actual = first_output.values().get(&PolicyId::ADA).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[tokio::test]
+    async fn balance_at_address() {
+        let signer = Address::new("alice");
+        let starting_amount = 10_000_000;
+        let output = starting_output::<()>(&signer, starting_amount);
+        let outputs = vec![(signer.clone(), output)];
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_in_memory(signer.clone(), outputs);
+        let expected = starting_amount;
+        let actual = record
+            .balance_at_address(&signer, &PolicyId::ADA)
+            .await
+            .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[tokio::test]
+    async fn issue_transfer() {
+        let sender = Address::new("alice");
+        let starting_amount = 10_000_000;
+        let transfer_amount = 3_000_000;
+        let output = starting_output::<()>(&sender, starting_amount);
+        let outputs = vec![(sender.clone(), output)];
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+        let mut values = Values::default();
+        values.add_one_value(&PolicyId::ADA, transfer_amount);
+        let recipient = Address::new("bob");
+        let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
+        let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+            script_version: TransactionVersion::V1,
+            script_inputs: vec![],
+            unbuilt_outputs: vec![new_output],
+            minting: Default::default(),
+            specific_wallet_inputs: vec![],
+            valid_range: (None, None),
+        };
+        record.issue(tx).await.unwrap();
+        let actual_bob = record
+            .all_outputs_at_address(&recipient)
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+        let actual_bob_ada = actual_bob.values().get(&PolicyId::ADA).unwrap();
+        assert_eq!(actual_bob_ada, transfer_amount);
+        let actual_bob_tx_hash = actual_bob.id().tx_hash();
+
+        let actual_alice = record
+            .all_outputs_at_address(&sender)
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+        let actual_alice_ada = actual_alice.values().get(&PolicyId::ADA).unwrap();
+        assert_eq!(actual_alice_ada, starting_amount - transfer_amount);
+
+        let actual_alice_tx_hash = actual_alice.id().tx_hash();
+
+        assert_eq!(actual_bob_tx_hash, actual_alice_tx_hash);
     }
 }
