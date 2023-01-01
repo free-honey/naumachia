@@ -1,4 +1,4 @@
-use crate::ledger_client::test_ledger_client::{InMemoryLCError, TestLedgerStorage};
+use crate::ledger_client::test_ledger_client::{TestLCError, TestLedgerStorage};
 use crate::ledger_client::LedgerClientError::FailedToIssueTx;
 use crate::ledger_client::{LedgerClientError, LedgerClientResult};
 use crate::output::Output;
@@ -27,7 +27,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
         let outputs = self
             .outputs
             .lock()
-            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| TestLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| {
                 LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
             })?
@@ -43,7 +43,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
         let outputs = self
             .outputs
             .lock()
-            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| TestLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| {
                 LedgerClientError::FailedToRetrieveOutputsAt(address.clone(), Box::new(e))
             })?
@@ -58,7 +58,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
         let mut ledger_utxos = self
             .outputs
             .lock()
-            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| TestLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
         let index = ledger_utxos
             .iter()
@@ -66,7 +66,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
             .ok_or_else(|| {
                 LedgerClientError::FailedToRetrieveOutputWithId(
                     output.id().clone(),
-                    Box::new(InMemoryLCError::DuplicateInput),
+                    Box::new(TestLCError::DuplicateInput),
                 )
             })?;
         ledger_utxos.remove(index);
@@ -77,7 +77,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
         let mut ledger_utxos = self
             .outputs
             .lock()
-            .map_err(|e| InMemoryLCError::Mutex(format! {"{:?}", e}))
+            .map_err(|e| TestLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
         ledger_utxos.push((output.owner().clone(), output.clone()));
         Ok(())

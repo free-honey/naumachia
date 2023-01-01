@@ -109,7 +109,7 @@ where
 }
 
 #[derive(Debug, Error)]
-enum InMemoryLCError {
+enum TestLCError {
     #[error("Mutex lock error: {0:?}")]
     Mutex(String),
     #[error("Not enough input value available for outputs")]
@@ -140,8 +140,9 @@ pub struct TestLedgerClient<Datum, Redeemer, Storage: TestLedgerStorage<Datum>> 
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
 }
 
-impl<Datum: Clone + Send + Sync + PartialEq, Redeemer>
-    TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>
+impl<Datum, Redeemer> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>
+where
+    Datum: Clone + Send + Sync + PartialEq,
 {
     pub fn new_in_memory(signer: Address, outputs: Vec<(Address, Output<Datum>)>) -> Self {
         let storage = InMemoryStorage {
@@ -155,8 +156,9 @@ impl<Datum: Clone + Send + Sync + PartialEq, Redeemer>
         }
     }
 }
-impl<Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned, Redeemer>
-    TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<Datum>>
+impl<Datum, Redeemer> TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<Datum>>
+where
+    Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned,
 {
     pub fn new_local_persisted(signer: Address, starting_amount: u64) -> Self {
         let tmp_dir = TempDir::new().unwrap();
@@ -167,6 +169,16 @@ impl<Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned, Rede
             _datum: Default::default(),
             _redeemer: Default::default(),
         }
+    }
+}
+
+impl<Datum, Redeemer, Storage> TestLedgerClient<Datum, Redeemer, Storage>
+where
+    Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned,
+    Storage: TestLedgerStorage<Datum> + Send + Sync,
+{
+    async fn current_time(&self) -> LedgerClientResult<i64> {
+        todo!()
     }
 }
 
@@ -198,13 +210,11 @@ where
     }
 
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
-        let mut construction_ctx = TxConstructionCtx::new();
+        // Setup
         let signer = self.signer().await?;
-        let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
-        tx.script_inputs()
-            .iter()
-            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
 
+        // TODO: Optimize selection
+        let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
         let mut total_input_value =
             combined_inputs
                 .iter()
@@ -212,6 +222,15 @@ where
                     acc.add_values(utxo.values());
                     acc
                 });
+        // Phase I Check
+
+        // Phase II Check
+
+        let mut construction_ctx = TxIdConstructionCtx::new();
+
+        tx.script_inputs()
+            .iter()
+            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
 
         let mut minted_value = Values::default();
 
@@ -234,7 +253,7 @@ where
                 });
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
-            .map_err(|_| InMemoryLCError::NotEnoughInputs)
+            .map_err(|_| TestLCError::NotEnoughInputs)
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
 
         for input in combined_inputs {
@@ -262,15 +281,15 @@ where
     }
 }
 
-struct TxConstructionCtx {
+struct TxIdConstructionCtx {
     tx_hash: String,
     next_index: u64,
 }
 
-impl TxConstructionCtx {
+impl TxIdConstructionCtx {
     pub fn new() -> Self {
         let tx_hash = Uuid::new_v4().to_string();
-        TxConstructionCtx {
+        TxIdConstructionCtx {
             tx_hash,
             next_index: 0,
         }
@@ -290,7 +309,7 @@ impl TxConstructionCtx {
 fn new_wallet_output<Datum>(
     addr: &Address,
     vals: &Values,
-    construction_ctx: &mut TxConstructionCtx,
+    construction_ctx: &mut TxIdConstructionCtx,
 ) -> Output<Datum> {
     let tx_hash = construction_ctx.tx_hash();
     let index = construction_ctx.next_index();
@@ -301,7 +320,7 @@ fn new_validator_output<Datum>(
     addr: &Address,
     vals: &Values,
     datum: Datum,
-    construction_ctx: &mut TxConstructionCtx,
+    construction_ctx: &mut TxIdConstructionCtx,
 ) -> Output<Datum> {
     let tx_hash = construction_ctx.tx_hash();
     let index = construction_ctx.next_index();
@@ -310,7 +329,7 @@ fn new_validator_output<Datum>(
 
 fn build_outputs<Datum>(
     unbuilt_outputs: Vec<UnbuiltOutput<Datum>>,
-    construction_ctx: &mut TxConstructionCtx,
+    construction_ctx: &mut TxIdConstructionCtx,
 ) -> Vec<Output<Datum>> {
     unbuilt_outputs
         .into_iter()
@@ -419,4 +438,36 @@ mod tests {
 
         assert_eq!(actual_bob_tx_hash, actual_alice_tx_hash);
     }
+
+    #[tokio::test]
+    async fn errors_if_spending_more_than_you_own() {
+        let sender = Address::new("alice");
+        let starting_amount = 10_000_000;
+        let output = starting_output::<()>(&sender, starting_amount);
+        let outputs = vec![];
+        let record: TestLedgerClient<(), (), _> =
+            TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+        let mut values = Values::default();
+        values.add_one_value(&PolicyId::ADA, transfer_amount);
+        let recipient = Address::new("bob");
+        let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
+        let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+            script_version: TransactionVersion::V1,
+            script_inputs: vec![],
+            unbuilt_outputs: vec![new_output],
+            minting: Default::default(),
+            specific_wallet_inputs: vec![],
+            valid_range: (None, None),
+        };
+        let error = record.issue(tx).await.unwrap_err();
+
+        assert!(matches!(
+            LedgerClientError::FailedToIssueTx(Box::new(TestLCError::NotEnoughInputs)),
+            error
+        ));
+    }
+
+    #[tokio::test]
+    fn cannot_transfer_outside_valid_range() {}
 }
