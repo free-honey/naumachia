@@ -11,6 +11,7 @@ type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
 pub struct InMemoryStorage<Datum> {
     pub signer: Address,
     pub outputs: MutableData<Datum>,
+    pub current_posix_time: i64,
 }
 
 #[async_trait::async_trait]
@@ -80,6 +81,16 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
             .map_err(|e| TestLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
         ledger_utxos.push((output.owner().clone(), output.clone()));
+        Ok(())
+    }
+
+    async fn current_time(&self) -> LedgerClientResult<i64> {
+        let time = self.current_posix_time;
+        Ok(time)
+    }
+
+    async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()> {
+        self.current_posix_time = posix_time;
         Ok(())
     }
 }

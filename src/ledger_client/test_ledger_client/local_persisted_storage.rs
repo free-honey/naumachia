@@ -152,6 +152,14 @@ impl<Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq> Test
         self.update_outputs(ledger_utxos);
         Ok(())
     }
+
+    async fn current_time(&self) -> LedgerClientResult<i64> {
+        todo!()
+    }
+
+    async fn set_current_time(&mut self, _posix_time: i64) -> LedgerClientResult<()> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
