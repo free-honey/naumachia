@@ -112,10 +112,7 @@ async fn errors_if_spending_more_than_you_own() {
     };
     let error = record.issue(tx).await.unwrap_err();
 
-    assert!(matches!(
-        LedgerClientError::FailedToIssueTx(Box::new(TestLCError::NotEnoughInputs)),
-        error
-    ));
+    assert!(matches!(error, LedgerClientError::FailedToIssueTx(_),));
 }
 
 #[tokio::test]
