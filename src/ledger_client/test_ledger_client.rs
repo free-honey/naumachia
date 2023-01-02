@@ -187,11 +187,11 @@ where
     Datum: Clone + Send + Sync + PartialEq,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
-    async fn current_time(&self) -> LedgerClientResult<i64> {
+    pub async fn current_time(&self) -> LedgerClientResult<i64> {
         self.storage.current_time().await
     }
 
-    async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()> {
+    pub async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()> {
         self.storage.set_current_time(posix_time).await
     }
 }
@@ -233,6 +233,11 @@ where
 
         // TODO: Optimize selection
         let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
+
+        tx.script_inputs()
+            .iter()
+            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
+
         let mut total_input_value =
             combined_inputs
                 .iter()
@@ -242,10 +247,6 @@ where
                 });
 
         let mut construction_ctx = TxIdConstructionCtx::new();
-
-        tx.script_inputs()
-            .iter()
-            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
 
         let mut minted_value = Values::default();
 
