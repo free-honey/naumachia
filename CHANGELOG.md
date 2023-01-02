@@ -4,7 +4,7 @@
 
 ### Added
 
-**naumachia**: Upgrade Test Ledger
+**naumachia**: Upgrade Test Ledger  
 **sample-dApps/time-locked-contract**: Create time locked validator contract  
 **naumachia**: Add time bound for Actions + partially for CML Client   
 **sample-dApps/mint_nft**: Create one-shot Aiken contract  
