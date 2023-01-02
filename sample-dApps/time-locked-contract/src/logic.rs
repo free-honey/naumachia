@@ -99,7 +99,7 @@ async fn impl_claim<LC: LedgerClient<i64, ()>>(
     let script_box = Box::new(script);
     let tx_actions = TxActions::v2()
         .with_script_redeem(output, redeemer, script_box)
-        .with_valid_range(Some((1595967616, true)), None);
+        .with_valid_range(Some(1595967616), None);
     Ok(tx_actions)
 }
 

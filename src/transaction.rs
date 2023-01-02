@@ -130,11 +130,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         self
     }
 
-    pub fn with_valid_range(
-        mut self,
-        lower: Option<(i64, bool)>,
-        upper: Option<(i64, bool)>,
-    ) -> Self {
+    pub fn with_valid_range(mut self, lower: Option<i64>, upper: Option<i64>) -> Self {
         self.valid_range = (lower, upper);
         self
     }
@@ -232,7 +228,7 @@ pub enum TransactionVersion {
     V2,
 }
 
-type Range = (Option<(i64, bool)>, Option<(i64, bool)>);
+type Range = (Option<i64>, Option<i64>);
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {
     pub script_version: TransactionVersion,

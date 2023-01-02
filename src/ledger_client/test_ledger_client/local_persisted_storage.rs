@@ -21,6 +21,7 @@ use crate::{
 pub(crate) struct LedgerData<Datum> {
     signer: Address,
     outputs: Vec<Output<Datum>>,
+    current_time: i64,
 }
 
 #[derive(Debug, Error)]
@@ -34,7 +35,11 @@ enum LocalPersistedLCError {
 impl<Datum> LedgerData<Datum> {
     pub fn new(signer: Address) -> Self {
         let outputs = Vec::new();
-        LedgerData { signer, outputs }
+        LedgerData {
+            signer,
+            outputs,
+            current_time: 0,
+        }
     }
 
     pub fn add_output(&mut self, output: Output<Datum>) {
@@ -92,6 +97,16 @@ impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
         let serialized = serde_json::to_string(&data).unwrap();
         let mut file = File::create(path).unwrap();
         file.write_all(&serialized.into_bytes()).unwrap();
+    }
+
+    fn update_current_time(&self, posix_time: i64) -> LedgerClientResult<()> {
+        let path = self.tmp_dir.path().join(DATA);
+        let mut data = self.get_data();
+        data.current_time = posix_time;
+        let serialized = serde_json::to_string(&data).unwrap();
+        let mut file = File::create(path).unwrap();
+        file.write_all(&serialized.into_bytes()).unwrap();
+        Ok(())
     }
 }
 
@@ -152,6 +167,15 @@ impl<Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq> Test
         self.update_outputs(ledger_utxos);
         Ok(())
     }
+
+    async fn current_time(&self) -> LedgerClientResult<i64> {
+        Ok(self.get_data().current_time)
+    }
+
+    async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()> {
+        self.update_current_time(posix_time).unwrap();
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -159,19 +183,14 @@ mod tests {
     #![allow(non_snake_case)]
 
     use super::*;
-    use crate::ledger_client::test_ledger_client::TestLedgerClient;
-    use crate::ledger_client::LedgerClient;
-    use crate::output::UnbuiltOutput;
-    use crate::transaction::TransactionVersion;
-    use crate::UnbuiltTransaction;
 
     #[tokio::test]
     async fn outputs_at_address() {
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
-        let record: TestLedgerClient<(), (), _> =
-            TestLedgerClient::new_local_persisted(signer.clone(), starting_amount);
-        let mut outputs = record.all_outputs_at_address(&signer).await.unwrap();
+        let tmp_dir = TempDir::new().unwrap();
+        let storage = LocalPersistedStorage::<()>::init(tmp_dir, signer.clone(), starting_amount);
+        let mut outputs = storage.all_outputs(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
@@ -180,54 +199,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn balance_at_address() {
+    async fn current_time() {
         let signer = Address::new("alice");
         let starting_amount = 10_000_000;
-        let record: TestLedgerClient<(), (), _> =
-            TestLedgerClient::new_local_persisted(signer.clone(), starting_amount);
-        let expected = starting_amount;
-        let actual = record
-            .balance_at_address(&signer, &PolicyId::ADA)
-            .await
-            .unwrap();
-        assert_eq!(expected, actual);
-    }
-
-    #[tokio::test]
-    async fn issue() {
-        let signer = Address::new("alice");
-        let starting_amount = 10_000_000;
-        let record: TestLedgerClient<(), (), _> =
-            TestLedgerClient::new_local_persisted(signer.clone(), starting_amount);
-        let first_output = record
-            .all_outputs_at_address(&signer)
-            .await
-            .unwrap()
-            .pop()
-            .unwrap();
-        let owner = Address::new("bob");
-        let new_output = UnbuiltOutput::new_wallet(owner.clone(), first_output.values().clone());
-        let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
-            script_version: TransactionVersion::V1,
-            script_inputs: vec![],
-            unbuilt_outputs: vec![new_output],
-            minting: Default::default(),
-            specific_wallet_inputs: vec![],
-            valid_range: (None, None),
-        };
-        record.issue(tx).await.unwrap();
-        let expected_bob = starting_amount;
-        let actual_bob = record
-            .balance_at_address(&owner, &PolicyId::ADA)
-            .await
-            .unwrap();
-        assert_eq!(expected_bob, actual_bob);
-
-        let expected_alice = 0;
-        let actual_alice = record
-            .balance_at_address(&signer, &PolicyId::ADA)
-            .await
-            .unwrap();
-        assert_eq!(expected_alice, actual_alice)
+        let tmp_dir = TempDir::new().unwrap();
+        let mut storage =
+            LocalPersistedStorage::<()>::init(tmp_dir, signer.clone(), starting_amount);
+        let current_time = storage.current_time().await.unwrap();
+        assert_eq!(current_time, 0);
+        let new_time = 1000;
+        storage.set_current_time(new_time).await.unwrap();
+        let current_time = storage.current_time().await.unwrap();
+        assert_eq!(current_time, new_time);
     }
 }
