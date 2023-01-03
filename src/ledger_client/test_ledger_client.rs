@@ -7,6 +7,7 @@ use std::{
 use uuid::Uuid;
 
 use crate::output::UnbuiltOutput;
+use crate::scripts::{TxContext, ValidRange};
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -19,6 +20,7 @@ use crate::{
     Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
+use cardano_multiplatform_lib::Datum;
 use local_persisted_storage::LocalPersistedStorage;
 use serde::{de::DeserializeOwned, Serialize};
 use tempfile::TempDir;
@@ -234,9 +236,19 @@ where
         // TODO: Optimize selection
         let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
 
-        tx.script_inputs()
-            .iter()
-            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
+        // tx.script_inputs()
+        //     .iter()
+        //     .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
+
+        for (input, redeemer, script) in tx.script_inputs().iter() {
+            if let Some(datum) = input.datum() {
+                let ctx = tx_context(&tx, &signer);
+                script
+                    .execute(datum.to_owned(), redeemer.to_owned(), ctx)
+                    .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+                combined_inputs.push(input.clone())
+            }
+        }
 
         let mut total_input_value =
             combined_inputs
@@ -376,4 +388,18 @@ fn build_outputs<Datum>(
             } => new_validator_output(&owner, &values, datum, construction_ctx),
         })
         .collect()
+}
+
+fn tx_context<Datum, Redeemer>(
+    tx: &UnbuiltTransaction<Datum, Redeemer>,
+    signer: &Address,
+) -> TxContext {
+    let lower = tx.valid_range.0.map(|n| (n, true));
+    let upper = tx.valid_range.1.map(|n| (n, false));
+
+    let range = ValidRange { lower, upper };
+    TxContext {
+        signer: signer.clone(),
+        range,
+    }
 }
