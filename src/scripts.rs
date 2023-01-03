@@ -1,6 +1,4 @@
 use crate::address::Address;
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
-use crate::UnbuiltTransaction;
 use std::fmt::Debug;
 use thiserror::Error;
 

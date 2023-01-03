@@ -12,7 +12,7 @@ use crate::{
     backend::Backend,
     ledger_client::{
         test_ledger_client::in_memory_storage::InMemoryStorage, LedgerClient, LedgerClientError,
-        LedgerClientError::FailedToIssueTx, LedgerClientResult,
+        LedgerClientResult,
     },
     output::Output,
     transaction::TxId,
@@ -20,7 +20,6 @@ use crate::{
     Address, PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
-use cardano_multiplatform_lib::Datum;
 use local_persisted_storage::LocalPersistedStorage;
 use serde::{de::DeserializeOwned, Serialize};
 use tempfile::TempDir;
@@ -120,7 +119,7 @@ enum TestLCError {
     #[error("Not enough input value available for outputs")]
     NotEnoughInputs,
     #[error("The same input is listed twice")]
-    DuplicateInput, // TODO: WE don't need this once we dedupe
+    DuplicateInput,
     #[error("Tx too early")]
     TxTooEarly,
     #[error("Tx too late")]
@@ -144,8 +143,6 @@ pub trait TestLedgerStorage<Datum> {
 
 #[derive(Debug)]
 pub struct TestLedgerClient<Datum, Redeemer, Storage: TestLedgerStorage<Datum>> {
-    // pub signer: Address,
-    // pub outputs: MutableData<Datum>,
     storage: Storage,
     _datum: PhantomData<Datum>, // This is useless but makes calling it's functions easier
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
@@ -229,24 +226,29 @@ where
         // Setup
         let valid_range = tx.valid_range;
         let current_time = self.current_time().await?;
-        check_time_valid(valid_range, current_time).map_err(|e| FailedToIssueTx(Box::new(e)))?;
+        check_time_valid(valid_range, current_time)
+            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
         let signer = self.signer().await?;
 
         // TODO: Optimize selection
         let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
 
-        // tx.script_inputs()
-        //     .iter()
-        //     .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
-
+        let mut spending_outputs: Vec<Output<_>> = Vec::new();
         for (input, redeemer, script) in tx.script_inputs().iter() {
             if let Some(datum) = input.datum() {
-                let ctx = tx_context(&tx, &signer);
-                script
-                    .execute(datum.to_owned(), redeemer.to_owned(), ctx)
-                    .map_err(|e| FailedToIssueTx(Box::new(e)))?;
-                combined_inputs.push(input.clone())
+                if !spending_outputs.contains(input) {
+                    let ctx = tx_context(&tx, &signer);
+                    script
+                        .execute(datum.to_owned(), redeemer.to_owned(), ctx)
+                        .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+                    combined_inputs.push(input.clone());
+                    spending_outputs.push(input.clone());
+                } else {
+                    return Err(LedgerClientError::FailedToIssueTx(Box::new(
+                        TestLCError::DuplicateInput,
+                    )));
+                }
             }
         }
 
@@ -282,7 +284,7 @@ where
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| TestLCError::NotEnoughInputs)
-            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
         for input in combined_inputs {
             self.storage.remove_output(&input).await?;
