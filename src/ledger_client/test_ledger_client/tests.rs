@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use super::*;
-use crate::scripts::{ScriptError, ScriptResult, ValidatorCode};
+use crate::scripts::{MintingPolicy, ScriptError, ScriptResult, ValidatorCode};
 use crate::transaction::TransactionVersion;
 use crate::{
     ledger_client::{
@@ -411,4 +411,52 @@ async fn cannot_redeem_datum_twice() {
 
     // Then should error
     record.issue(tx).await.unwrap_err();
+}
+
+pub struct AlwaysTruePolicy;
+
+impl MintingPolicy<()> for AlwaysTruePolicy {
+    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+        Ok(())
+    }
+
+    fn id(&self) -> ScriptResult<String> {
+        Ok("some token".to_string())
+    }
+
+    fn script_hex(&self) -> ScriptResult<String> {
+        todo!()
+    }
+}
+
+#[tokio::test]
+async fn mint_always_true() {
+    let sender = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let minting_amount = 3_000_000;
+
+    let output = starting_output::<()>(&sender, starting_amount);
+    let outputs = vec![(sender.clone(), output)];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+    let policy = AlwaysTruePolicy;
+    let id = policy.id().unwrap();
+
+    let script_box: Box<dyn MintingPolicy<()>> = Box::new(policy);
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![],
+        minting: vec![(minting_amount, None, (), script_box)],
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::NativeToken(id, None))
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, minting_amount);
 }
