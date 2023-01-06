@@ -38,10 +38,10 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<
-        Datum: Clone + PartialEq + Debug + Send + Sync,
-        Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
-    > TestBackendsBuilder<Datum, Redeemer>
+impl<Datum, Redeemer> TestBackendsBuilder<Datum, Redeemer>
+where
+    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
         TestBackendsBuilder {
@@ -264,11 +264,15 @@ where
 
         let mut minted_value = Values::default();
 
-        for (amount, asset_name, _, policy) in tx.minting.iter() {
+        for (amount, asset_name, redeemer, policy) in tx.minting.iter() {
             let id = policy
                 .id()
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             let policy_id = PolicyId::native_token(&id, asset_name);
+            let ctx = tx_context(&tx, &signer);
+            policy
+                .execute(redeemer.to_owned(), ctx)
+                .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             minted_value.add_one_value(&policy_id, *amount);
         }
 
