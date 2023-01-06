@@ -7,11 +7,12 @@ use std::{
 use uuid::Uuid;
 
 use crate::output::UnbuiltOutput;
+use crate::scripts::{TxContext, ValidRange};
 use crate::{
     backend::Backend,
     ledger_client::{
         test_ledger_client::in_memory_storage::InMemoryStorage, LedgerClient, LedgerClientError,
-        LedgerClientError::FailedToIssueTx, LedgerClientResult,
+        LedgerClientResult,
     },
     output::Output,
     transaction::TxId,
@@ -37,10 +38,10 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<
-        Datum: Clone + PartialEq + Debug + Send + Sync,
-        Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
-    > TestBackendsBuilder<Datum, Redeemer>
+impl<Datum, Redeemer> TestBackendsBuilder<Datum, Redeemer>
+where
+    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
         TestBackendsBuilder {
@@ -118,7 +119,7 @@ enum TestLCError {
     #[error("Not enough input value available for outputs")]
     NotEnoughInputs,
     #[error("The same input is listed twice")]
-    DuplicateInput, // TODO: WE don't need this once we dedupe
+    DuplicateInput,
     #[error("Tx too early")]
     TxTooEarly,
     #[error("Tx too late")]
@@ -142,8 +143,6 @@ pub trait TestLedgerStorage<Datum> {
 
 #[derive(Debug)]
 pub struct TestLedgerClient<Datum, Redeemer, Storage: TestLedgerStorage<Datum>> {
-    // pub signer: Address,
-    // pub outputs: MutableData<Datum>,
     storage: Storage,
     _datum: PhantomData<Datum>, // This is useless but makes calling it's functions easier
     _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
@@ -227,16 +226,31 @@ where
         // Setup
         let valid_range = tx.valid_range;
         let current_time = self.current_time().await?;
-        check_time_valid(valid_range, current_time).map_err(|e| FailedToIssueTx(Box::new(e)))?;
+        check_time_valid(valid_range, current_time)
+            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
         let signer = self.signer().await?;
 
         // TODO: Optimize selection
         let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
 
-        tx.script_inputs()
-            .iter()
-            .for_each(|(input, _, _)| combined_inputs.push(input.clone())); // TODO: Check for dupes
+        let mut spending_outputs: Vec<Output<_>> = Vec::new();
+        for (input, redeemer, script) in tx.script_inputs().iter() {
+            if let Some(datum) = input.datum() {
+                if !spending_outputs.contains(input) {
+                    let ctx = tx_context(&tx, &signer);
+                    script
+                        .execute(datum.to_owned(), redeemer.to_owned(), ctx)
+                        .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+                    combined_inputs.push(input.clone());
+                    spending_outputs.push(input.clone());
+                } else {
+                    return Err(LedgerClientError::FailedToIssueTx(Box::new(
+                        TestLCError::DuplicateInput,
+                    )));
+                }
+            }
+        }
 
         let mut total_input_value =
             combined_inputs
@@ -250,11 +264,15 @@ where
 
         let mut minted_value = Values::default();
 
-        for (amount, asset_name, _, policy) in tx.minting.iter() {
+        for (amount, asset_name, redeemer, policy) in tx.minting.iter() {
             let id = policy
                 .id()
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             let policy_id = PolicyId::native_token(&id, asset_name);
+            let ctx = tx_context(&tx, &signer);
+            policy
+                .execute(redeemer.to_owned(), ctx)
+                .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             minted_value.add_one_value(&policy_id, *amount);
         }
 
@@ -270,7 +288,7 @@ where
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| TestLCError::NotEnoughInputs)
-            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
         for input in combined_inputs {
             self.storage.remove_output(&input).await?;
@@ -376,4 +394,18 @@ fn build_outputs<Datum>(
             } => new_validator_output(&owner, &values, datum, construction_ctx),
         })
         .collect()
+}
+
+fn tx_context<Datum, Redeemer>(
+    tx: &UnbuiltTransaction<Datum, Redeemer>,
+    signer: &Address,
+) -> TxContext {
+    let lower = tx.valid_range.0.map(|n| (n, true));
+    let upper = tx.valid_range.1.map(|n| (n, false));
+
+    let range = ValidRange { lower, upper };
+    TxContext {
+        signer: signer.clone(),
+        range,
+    }
 }

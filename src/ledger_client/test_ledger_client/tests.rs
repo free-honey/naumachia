@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 use super::*;
+use crate::scripts::{MintingPolicy, ScriptError, ScriptResult, ValidatorCode};
 use crate::transaction::TransactionVersion;
 use crate::{
     ledger_client::{
@@ -167,7 +168,7 @@ async fn cannot_transfer_after_valid_range() {
     let recipient = Address::new("bob");
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
-        script_version: TransactionVersion::V1,
+        script_version: TransactionVersion::V2,
         script_inputs: vec![],
         unbuilt_outputs: vec![new_output],
         minting: Default::default(),
@@ -177,4 +178,333 @@ async fn cannot_transfer_after_valid_range() {
     let error = record.issue(tx).await.unwrap_err();
 
     assert!(matches!(error, LedgerClientError::FailedToIssueTx(_),));
+}
+
+#[derive(Clone, Copy)]
+struct AlwaysTrueFakeValidator;
+
+impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
+    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+        Ok(())
+    }
+
+    fn address(&self, _network: u8) -> ScriptResult<Address> {
+        Ok(Address::new("script"))
+    }
+
+    fn script_hex(&self) -> ScriptResult<String> {
+        todo!()
+    }
+}
+
+#[tokio::test]
+async fn redeeming_datum() {
+    let sender = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let locking_amount = 3_000_000;
+
+    let output = starting_output::<()>(&sender, starting_amount);
+    let outputs = vec![(sender.clone(), output)];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+    let mut values = Values::default();
+    values.add_one_value(&PolicyId::ADA, locking_amount);
+
+    let validator = AlwaysTrueFakeValidator;
+
+    let script_address = validator.address(0).unwrap();
+    let new_output = UnbuiltOutput::new_validator(script_address.clone(), values, ());
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V1,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![new_output],
+        minting: Default::default(),
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, starting_amount - locking_amount);
+    let script_balance = record
+        .balance_at_address(&script_address, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(script_balance, locking_amount);
+
+    let output = record
+        .all_outputs_at_address(&script_address)
+        .await
+        .unwrap()
+        .pop()
+        .unwrap();
+
+    let script_box: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let redemption_details = (output, (), script_box);
+
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![redemption_details],
+        unbuilt_outputs: vec![],
+        minting: Default::default(),
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+
+    record.issue(tx).await.unwrap();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, starting_amount);
+    let script_balance = record
+        .balance_at_address(&script_address, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(script_balance, 0);
+}
+
+struct AlwaysFailsFakeValidator;
+
+impl ValidatorCode<(), ()> for AlwaysFailsFakeValidator {
+    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+        Err(ScriptError::FailedToExecute(
+            "Should always fail!".to_string(),
+        ))
+    }
+
+    fn address(&self, _network: u8) -> ScriptResult<Address> {
+        Ok(Address::new("script"))
+    }
+
+    fn script_hex(&self) -> ScriptResult<String> {
+        todo!()
+    }
+}
+
+#[tokio::test]
+async fn failing_script_will_not_redeem() {
+    let sender = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let locking_amount = 3_000_000;
+
+    let output = starting_output::<()>(&sender, starting_amount);
+    let outputs = vec![(sender.clone(), output)];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+    let mut values = Values::default();
+    values.add_one_value(&PolicyId::ADA, locking_amount);
+
+    let validator = AlwaysFailsFakeValidator;
+
+    let script_address = validator.address(0).unwrap();
+    let new_output = UnbuiltOutput::new_validator(script_address.clone(), values, ());
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![new_output],
+        minting: Default::default(),
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, starting_amount - locking_amount);
+    let script_balance = record
+        .balance_at_address(&script_address, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(script_balance, locking_amount);
+
+    let output = record
+        .all_outputs_at_address(&script_address)
+        .await
+        .unwrap()
+        .pop()
+        .unwrap();
+
+    let script_box: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let redemption_details = (output, (), script_box);
+
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![redemption_details],
+        unbuilt_outputs: vec![],
+        minting: Default::default(),
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+
+    record.issue(tx).await.unwrap_err();
+}
+
+#[tokio::test]
+async fn cannot_redeem_datum_twice() {
+    let sender = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let locking_amount = 3_000_000;
+
+    let output = starting_output::<()>(&sender, starting_amount);
+    let outputs = vec![(sender.clone(), output)];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+    let mut values = Values::default();
+    values.add_one_value(&PolicyId::ADA, locking_amount);
+
+    let validator = AlwaysTrueFakeValidator;
+
+    let script_address = validator.address(0).unwrap();
+    let new_output = UnbuiltOutput::new_validator(script_address.clone(), values, ());
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![new_output],
+        minting: Default::default(),
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, starting_amount - locking_amount);
+    let script_balance = record
+        .balance_at_address(&script_address, &PolicyId::ADA)
+        .await
+        .unwrap();
+    assert_eq!(script_balance, locking_amount);
+
+    let output = record
+        .all_outputs_at_address(&script_address)
+        .await
+        .unwrap()
+        .pop()
+        .unwrap();
+
+    // When
+    let script_box_1: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let script_box_2: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let redemption_details_1 = (output.clone(), (), script_box_1);
+    let redemption_details_2 = (output, (), script_box_2);
+
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V1,
+        script_inputs: vec![redemption_details_1, redemption_details_2],
+        unbuilt_outputs: vec![],
+        minting: Default::default(),
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+
+    // Then should error
+    record.issue(tx).await.unwrap_err();
+}
+
+pub struct AlwaysTruePolicy;
+
+impl MintingPolicy<()> for AlwaysTruePolicy {
+    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+        Ok(())
+    }
+
+    fn id(&self) -> ScriptResult<String> {
+        Ok("some token".to_string())
+    }
+
+    fn script_hex(&self) -> ScriptResult<String> {
+        todo!()
+    }
+}
+
+#[tokio::test]
+async fn mint_always_true() {
+    let sender = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let minting_amount = 3_000_000;
+
+    let output = starting_output::<()>(&sender, starting_amount);
+    let outputs = vec![(sender.clone(), output)];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+    let policy = AlwaysTruePolicy;
+    let id = policy.id().unwrap();
+
+    let script_box: Box<dyn MintingPolicy<()>> = Box::new(policy);
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![],
+        minting: vec![(minting_amount, None, (), script_box)],
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::NativeToken(id, None))
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, minting_amount);
+}
+
+pub struct AlwaysFailsPolicy;
+
+impl MintingPolicy<()> for AlwaysFailsPolicy {
+    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+        Err(ScriptError::FailedToExecute("Always fails :@".to_string()))
+    }
+
+    fn id(&self) -> ScriptResult<String> {
+        Ok("some token".to_string())
+    }
+
+    fn script_hex(&self) -> ScriptResult<String> {
+        todo!()
+    }
+}
+
+#[tokio::test]
+async fn mint_always_fails_errors() {
+    let sender = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let minting_amount = 3_000_000;
+
+    let output = starting_output::<()>(&sender, starting_amount);
+    let outputs = vec![(sender.clone(), output)];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+    let policy = AlwaysFailsPolicy;
+    let id = policy.id().unwrap();
+
+    let script_box: Box<dyn MintingPolicy<()>> = Box::new(policy);
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![],
+        minting: vec![(minting_amount, None, (), script_box)],
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap_err();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::NativeToken(id, None))
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, 0);
 }
