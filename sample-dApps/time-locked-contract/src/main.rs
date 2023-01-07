@@ -19,6 +19,7 @@ struct Args {
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
     /// Lock amount at script address
+    // TODO: Add time stamp
     Lock { amount: f64 },
     /// Claim locked Output at script address
     Claim { tx_hash: String, index: u64 },
@@ -35,7 +36,6 @@ async fn main() {
     let backend = Backend::new(ledger_client);
     let contract = SmartContract::new(&logic, &backend);
 
-    println!("hello world");
     match args.action {
         ActionParams::Lock { amount } => contract
             .hit_endpoint(TimeLockedEndpoints::Lock {
