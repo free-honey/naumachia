@@ -1,6 +1,9 @@
+use async_trait::async_trait;
 use naumachia::ledger_client::LedgerClient;
 use naumachia::logic::{SCLogic, SCLogicResult};
 use naumachia::transaction::TxActions;
+
+pub mod scripts;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TimeLockedLogic;
@@ -11,7 +14,10 @@ pub enum PullEndpoints {
     Pull,
 }
 
-impl SCLogic for PullLogic {
+pub struct CheckingAccount;
+
+#[async_trait]
+impl SCLogic for CheckingAccount {
     type Endpoints = PullEndpoints;
     type Lookups = ();
     type LookupResponses = ();
@@ -38,7 +44,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    fn init_creates_instance() {
+    async fn init_creates_instance() {
         todo!()
     }
 }

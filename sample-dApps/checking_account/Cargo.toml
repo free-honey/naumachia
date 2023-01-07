@@ -10,6 +10,11 @@ path = "src/lib.rs"
 name = "checking"
 path = "src/main.rs"
 
+[build-dependencies]
+aiken = "0.0.28"
+aiken-project = "0.0.28"
+uplc = "0.0.28"
+
 [dependencies]
 async-trait = "0.1.57"
 clap = { version = "3.2.16", features = ["derive"] }
