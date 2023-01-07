@@ -4,6 +4,7 @@
 
 ### Added
 
+**naumachia**: Add Mint and Spend script checks in test ledgers  
 **naumachia**: Upgrade Test Ledger  
 **sample-dApps/time-locked-contract**: Create time locked validator contract  
 **naumachia**: Add time bound for Actions + partially for CML Client   
