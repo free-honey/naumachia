@@ -4,6 +4,7 @@
 
 ### Added
 
+**naumachia**: Use BF CLient that supports Preprod Network  
 **naumachia**: Add Mint and Spend script checks in test ledgers  
 **naumachia**: Upgrade Test Ledger  
 **sample-dApps/time-locked-contract**: Create time locked validator contract  
