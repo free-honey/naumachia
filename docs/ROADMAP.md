@@ -9,26 +9,14 @@
   - [x] Spend Specific Output (e.g. for one-time mintings) 
   - [x] Specify valid range
   - [ ] Create Multi-Sig Tx?
-- In-memory Ledger Client
+- Test Ledger Client
   - [x] Transfer
-  - [ ] Mint
-    - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
+  - [x] Mint
   - [x] InitScript
-  - [ ] RedeemScriptOutput
-    - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
+  - [x] RedeemScriptOutput
   - [ ] Spend Specific Output (e.g. for one-time mintings)
-  - [ ] Specify valid range
+  - [x] Specify valid range
   - [ ] Create Multi-Sig Tx?
-- Local-persisted Ledger Client
-    - [x] Transfer
-    - [ ] Mint
-      - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
-    - [x] InitScript
-    - [ ] RedeemScriptOutput
-      - [ ] Validation if the Tx is good or not (we had it, but it was in the wrong spot)
-    - [ ] Spend Specific Output (e.g. for one-time mintings)
-    - [ ] Specify valid range
-    - [ ] Create Multi-Sig Tx?
 - Trireme Ledger Client
   - CML Ledger Client
     - Implemented Actions:
