@@ -9,7 +9,7 @@ use crate::{
 
 use crate::trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey;
 use async_trait::async_trait;
-use blockfrost_http_client::{MAINNET_URL, TEST_URL};
+use blockfrost_http_client::{MAINNET_URL, PREPROD_NETWORK_URL};
 use cml_client::{
     blockfrost_ledger::BlockFrostLedger, plutus_data_interop::PlutusDataInterop, CMLLedgerCLient,
 };
@@ -71,14 +71,14 @@ pub enum KeySource {
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum Network {
-    Testnet,
+    Preprod,
     Mainnet,
 }
 
 impl From<Network> for u8 {
     fn from(network: Network) -> Self {
         match network {
-            Network::Testnet => 0,
+            Network::Preprod => 0,
             Network::Mainnet => 1,
         }
     }
@@ -116,7 +116,7 @@ impl TriremeConfig {
                     })?;
                 let key: String = blockfrost_key.into();
                 let url = match network {
-                    Network::Testnet => TEST_URL,
+                    Network::Preprod => PREPROD_NETWORK_URL,
                     Network::Mainnet => MAINNET_URL,
                 };
                 BlockFrostLedger::new(url, &key)

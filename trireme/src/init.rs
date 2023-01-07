@@ -64,7 +64,7 @@ async fn write_blockfrost_api_key(api_key: &str) -> Result<PathBuf> {
 async fn write_trireme_config(api_key_file: PathBuf, phrase_file: PathBuf) -> Result<()> {
     let ledger_source = LedgerSource::BlockFrost { api_key_file };
     let key_source = KeySource::RawSecretPhrase { phrase_file };
-    let network = Network::Testnet;
+    let network = Network::Preprod;
     let trireme_config = TriremeConfig::new(ledger_source, key_source, network);
     let file_path = path_to_trireme_config_file()?;
     write_toml_struct_to_file(&file_path, &trireme_config).await?;
