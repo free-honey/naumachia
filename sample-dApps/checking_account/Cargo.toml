@@ -1,0 +1,19 @@
+[package]
+name = "checking"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "checking"
+path = "src/main.rs"
+
+[dependencies]
+async-trait = "0.1.57"
+clap = { version = "3.2.16", features = ["derive"] }
+naumachia = {path = "../..", version = "0.2.0"}
+serde_json = "1.0"
+thiserror = "1.0.24"
+tokio = { version = "1.20.1", features = ["full"] }
