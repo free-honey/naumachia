@@ -61,14 +61,6 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
     Ok(raw_script_validator)
 }
 
-pub fn get_script() -> ScriptResult<RawPolicy<()>> {
-    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
-        .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = RawPolicy::new_v2(script_file)
-        .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    Ok(raw_script_validator)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,8 +88,6 @@ mod tests {
         let script = param_script.apply(out_ref).unwrap();
 
         let ctx = ContextBuilder::new(owner).build();
-        let cbor = script.script_hex().unwrap();
-        dbg!(&cbor);
         let _eval = script.execute((), ctx).unwrap();
     }
 }
