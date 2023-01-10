@@ -239,6 +239,8 @@ where
             if let Some(datum) = input.datum() {
                 if !spending_outputs.contains(input) {
                     let ctx = tx_context(&tx, &signer);
+                    // TODO: Check that the output is at the script address
+                    //  https://github.com/MitchTurner/naumachia/issues/86
                     script
                         .execute(datum.to_owned(), redeemer.to_owned(), ctx)
                         .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
