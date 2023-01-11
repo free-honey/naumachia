@@ -33,7 +33,7 @@ pub enum TimeLockedLookupResponses {
 }
 
 #[derive(Debug, Error)]
-pub enum AlwaysSucceedsError {
+pub enum TimeLockedError {
     #[error("Could not find an output with id: {0:?}")]
     OutputNotFound(OutputId),
 }
@@ -93,7 +93,7 @@ async fn impl_claim<LC: LedgerClient<i64, ()>>(
         .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
         .into_iter()
         .find(|o| o.id() == &output_id)
-        .ok_or(AlwaysSucceedsError::OutputNotFound(output_id))
+        .ok_or(TimeLockedError::OutputNotFound(output_id))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let redeemer = ();
     let script_box = Box::new(script);

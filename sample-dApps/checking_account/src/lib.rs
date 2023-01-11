@@ -1,5 +1,6 @@
 use crate::scripts::{FakeCheckingAccountValidator, FakePullerValidator};
 use async_trait::async_trait;
+use naumachia::output::OutputId;
 use naumachia::{
     address::{Address, PolicyId},
     ledger_client::LedgerClient,
@@ -8,6 +9,7 @@ use naumachia::{
     transaction::TxActions,
     values::Values,
 };
+use thiserror::Error;
 
 pub mod scripts;
 
@@ -28,7 +30,9 @@ pub enum CheckingAccountEndpoints {
         period: i64,
         next_pull: i64,
     },
-    RemovePuller,
+    RemovePuller {
+        output_id: OutputId,
+    },
     FundAccount,
     WithdrawFromAccount,
     // PullerEndpoints
@@ -49,6 +53,12 @@ pub enum CheckingAccountDatums {
         period: i64,
         next_pull: i64,
     },
+}
+
+#[derive(Debug, Error)]
+pub enum CheckingAccountError {
+    #[error("Could not find an output with id: {0:?}")]
+    OutputNotFound(OutputId),
 }
 
 #[async_trait]
@@ -72,7 +82,10 @@ impl SCLogic for CheckingAccountLogic {
                 amount_lovelace,
                 period,
                 next_pull,
-            } => add_puller(puller, amount_lovelace, period, next_pull),
+            } => add_puller(puller, amount_lovelace, period, next_pull).await,
+            CheckingAccountEndpoints::RemovePuller { output_id } => {
+                remove_puller(ledger_client, output_id).await
+            }
             _ => todo!(),
         }
     }
@@ -103,7 +116,7 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     Ok(actions)
 }
 
-fn add_puller(
+async fn add_puller(
     puller: Address,
     amount_lovelace: u64,
     period: i64,
@@ -121,6 +134,28 @@ fn add_puller(
         .address(0)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let actions = TxActions::v2().with_script_init(datum, values, address);
+    Ok(actions)
+}
+
+async fn remove_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
+    ledger_client: &LC,
+    output_id: OutputId,
+) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let validator = FakePullerValidator;
+    let address = validator
+        .address(0)
+        .map_err(SCLogicError::ValidatorScript)?;
+    let output = ledger_client
+        .all_outputs_at_address(&address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .into_iter()
+        .find(|o| o.id() == &output_id)
+        .ok_or(CheckingAccountError::OutputNotFound(output_id))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let redeemer = ();
+    let script = Box::new(validator);
+    let actions = TxActions::v2().with_script_redeem(output, redeemer, script);
     Ok(actions)
 }
 
@@ -192,5 +227,48 @@ mod tests {
         let script_output = outputs_at_address.pop().unwrap();
         let value = script_output.values().get(&PolicyId::ADA).unwrap();
         assert_eq!(value, 0);
+    }
+
+    #[tokio::test]
+    async fn remove_puller__removes_the_allowed_puller() {
+        let me = Address::new("me");
+        let start_amount = 100_000_000;
+        let backend = TestBackendsBuilder::new(&me)
+            .start_output(&me)
+            .with_value(PolicyId::ADA, start_amount)
+            .finish_output()
+            .build_in_memory();
+
+        let puller = Address::new("puller");
+        let puller = Address::new("puller");
+        let add_endpoint = CheckingAccountEndpoints::AddPuller {
+            puller: puller.clone(),
+            amount_lovelace: 15_000_000,
+            period: 1000,
+            next_pull: 0,
+        };
+
+        let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+        contract.hit_endpoint(add_endpoint).await.unwrap();
+        let script = FakePullerValidator;
+        let address = script.address(NETWORK).unwrap();
+        let mut outputs_at_address = backend
+            .ledger_client
+            .all_outputs_at_address(&address)
+            .await
+            .unwrap();
+        let script_output = outputs_at_address.pop().unwrap();
+        let output_id = script_output.id().to_owned();
+
+        let remove_endpoint = CheckingAccountEndpoints::RemovePuller { output_id };
+
+        contract.hit_endpoint(remove_endpoint).await.unwrap();
+
+        let mut outputs_at_address = backend
+            .ledger_client
+            .all_outputs_at_address(&address)
+            .await
+            .unwrap();
+        assert!(outputs_at_address.pop().is_none());
     }
 }
