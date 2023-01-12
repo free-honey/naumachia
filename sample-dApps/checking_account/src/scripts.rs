@@ -1,9 +1,6 @@
 use crate::CheckingAccountDatums;
 use naumachia::address::Address;
-use naumachia::scripts::raw_policy_script::OneParamRawPolicy;
-use naumachia::scripts::raw_script::PlutusScriptFile;
-use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
-use naumachia::scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode};
+use naumachia::scripts::{ScriptResult, TxContext, ValidatorCode};
 
 pub mod spend_token_policy;
 

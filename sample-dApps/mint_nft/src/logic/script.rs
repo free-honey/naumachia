@@ -1,6 +1,6 @@
 use hex;
 use naumachia::output::Output as NauOutput;
-use naumachia::scripts::raw_policy_script::{OneParamRawPolicy, RawPolicy};
+use naumachia::scripts::raw_policy_script::OneParamRawPolicy;
 use naumachia::scripts::raw_script::PlutusScriptFile;
 use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
 use naumachia::scripts::{ScriptError, ScriptResult};

@@ -124,8 +124,8 @@ impl SCLogic for CheckingAccountLogic {
     }
 
     async fn lookup<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
-        query: Self::Lookups,
-        ledger_client: &Record,
+        _query: Self::Lookups,
+        _ledger_client: &Record,
     ) -> SCLogicResult<Self::LookupResponses> {
         todo!()
     }
@@ -348,11 +348,11 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     Ok(actions)
 }
 
+#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::scripts::{FakeCheckingAccountValidator, FakePullerValidator};
-    use crate::CheckingAccountDatums::CheckingAccount;
     use naumachia::address::{Address, PolicyId};
     use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
     use naumachia::smart_contract::{SmartContract, SmartContractTrait};
@@ -429,7 +429,6 @@ mod tests {
             .finish_output()
             .build_in_memory();
 
-        let puller = Address::new("puller");
         let puller = Address::new("puller");
         let add_endpoint = CheckingAccountEndpoints::AddPuller {
             puller: puller.clone(),
