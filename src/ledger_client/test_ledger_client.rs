@@ -56,6 +56,7 @@ where
             inner: self,
             owner: owner.clone(),
             values: Values::default(),
+            datum: None,
         }
     }
 
@@ -81,6 +82,7 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
     inner: TestBackendsBuilder<Datum, Redeemer>,
     owner: Address,
     values: Values,
+    datum: Option<Datum>,
 }
 
 impl<Datum, Redeemer> OutputBuilder<Datum, Redeemer>
@@ -97,16 +99,26 @@ where
         self
     }
 
+    pub fn with_datum(mut self, datum: Datum) -> OutputBuilder<Datum, Redeemer> {
+        self.datum = Some(datum);
+        self
+    }
+
     pub fn finish_output(self) -> TestBackendsBuilder<Datum, Redeemer> {
         let OutputBuilder {
             mut inner,
             owner,
             values,
+            datum,
         } = self;
         let address = owner.clone();
         let tx_hash = Uuid::new_v4().to_string();
         let index = 0;
-        let output = Output::new_wallet(tx_hash, index, address, values);
+        let output = if let Some(datum) = datum {
+            Output::new_validator(tx_hash, index, address, values, datum)
+        } else {
+            Output::new_wallet(tx_hash, index, address, values)
+        };
         inner.add_output(&owner, output);
         inner
     }
@@ -239,6 +251,8 @@ where
             if let Some(datum) = input.datum() {
                 if !spending_outputs.contains(input) {
                     let ctx = tx_context(&tx, &signer);
+                    // TODO: Check that the output is at the script address
+                    //  https://github.com/MitchTurner/naumachia/issues/86
                     script
                         .execute(datum.to_owned(), redeemer.to_owned(), ctx)
                         .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
