@@ -33,7 +33,10 @@ pub enum CheckingAccountEndpoints {
     RemovePuller {
         output_id: OutputId,
     },
-    FundAccount,
+    FundAccount {
+        output_id: OutputId,
+        fund_amount: u64,
+    },
     WithdrawFromAccount,
     // PullerEndpoints
     PullFromCheckingAccount,
@@ -59,6 +62,8 @@ pub enum CheckingAccountDatums {
 pub enum CheckingAccountError {
     #[error("Could not find an output with id: {0:?}")]
     OutputNotFound(OutputId),
+    #[error("Expected datum on output with id: {0:?}")]
+    DatumNotFoundForOutput(OutputId),
 }
 
 #[async_trait]
@@ -86,6 +91,10 @@ impl SCLogic for CheckingAccountLogic {
             CheckingAccountEndpoints::RemovePuller { output_id } => {
                 remove_puller(ledger_client, output_id).await
             }
+            CheckingAccountEndpoints::FundAccount {
+                output_id,
+                fund_amount,
+            } => fund_account(ledger_client, output_id, fund_amount).await,
             _ => todo!(),
         }
     }
@@ -159,10 +168,44 @@ async fn remove_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     Ok(actions)
 }
 
+async fn fund_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
+    ledger_client: &LC,
+    output_id: OutputId,
+    amount: u64,
+) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let validator = FakeCheckingAccountValidator;
+    let address = validator
+        .address(0)
+        .map_err(SCLogicError::ValidatorScript)?;
+    let output = ledger_client
+        .all_outputs_at_address(&address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .into_iter()
+        .find(|o| o.id() == &output_id)
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    let new_datum = output
+        .datum()
+        .ok_or(CheckingAccountError::OutputNotFound(output_id))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .to_owned();
+    let redeemer = ();
+    let script = Box::new(validator);
+    let mut values = output.values().to_owned();
+    values.add_one_value(&PolicyId::ADA, amount);
+    let actions = TxActions::v2()
+        .with_script_redeem(output, redeemer, script)
+        .with_script_init(new_datum, values, address);
+    Ok(actions)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::scripts::{FakeCheckingAccountValidator, FakePullerValidator};
+    use crate::CheckingAccountDatums::CheckingAccount;
     use naumachia::address::{Address, PolicyId};
     use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
     use naumachia::smart_contract::{SmartContract, SmartContractTrait};
@@ -270,5 +313,49 @@ mod tests {
             .await
             .unwrap();
         assert!(outputs_at_address.pop().is_none());
+    }
+
+    #[tokio::test]
+    async fn fund_account__replaces_existing_balance_with_updated_amount() {
+        let me = Address::new("me");
+        let start_amount = 100_000_000;
+        let backend = TestBackendsBuilder::new(&me)
+            .start_output(&me)
+            .with_value(PolicyId::ADA, start_amount)
+            .finish_output()
+            .build_in_memory();
+
+        let account_amount = 10_000_000;
+        let fund_amount = 5_000_000;
+        let init_endpoint = CheckingAccountEndpoints::InitAccount {
+            starting_lovelace: account_amount,
+        };
+        let script = FakeCheckingAccountValidator;
+        let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+        contract.hit_endpoint(init_endpoint).await.unwrap();
+
+        let address = script.address(NETWORK).unwrap();
+        let mut outputs_at_address = backend
+            .ledger_client
+            .all_outputs_at_address(&address)
+            .await
+            .unwrap();
+        let script_output = outputs_at_address.pop().unwrap();
+        let output_id = script_output.id().to_owned();
+
+        let fund_endpoint = CheckingAccountEndpoints::FundAccount {
+            output_id,
+            fund_amount,
+        };
+
+        contract.hit_endpoint(fund_endpoint).await.unwrap();
+        let mut outputs_at_address = backend
+            .ledger_client
+            .all_outputs_at_address(&address)
+            .await
+            .unwrap();
+        let script_output = outputs_at_address.pop().unwrap();
+        let value = script_output.values().get(&PolicyId::ADA).unwrap();
+        assert_eq!(value, account_amount + fund_amount);
     }
 }

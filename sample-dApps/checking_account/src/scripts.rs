@@ -7,6 +7,7 @@ use naumachia::scripts::{ScriptError, ScriptResult, TxContext, ValidatorCode};
 
 pub mod spend_token_policy;
 
+// TODO: Parameterize by some Policy whose tokens are allowed to access and owner
 pub struct FakeCheckingAccountValidator;
 
 impl ValidatorCode<CheckingAccountDatums, ()> for FakeCheckingAccountValidator {
