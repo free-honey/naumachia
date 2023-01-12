@@ -37,7 +37,10 @@ pub enum CheckingAccountEndpoints {
         output_id: OutputId,
         fund_amount: u64,
     },
-    WithdrawFromAccount,
+    WithdrawFromAccount {
+        output_id: OutputId,
+        withdraw_amount: u64,
+    },
     // PullerEndpoints
     PullFromCheckingAccount,
 }
@@ -64,6 +67,8 @@ pub enum CheckingAccountError {
     OutputNotFound(OutputId),
     #[error("Expected datum on output with id: {0:?}")]
     DatumNotFoundForOutput(OutputId),
+    #[error("You are trying to withdraw more than is in account")]
+    CannotWithdrawSpecifiedAmount,
 }
 
 #[async_trait]
@@ -95,6 +100,10 @@ impl SCLogic for CheckingAccountLogic {
                 output_id,
                 fund_amount,
             } => fund_account(ledger_client, output_id, fund_amount).await,
+            CheckingAccountEndpoints::WithdrawFromAccount {
+                output_id,
+                withdraw_amount,
+            } => withdraw_from_account(ledger_client, output_id, withdraw_amount).await,
             _ => todo!(),
         }
     }
@@ -190,7 +199,7 @@ async fn fund_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .datum()
         .ok_or(CheckingAccountError::OutputNotFound(output_id))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-        .to_owned();
+        .clone();
     let redeemer = ();
     let script = Box::new(validator);
     let mut values = output.values().to_owned();
@@ -198,6 +207,45 @@ async fn fund_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let actions = TxActions::v2()
         .with_script_redeem(output, redeemer, script)
         .with_script_init(new_datum, values, address);
+    Ok(actions)
+}
+
+async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
+    ledger_client: &LC,
+    output_id: OutputId,
+    amount: u64,
+) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let validator = FakeCheckingAccountValidator;
+    let address = validator
+        .address(0)
+        .map_err(SCLogicError::ValidatorScript)?;
+    let output = ledger_client
+        .all_outputs_at_address(&address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .into_iter()
+        .find(|o| o.id() == &output_id)
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    let new_datum = output
+        .datum()
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .clone();
+    let redeemer = ();
+    let script = Box::new(validator);
+    let old_values = output.values().to_owned();
+    let mut sub_values = Values::default();
+    sub_values.add_one_value(&PolicyId::ADA, amount);
+    let new_value = old_values
+        .try_subtract(&sub_values)
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let actions = TxActions::v2()
+        .with_script_redeem(output, redeemer, script)
+        .with_script_init(new_datum, new_value, address);
     Ok(actions)
 }
 
@@ -357,5 +405,49 @@ mod tests {
         let script_output = outputs_at_address.pop().unwrap();
         let value = script_output.values().get(&PolicyId::ADA).unwrap();
         assert_eq!(value, account_amount + fund_amount);
+    }
+
+    #[tokio::test]
+    async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() {
+        let me = Address::new("me");
+        let start_amount = 100_000_000;
+        let backend = TestBackendsBuilder::new(&me)
+            .start_output(&me)
+            .with_value(PolicyId::ADA, start_amount)
+            .finish_output()
+            .build_in_memory();
+
+        let account_amount = 10_000_000;
+        let withdraw_amount = 5_000_000;
+        let init_endpoint = CheckingAccountEndpoints::InitAccount {
+            starting_lovelace: account_amount,
+        };
+        let script = FakeCheckingAccountValidator;
+        let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+        contract.hit_endpoint(init_endpoint).await.unwrap();
+
+        let address = script.address(NETWORK).unwrap();
+        let mut outputs_at_address = backend
+            .ledger_client
+            .all_outputs_at_address(&address)
+            .await
+            .unwrap();
+        let script_output = outputs_at_address.pop().unwrap();
+        let output_id = script_output.id().to_owned();
+
+        let fund_endpoint = CheckingAccountEndpoints::WithdrawFromAccount {
+            output_id,
+            withdraw_amount,
+        };
+
+        contract.hit_endpoint(fund_endpoint).await.unwrap();
+        let mut outputs_at_address = backend
+            .ledger_client
+            .all_outputs_at_address(&address)
+            .await
+            .unwrap();
+        let script_output = outputs_at_address.pop().unwrap();
+        let value = script_output.values().get(&PolicyId::ADA).unwrap();
+        assert_eq!(value, account_amount - withdraw_amount);
     }
 }
