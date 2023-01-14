@@ -1,6 +1,7 @@
 use crate::scripts::{FakeCheckingAccountValidator, FakePullerValidator};
 use async_trait::async_trait;
 use naumachia::output::OutputId;
+use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::{
     address::{Address, PolicyId},
     ledger_client::LedgerClient,
@@ -62,6 +63,12 @@ pub enum CheckingAccountDatums {
         period: i64,
         next_pull: i64,
     },
+}
+
+impl From<CheckingAccountDatums> for PlutusData {
+    fn from(value: CheckingAccountDatums) -> Self {
+        todo!()
+    }
 }
 
 #[derive(Debug, Error)]

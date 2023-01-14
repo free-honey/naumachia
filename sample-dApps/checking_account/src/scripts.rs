@@ -3,6 +3,7 @@ use naumachia::address::Address;
 use naumachia::scripts::context::TxContext;
 use naumachia::scripts::{ScriptResult, ValidatorCode};
 
+pub mod checking_account_validtor;
 pub mod spend_token_policy;
 
 // TODO: Parameterize by some Policy whose tokens are allowed to access and owner
