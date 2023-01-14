@@ -66,7 +66,8 @@ mod tests {
     use super::*;
     use naumachia::address::Address;
     use naumachia::output::{Output, OutputId};
-    use naumachia::scripts::{ContextBuilder, MintingPolicy};
+    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::MintingPolicy;
 
     #[ignore]
     #[test]

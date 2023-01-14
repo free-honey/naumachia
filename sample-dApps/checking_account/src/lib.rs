@@ -131,6 +131,7 @@ impl SCLogic for CheckingAccountLogic {
     }
 }
 
+// TODO: Include account NFT?
 async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     starting_lovelace: u64,
@@ -149,6 +150,7 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     Ok(actions)
 }
 
+// TODO: Include minting puller token
 async fn add_puller(
     puller: Address,
     amount_lovelace: u64,

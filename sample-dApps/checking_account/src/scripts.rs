@@ -1,6 +1,7 @@
 use crate::CheckingAccountDatums;
 use naumachia::address::Address;
-use naumachia::scripts::{ScriptResult, TxContext, ValidatorCode};
+use naumachia::scripts::context::TxContext;
+use naumachia::scripts::{ScriptResult, ValidatorCode};
 
 pub mod spend_token_policy;
 

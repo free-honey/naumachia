@@ -7,7 +7,8 @@ use std::{
 use uuid::Uuid;
 
 use crate::output::UnbuiltOutput;
-use crate::scripts::{TxContext, ValidRange};
+use crate::scripts::context::{CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -40,7 +41,7 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
 
 impl<Datum, Redeemer> TestBackendsBuilder<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
@@ -87,7 +88,7 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
 
 impl<Datum, Redeemer> OutputBuilder<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
@@ -211,7 +212,7 @@ where
 impl<Datum, Redeemer, Storage> LedgerClient<Datum, Redeemer>
     for TestLedgerClient<Datum, Redeemer, Storage>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
@@ -410,16 +411,33 @@ fn build_outputs<Datum>(
         .collect()
 }
 
-fn tx_context<Datum, Redeemer>(
+fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     tx: &UnbuiltTransaction<Datum, Redeemer>,
     signer: &Address,
 ) -> TxContext {
     let lower = tx.valid_range.0.map(|n| (n, true));
     let upper = tx.valid_range.1.map(|n| (n, false));
 
+    let mut inputs = Vec::new();
+    for (utxo, _, _) in tx.script_inputs.iter() {
+        let id = utxo.id();
+        let value = CtxValue::from(utxo.values().to_owned());
+        let datum = utxo.datum().map(|d| d.to_owned()).into();
+        let input = Input {
+            transaction_id: id.tx_hash().to_string(),
+            output_index: id.index(),
+            address: utxo.owner().to_str().to_string(),
+            value,
+            datum,
+            reference_script: None,
+        };
+        inputs.push(input);
+    }
+
     let range = ValidRange { lower, upper };
     TxContext {
         signer: signer.clone(),
         range,
+        inputs,
     }
 }

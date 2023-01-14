@@ -18,7 +18,8 @@ pub fn get_policy<R>() -> ScriptResult<RawPolicy<R>> {
 mod tests {
     use super::*;
     use naumachia::address::Address;
-    use naumachia::scripts::{ContextBuilder, MintingPolicy};
+    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::MintingPolicy;
 
     #[test]
     fn can_execute_policy() {

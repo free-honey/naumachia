@@ -508,3 +508,51 @@ async fn mint_always_fails_errors() {
         .unwrap();
     assert_eq!(alice_balance, 0);
 }
+
+pub struct SpendsNFTPolicy;
+
+impl MintingPolicy<()> for SpendsNFTPolicy {
+    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+        todo!()
+    }
+
+    fn id(&self) -> ScriptResult<String> {
+        Ok("some token".to_string())
+    }
+
+    fn script_hex(&self) -> ScriptResult<String> {
+        todo!()
+    }
+}
+
+#[tokio::test]
+async fn spends_specific_value() {
+    let sender = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let minting_amount = 3_000_000;
+
+    let output = starting_output::<()>(&sender, starting_amount);
+    let outputs = vec![(sender.clone(), output)];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+
+    let policy = AlwaysFailsPolicy;
+    let id = policy.id().unwrap();
+
+    let script_box: Box<dyn MintingPolicy<()>> = Box::new(policy);
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![],
+        minting: vec![(minting_amount, None, (), script_box)],
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap_err();
+
+    let alice_balance = record
+        .balance_at_address(&sender, &PolicyId::NativeToken(id, None))
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, 0);
+}

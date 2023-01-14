@@ -17,7 +17,8 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<(), ()>> {
 mod tests {
     use super::*;
     use naumachia::address::Address;
-    use naumachia::scripts::{ContextBuilder, ValidatorCode};
+    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::ValidatorCode;
 
     #[test]
     fn test() {

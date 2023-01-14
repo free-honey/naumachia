@@ -1,4 +1,5 @@
-use crate::scripts::{ScriptError, TxContext, ValidRange};
+use crate::scripts::context::{TxContext, ValidRange};
+use crate::scripts::ScriptError;
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]

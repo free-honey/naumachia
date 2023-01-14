@@ -1,6 +1,6 @@
 use crate::{
     scripts::as_failed_to_execute,
-    scripts::{ScriptResult, TxContext, ValidatorCode},
+    scripts::{ScriptResult, ValidatorCode},
     Address,
 };
 use cardano_multiplatform_lib::{
@@ -9,6 +9,7 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::{Decoder, Encoder};
 
+use crate::scripts::context::TxContext;
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
 use crate::scripts::ScriptError;

@@ -1,5 +1,5 @@
 use super::*;
-use crate::scripts::ContextBuilder;
+use crate::scripts::context::ContextBuilder;
 
 mod game;
 mod hello;
