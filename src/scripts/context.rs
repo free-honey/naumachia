@@ -29,7 +29,7 @@ pub struct Input {
 
 #[derive(Clone)]
 pub struct CtxValue {
-    inner: HashMap<String, HashMap<String, u64>>,
+    pub inner: HashMap<String, HashMap<String, u64>>,
 }
 
 impl From<Values> for CtxValue {
@@ -90,7 +90,7 @@ impl ContextBuilder {
     }
 
     pub fn with_input(
-        mut self,
+        self,
         transaction_id: String,
         output_index: u64,
         address: String,
