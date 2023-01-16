@@ -81,11 +81,11 @@ with your smart contracts on the Testnet. Over time, we'll add more sample dApps
 
 The `/sample-dApps` directory includes the `always-succeeds-contract` which you can use as long as you have
 1. [Rust](https://www.rust-lang.org/tools/install) v1.64+ toolchain installed on your machine
-2. A [Blockfrost API](https://blockfrost.io/#pricing) Testnet Project (this is still on the old testnet, but that can change very soon)
-3. A secret phrase for an account with some funds on Testnet. 
+2. A [Blockfrost API](https://blockfrost.io/#pricing) Preprod Project
+3. A secret phrase for an account with some funds on Preprod. 
 You can use [Yoroi](https://yoroi-wallet.com/#/), [Nami](https://namiwallet.io/), [Flint](https://flint-wallet.com/),
 or any Cardano wallet to create a new phrase, 
-and fund it with the [Testnet Faucet](https://developers.cardano.org/docs/integrate-cardano/testnet-faucet/) 
+and fund it with the [Testnet Faucet](https://docs.cardano.org/cardano-testnet/tools/faucet) 
 (We'll add  the ability to generate a new phrase with `Trireme` soon, but in the meantime you'll need to build it elsewhere)
 
 I've only tested on Linux.
