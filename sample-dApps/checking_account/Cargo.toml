@@ -22,3 +22,6 @@ naumachia = {path = "../..", version = "0.2.0"}
 serde_json = "1.0"
 thiserror = "1.0.24"
 tokio = { version = "1.20.1", features = ["full"] }
+
+[dev-dependencies]
+hex = "0.4.3"

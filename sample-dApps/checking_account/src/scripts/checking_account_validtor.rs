@@ -28,21 +28,53 @@ pub fn checking_account_validator(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::scripts::{MintingPolicy, ValidatorCode};
+    use hex;
+    use naumachia::address::Address;
+    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::ValidatorCode;
 
     #[test]
-    fn different_salts_have_different_ids() {
+    fn succeeds_if_spending_token_in_inputs() {
+        let signer = Address::new("6082e016828989cd9d809b50d6976d9efa9bc5b2c1a78d4b3bfa1bb83b");
         let param_script = checking_account_validator().unwrap();
-        let nft_1 = SpendingTokenPolicy {
-            inner: vec![1, 2, 3, 4, 5],
+        let policy = vec![1, 2, 3, 4, 5];
+        let spending_token = SpendingTokenPolicy {
+            inner: policy.clone(),
         };
-        let script_1 = param_script.apply(nft_1).unwrap();
-        let id_1 = script_1.script_hex().unwrap();
-        let nft_2 = SpendingTokenPolicy {
-            inner: vec![6, 7, 8, 9, 10],
+        let ctx = ContextBuilder::new(signer.clone())
+            .with_input(
+                "73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b",
+                0,
+                signer.to_str(),
+            )
+            .with_value(&hex::encode(&policy), "", 1)
+            .finish_input()
+            .build();
+
+        let script = param_script.apply(spending_token).unwrap();
+
+        let _eval = script.execute((), (), ctx).unwrap();
+    }
+
+    #[test]
+    fn fails_if_not_spending_token_in_inputs() {
+        let signer = Address::new("6082e016828989cd9d809b50d6976d9efa9bc5b2c1a78d4b3bfa1bb83b");
+        let param_script = checking_account_validator().unwrap();
+        let policy = vec![1, 2, 3, 4, 5];
+        let spending_token = SpendingTokenPolicy {
+            inner: policy.clone(),
         };
-        let script_2 = param_script.apply(nft_2).unwrap();
-        let id_2 = script_2.script_hex().unwrap();
-        assert_ne!(id_1, id_2);
+        let ctx = ContextBuilder::new(signer.clone())
+            .with_input(
+                "73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b",
+                0,
+                signer.to_str(),
+            )
+            .finish_input()
+            .build();
+
+        let script = param_script.apply(spending_token).unwrap();
+
+        let _eval = script.execute((), (), ctx).unwrap_err();
     }
 }

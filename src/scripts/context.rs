@@ -4,30 +4,32 @@ use crate::{Address, PolicyId};
 use std::collections::HashMap;
 
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
-#[derive(Clone)]
+// TODO: This should be shaped like the real one actually. That will be extra useful because we can
+//   expose all the primitives in case people want to use them for params, datums, etc...
+#[derive(Clone, Debug)]
 pub struct TxContext {
     pub signer: Address,
     pub range: ValidRange,
     pub inputs: Vec<Input>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ValidRange {
     pub lower: Option<(i64, bool)>,
     pub upper: Option<(i64, bool)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Input {
     pub transaction_id: String,
     pub output_index: u64,
     pub address: String,
     pub value: CtxValue,
-    pub datum: Datum,
+    pub datum: CtxDatum,
     pub reference_script: Option<Vec<u8>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CtxValue {
     pub inner: HashMap<String, HashMap<String, u64>>,
 }
@@ -52,18 +54,18 @@ impl From<Values> for CtxValue {
     }
 }
 
-#[derive(Clone)]
-pub enum Datum {
+#[derive(Clone, Debug)]
+pub enum CtxDatum {
     NoDatum,
     DatumHash(Vec<u8>),
     InlineDatum(PlutusData),
 }
 
-impl<D: Clone + Into<PlutusData>> From<Option<D>> for Datum {
+impl<D: Clone + Into<PlutusData>> From<Option<D>> for CtxDatum {
     fn from(value: Option<D>) -> Self {
         match value {
-            None => Datum::NoDatum,
-            Some(datum) => Datum::InlineDatum(datum.into()),
+            None => CtxDatum::NoDatum,
+            Some(datum) => CtxDatum::InlineDatum(datum.into()),
         }
     }
 }
@@ -91,16 +93,16 @@ impl ContextBuilder {
 
     pub fn with_input(
         self,
-        transaction_id: String,
+        transaction_id: &str,
         output_index: u64,
-        address: String,
+        address: &str,
     ) -> InputBuilder {
         InputBuilder {
             outer: self,
-            transaction_id,
-            address,
+            transaction_id: transaction_id.to_string(),
+            address: address.to_string(),
             value: Default::default(),
-            datum: Datum::NoDatum,
+            datum: CtxDatum::NoDatum,
             reference_script: None,
             output_index,
         }
@@ -123,7 +125,7 @@ impl ContextBuilder {
         TxContext {
             signer: self.signer.clone(),
             range,
-            inputs: vec![],
+            inputs: self.inputs.clone(),
         }
     }
 }
@@ -134,7 +136,7 @@ pub struct InputBuilder {
     output_index: u64,
     address: String,
     value: HashMap<String, HashMap<String, u64>>,
-    datum: Datum,
+    datum: CtxDatum,
     reference_script: Option<Vec<u8>>,
 }
 
@@ -145,12 +147,12 @@ impl InputBuilder {
     }
 
     pub fn with_inline_datum(mut self, plutus_data: PlutusData) -> InputBuilder {
-        self.datum = Datum::InlineDatum(plutus_data);
+        self.datum = CtxDatum::InlineDatum(plutus_data);
         self
     }
 
     pub fn with_datum_hash(mut self, datum_hash: Vec<u8>) -> InputBuilder {
-        self.datum = Datum::DatumHash(datum_hash);
+        self.datum = CtxDatum::DatumHash(datum_hash);
         self
     }
 

@@ -66,7 +66,7 @@ pub enum CheckingAccountDatums {
 }
 
 impl From<CheckingAccountDatums> for PlutusData {
-    fn from(value: CheckingAccountDatums) -> Self {
+    fn from(_value: CheckingAccountDatums) -> Self {
         todo!()
     }
 }

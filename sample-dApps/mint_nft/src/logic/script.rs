@@ -12,6 +12,7 @@ const SCRIPT_RAW: &str =
 //   transction_id: TransactionId,
 //   output_index: Int,
 // }
+// TODO: Move to context
 pub struct OutputReference {
     pub transaction_id: TransactionId,
     pub output_index: u64,
