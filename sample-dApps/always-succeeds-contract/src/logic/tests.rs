@@ -5,7 +5,7 @@ use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 
 #[tokio::test]
 async fn lock_and_claim() {
-    let me = Address::new("me");
+    let me = Address::new("6082e016828989cd9d809b50d6976d9efa9bc5b2c1a78d4b3bfa1bb83b");
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)

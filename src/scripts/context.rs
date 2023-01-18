@@ -23,7 +23,7 @@ pub struct ValidRange {
 pub struct Input {
     pub transaction_id: String,
     pub output_index: u64,
-    pub address: String,
+    pub address: Vec<u8>,
     pub value: CtxValue,
     pub datum: CtxDatum,
     pub reference_script: Option<Vec<u8>>,
@@ -100,7 +100,7 @@ impl ContextBuilder {
         InputBuilder {
             outer: self,
             transaction_id: transaction_id.to_string(),
-            address: address.to_string(),
+            address: hex::decode(address).unwrap(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,
             reference_script: None,
@@ -134,7 +134,7 @@ pub struct InputBuilder {
     outer: ContextBuilder,
     transaction_id: String,
     output_index: u64,
-    address: String,
+    address: Vec<u8>,
     value: HashMap<String, HashMap<String, u64>>,
     datum: CtxDatum,
     reference_script: Option<Vec<u8>>,

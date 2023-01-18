@@ -91,13 +91,10 @@ impl From<TxContext> for PlutusData {
             )])),
         )]));
         let dcert = PlutusData::Array(vec![]);
-        // let wdrl = PlutusData::Array(vec![]);
         let wdrl = PlutusData::Map(BTreeMap::new());
         let valid_range = ctx.range.into();
         let signatories = PlutusData::Array(vec![]);
-        // let redeemers = PlutusData::Array(vec![]);
         let redeemers = PlutusData::Map(BTreeMap::new());
-        // let data = PlutusData::Array(vec![]);
         let data = PlutusData::Map(BTreeMap::new());
         let id = PlutusData::Constr(Constr {
             tag: 121,
@@ -245,19 +242,17 @@ impl From<Input> for PlutusData {
         }
         .into();
         let output = CtxOutput {
-            address: hex::decode(input.address).unwrap(), // TODO
+            address: input.address,
             value: input.value,
             datum: input.datum,
             reference_script: input.reference_script,
         }
         .into();
-        let data = PlutusData::Constr(Constr {
+        PlutusData::Constr(Constr {
             tag: 121,
             any_constructor: None,
             fields: vec![output_reference, output],
-        });
-        // dbg!(&data);
-        data
+        })
     }
 }
 

@@ -251,7 +251,7 @@ where
         for (input, redeemer, script) in tx.script_inputs().iter() {
             if let Some(datum) = input.datum() {
                 if !spending_outputs.contains(input) {
-                    let ctx = tx_context(&tx, &signer);
+                    let ctx = tx_context(&tx, &signer)?;
                     // TODO: Check that the output is at the script address
                     //  https://github.com/MitchTurner/naumachia/issues/86
                     script
@@ -284,7 +284,7 @@ where
                 .id()
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             let policy_id = PolicyId::native_token(&id, asset_name);
-            let ctx = tx_context(&tx, &signer);
+            let ctx = tx_context(&tx, &signer)?;
             policy
                 .execute(redeemer.to_owned(), ctx)
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
@@ -414,7 +414,7 @@ fn build_outputs<Datum>(
 fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     tx: &UnbuiltTransaction<Datum, Redeemer>,
     signer: &Address,
-) -> TxContext {
+) -> LedgerClientResult<TxContext> {
     let lower = tx.valid_range.0.map(|n| (n, true));
     let upper = tx.valid_range.1.map(|n| (n, false));
 
@@ -423,10 +423,15 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         let id = utxo.id();
         let value = CtxValue::from(utxo.values().to_owned());
         let datum = utxo.datum().map(|d| d.to_owned()).into();
+        dbg!(utxo.owner());
+        let address = utxo
+            .owner()
+            .bytes()
+            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
         let input = Input {
             transaction_id: id.tx_hash().to_string(),
             output_index: id.index(),
-            address: utxo.owner().to_str().to_string(),
+            address,
             value,
             datum,
             reference_script: None,
@@ -435,9 +440,10 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     }
 
     let range = ValidRange { lower, upper };
-    TxContext {
+    let ctx = TxContext {
         signer: signer.clone(),
         range,
         inputs,
-    }
+    };
+    Ok(ctx)
 }
