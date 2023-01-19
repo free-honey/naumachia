@@ -69,16 +69,16 @@ pub enum Output<Datum> {
 
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub struct OutputId {
-    tx_hash: String,
+    tx_hash: Vec<u8>,
     index: u64,
 }
 
 impl OutputId {
-    pub fn new(tx_hash: String, index: u64) -> Self {
+    pub fn new(tx_hash: Vec<u8>, index: u64) -> Self {
         OutputId { tx_hash, index }
     }
 
-    pub fn tx_hash(&self) -> &str {
+    pub fn tx_hash(&self) -> &[u8] {
         &self.tx_hash
     }
 
@@ -90,13 +90,13 @@ impl OutputId {
 pub type Value = (PolicyId, u64);
 
 impl<Datum> Output<Datum> {
-    pub fn new_wallet(tx_hash: String, index: u64, owner: Address, values: Values) -> Self {
+    pub fn new_wallet(tx_hash: Vec<u8>, index: u64, owner: Address, values: Values) -> Self {
         let id = OutputId::new(tx_hash, index);
         Output::Wallet { id, owner, values }
     }
 
     pub fn new_validator(
-        tx_hash: String,
+        tx_hash: Vec<u8>,
         index: u64,
         owner: Address,
         values: Values,

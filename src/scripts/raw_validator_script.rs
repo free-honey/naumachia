@@ -1,6 +1,6 @@
 use crate::{
     scripts::as_failed_to_execute,
-    scripts::{ScriptResult, TxContext, ValidatorCode},
+    scripts::{ScriptResult, ValidatorCode},
     Address,
 };
 use cardano_multiplatform_lib::{
@@ -9,6 +9,7 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::{Decoder, Encoder};
 
+use crate::scripts::context::TxContext;
 use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
 use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
 use crate::scripts::ScriptError;
@@ -65,6 +66,54 @@ impl<D, R> RawPlutusValidator<D, R> {
             _redeemer: Default::default(),
         };
         Ok(v2_policy)
+    }
+}
+
+pub struct OneParamRawValidator<One, Datum, Redeemer> {
+    version: TransactionVersion,
+    cbor: Vec<u8>,
+    _one: PhantomData<One>,
+    _datum: PhantomData<Datum>,
+    _redeemer: PhantomData<Redeemer>,
+}
+
+impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
+    pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(script_file.cborHex)
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let mut outer_decoder = Decoder::new(&cbor);
+        let outer = outer_decoder
+            .bytes()
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_val = OneParamRawValidator {
+            version: TransactionVersion::V2,
+            cbor: outer.to_vec(),
+            _one: Default::default(),
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_val)
+    }
+
+    pub fn apply(&self, one: One) -> RawPlutusScriptResult<RawPlutusValidator<D, R>> {
+        let program: Program<NamedDeBruijn> =
+            Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
+                .unwrap()
+                .into();
+        let one_data: PlutusData = one.into();
+        let one_term = Term::Constant(Constant::Data(one_data.into()));
+        let program = program.apply_term(&one_term);
+        let fake: Program<FakeNamedDeBruijn> = program.into();
+        let new_cbor = fake
+            .to_cbor()
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let policy = RawPlutusValidator {
+            version: self.version.clone(),
+            cbor: new_cbor,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(policy)
     }
 }
 
@@ -170,7 +219,7 @@ where
         let cml_script_address = enterprise_addr.to_address();
         let script_address_str = cml_script_address
             .to_bech32(None)
-            .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?; // TODO: unwrap
+            .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?;
         let address = Address::Script(script_address_str);
         Ok(address)
     }

@@ -4,10 +4,10 @@ use std::{
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
-use uuid::Uuid;
 
 use crate::output::UnbuiltOutput;
-use crate::scripts::{TxContext, ValidRange};
+use crate::scripts::context::{CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -21,6 +21,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use local_persisted_storage::LocalPersistedStorage;
+use rand::Rng;
 use serde::{de::DeserializeOwned, Serialize};
 use tempfile::TempDir;
 use thiserror::Error;
@@ -40,7 +41,7 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
 
 impl<Datum, Redeemer> TestBackendsBuilder<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
@@ -87,7 +88,7 @@ pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + Partia
 
 impl<Datum, Redeemer> OutputBuilder<Datum, Redeemer>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
@@ -112,7 +113,7 @@ where
             datum,
         } = self;
         let address = owner.clone();
-        let tx_hash = Uuid::new_v4().to_string();
+        let tx_hash = arbitrary_tx_id().to_vec();
         let index = 0;
         let output = if let Some(datum) = datum {
             Output::new_validator(tx_hash, index, address, values, datum)
@@ -211,7 +212,7 @@ where
 impl<Datum, Redeemer, Storage> LedgerClient<Datum, Redeemer>
     for TestLedgerClient<Datum, Redeemer, Storage>
 where
-    Datum: Clone + PartialEq + Debug + Send + Sync,
+    Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
@@ -250,7 +251,7 @@ where
         for (input, redeemer, script) in tx.script_inputs().iter() {
             if let Some(datum) = input.datum() {
                 if !spending_outputs.contains(input) {
-                    let ctx = tx_context(&tx, &signer);
+                    let ctx = tx_context(&tx, &signer)?;
                     // TODO: Check that the output is at the script address
                     //  https://github.com/MitchTurner/naumachia/issues/86
                     script
@@ -283,7 +284,7 @@ where
                 .id()
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             let policy_id = PolicyId::native_token(&id, asset_name);
-            let ctx = tx_context(&tx, &signer);
+            let ctx = tx_context(&tx, &signer)?;
             policy
                 .execute(redeemer.to_owned(), ctx)
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
@@ -325,7 +326,7 @@ where
             self.storage.add_output(&output).await?;
         }
 
-        Ok(TxId::new("Not a real id"))
+        Ok(TxId::new(&hex::encode(construction_ctx.tx_hash())))
     }
 }
 
@@ -346,20 +347,20 @@ fn check_time_valid(
 }
 
 struct TxIdConstructionCtx {
-    tx_hash: String,
+    tx_hash: Vec<u8>,
     next_index: u64,
 }
 
 impl TxIdConstructionCtx {
     pub fn new() -> Self {
-        let tx_hash = Uuid::new_v4().to_string();
+        let tx_hash = arbitrary_tx_id().to_vec();
         TxIdConstructionCtx {
             tx_hash,
             next_index: 0,
         }
     }
 
-    pub fn tx_hash(&self) -> String {
+    pub fn tx_hash(&self) -> Vec<u8> {
         self.tx_hash.clone()
     }
 
@@ -410,16 +411,43 @@ fn build_outputs<Datum>(
         .collect()
 }
 
-fn tx_context<Datum, Redeemer>(
+fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     tx: &UnbuiltTransaction<Datum, Redeemer>,
     signer: &Address,
-) -> TxContext {
+) -> LedgerClientResult<TxContext> {
     let lower = tx.valid_range.0.map(|n| (n, true));
     let upper = tx.valid_range.1.map(|n| (n, false));
 
+    let mut inputs = Vec::new();
+    for (utxo, _, _) in tx.script_inputs.iter() {
+        let id = utxo.id();
+        let value = CtxValue::from(utxo.values().to_owned());
+        let datum = utxo.datum().map(|d| d.to_owned()).into();
+        let address = utxo
+            .owner()
+            .bytes()
+            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+        let transaction_id = id.tx_hash().to_vec();
+        let input = Input {
+            transaction_id,
+            output_index: id.index(),
+            address,
+            value,
+            datum,
+            reference_script: None,
+        };
+        inputs.push(input);
+    }
+
     let range = ValidRange { lower, upper };
-    TxContext {
+    let ctx = TxContext {
         signer: signer.clone(),
         range,
-    }
+        inputs,
+    };
+    Ok(ctx)
+}
+
+fn arbitrary_tx_id() -> [u8; 32] {
+    rand::thread_rng().gen()
 }

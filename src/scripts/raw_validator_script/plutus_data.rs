@@ -1,4 +1,5 @@
-use crate::scripts::{ScriptError, TxContext, ValidRange};
+use crate::scripts::context::{CtxDatum, CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::ScriptError;
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -72,7 +73,7 @@ impl TryFrom<PlutusData> for i64 {
 // TODO: THIS IS V2 only right now! Add V1!
 impl From<TxContext> for PlutusData {
     fn from(ctx: TxContext) -> Self {
-        let inputs = PlutusData::Array(vec![]);
+        let inputs = PlutusData::Array(ctx.inputs.into_iter().map(Into::into).collect());
         let reference_inputs = PlutusData::Array(vec![]);
         let outputs = PlutusData::Array(vec![]);
         let fee = PlutusData::Map(BTreeMap::from([(
@@ -90,13 +91,10 @@ impl From<TxContext> for PlutusData {
             )])),
         )]));
         let dcert = PlutusData::Array(vec![]);
-        // let wdrl = PlutusData::Array(vec![]);
         let wdrl = PlutusData::Map(BTreeMap::new());
         let valid_range = ctx.range.into();
         let signatories = PlutusData::Array(vec![]);
-        // let redeemers = PlutusData::Array(vec![]);
         let redeemers = PlutusData::Map(BTreeMap::new());
-        // let data = PlutusData::Array(vec![]);
         let data = PlutusData::Map(BTreeMap::new());
         let id = PlutusData::Constr(Constr {
             tag: 121,
@@ -234,6 +232,140 @@ fn lower_bound(bound: i64) -> PlutusData {
             }),
         ],
     })
+}
+
+impl From<Input> for PlutusData {
+    fn from(input: Input) -> Self {
+        let output_reference = CtxOutputReference {
+            transaction_id: input.transaction_id,
+            output_index: input.output_index,
+        }
+        .into();
+        let output = CtxOutput {
+            address: input.address,
+            value: input.value,
+            datum: input.datum,
+            reference_script: input.reference_script,
+        }
+        .into();
+        PlutusData::Constr(Constr {
+            tag: 121,
+            any_constructor: None,
+            fields: vec![output_reference, output],
+        })
+    }
+}
+
+// TODO: Move into `Input`
+struct CtxOutputReference {
+    transaction_id: Vec<u8>,
+    output_index: u64,
+}
+
+impl From<CtxOutputReference> for PlutusData {
+    fn from(out_ref: CtxOutputReference) -> Self {
+        let tx_id_bytes = out_ref.transaction_id;
+        let transaction_id = PlutusData::Constr(Constr {
+            tag: 121,
+            any_constructor: None,
+            fields: vec![PlutusData::BoundedBytes(tx_id_bytes)],
+        });
+        let output_index = PlutusData::BigInt((out_ref.output_index as i64).into()); // TODO: panic
+        PlutusData::Constr(Constr {
+            tag: 121,
+            any_constructor: None,
+            fields: vec![transaction_id, output_index],
+        })
+    }
+}
+
+// TODO: Move into `Input`
+struct CtxOutput {
+    address: Vec<u8>,
+    value: CtxValue,
+    datum: CtxDatum,
+    reference_script: Option<Vec<u8>>,
+}
+
+impl From<CtxOutput> for PlutusData {
+    fn from(output: CtxOutput) -> Self {
+        let address = PlutusData::BoundedBytes(output.address);
+        let value = output.value.into();
+        let datum = output.datum.into();
+        let reference_script = output.reference_script.into();
+        PlutusData::Constr(Constr {
+            tag: 121,
+            any_constructor: None,
+            fields: vec![address, value, datum, reference_script],
+        })
+    }
+}
+
+impl From<CtxValue> for PlutusData {
+    fn from(value: CtxValue) -> Self {
+        let converted_inner = value
+            .inner
+            .iter()
+            .map(|(p, a)| {
+                let policy_id = PlutusData::BoundedBytes(hex::decode(p).unwrap()); // TODO
+                let assets = a
+                    .iter()
+                    .map(|(an, amt)| {
+                        let asset_name = PlutusData::BoundedBytes(hex::decode(an).unwrap()); // TODO
+                        let amount = PlutusData::BigInt((*amt as i64).into()); // TODO
+                        (asset_name, amount)
+                    })
+                    .collect();
+                (policy_id, PlutusData::Map(assets))
+            })
+            .collect();
+        PlutusData::Map(converted_inner)
+    }
+}
+
+impl From<CtxDatum> for PlutusData {
+    fn from(value: CtxDatum) -> Self {
+        match value {
+            CtxDatum::NoDatum => PlutusData::Constr(Constr {
+                tag: 121,
+                any_constructor: None,
+                fields: vec![],
+            }),
+            CtxDatum::DatumHash(hash) => PlutusData::Constr(Constr {
+                tag: 122,
+                any_constructor: None,
+                fields: vec![PlutusData::BoundedBytes(hash)],
+            }),
+            CtxDatum::InlineDatum(data) => PlutusData::Constr(Constr {
+                tag: 123,
+                any_constructor: None,
+                fields: vec![data],
+            }),
+        }
+    }
+}
+
+impl<T: Into<PlutusData>> From<Option<T>> for PlutusData {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            None => PlutusData::Constr(Constr {
+                tag: 121,
+                any_constructor: None,
+                fields: vec![],
+            }),
+            Some(inner) => PlutusData::Constr(Constr {
+                tag: 122,
+                any_constructor: None,
+                fields: vec![inner.into()],
+            }),
+        }
+    }
+}
+
+impl From<Vec<u8>> for PlutusData {
+    fn from(value: Vec<u8>) -> Self {
+        PlutusData::BoundedBytes(value)
+    }
 }
 
 impl From<()> for PlutusData {

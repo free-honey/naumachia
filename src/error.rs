@@ -7,6 +7,8 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error("Error with Address")]
+    Address(String),
     #[error("TxORecord Error: {0}")]
     TxORecord(#[from] LedgerClientError),
     #[error("ValidatorCode Error: {0}")]

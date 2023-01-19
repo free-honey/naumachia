@@ -46,7 +46,8 @@ async fn main() {
             .await
             .unwrap(),
         ActionParams::Claim { tx_hash, index } => {
-            let output_id = OutputId::new(tx_hash, index);
+            let tx_hash_bytes = hex::decode(tx_hash).unwrap();
+            let output_id = OutputId::new(tx_hash_bytes, index);
             let endpoint = TimeLockedEndpoints::Claim { output_id };
             contract.hit_endpoint(endpoint).await.unwrap()
         }

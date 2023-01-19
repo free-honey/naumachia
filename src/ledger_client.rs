@@ -57,6 +57,8 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 pub enum LedgerClientError {
     #[error("Couldn't retrieve base address")]
     BaseAddress(Box<dyn error::Error + Send + Sync>),
+    #[error("Couldn't convert TxId")]
+    BadTxId(Box<dyn error::Error + Send + Sync>),
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]
     FailedToRetrieveOutputsAt(Address, Box<dyn error::Error + Send + Sync>),
     #[error("Failed to retrieve UTXO with ID {0:?}.")]

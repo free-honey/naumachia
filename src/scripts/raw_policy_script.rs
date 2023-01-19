@@ -1,10 +1,11 @@
+use crate::scripts::context::TxContext;
 use crate::scripts::ScriptError;
 use crate::{
     scripts::{
         as_failed_to_execute,
         raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult},
         raw_validator_script::plutus_data::PlutusData,
-        MintingPolicy, ScriptResult, TxContext,
+        MintingPolicy, ScriptResult,
     },
     transaction::TransactionVersion,
 };

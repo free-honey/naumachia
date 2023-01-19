@@ -189,7 +189,9 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {
-        Ok(Address::new("script"))
+        Ok(Address::new(
+            "addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu",
+        ))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -199,7 +201,7 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
 
 #[tokio::test]
 async fn redeeming_datum() {
-    let sender = Address::new("alice");
+    let sender = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
@@ -507,4 +509,76 @@ async fn mint_always_fails_errors() {
         .await
         .unwrap();
     assert_eq!(alice_balance, 0);
+}
+
+pub struct SpendsNFTPolicy {
+    policy_id: String,
+}
+
+impl MintingPolicy<()> for SpendsNFTPolicy {
+    fn execute(&self, _redeemer: (), ctx: TxContext) -> ScriptResult<()> {
+        if ctx
+            .inputs
+            .iter()
+            .any(|input| input.value.inner.contains_key(&self.policy_id))
+        {
+            Ok(())
+        } else {
+            Err(ScriptError::FailedToExecute("input not found".to_string()))
+        }
+    }
+
+    fn id(&self) -> ScriptResult<String> {
+        Ok("some token".to_string())
+    }
+
+    fn script_hex(&self) -> ScriptResult<String> {
+        todo!()
+    }
+}
+
+#[tokio::test]
+async fn spends_specific_script_value() {
+    let minter = Address::new("alice");
+    let starting_amount = 10_000_000;
+    let minting_amount = 3_000_000;
+
+    let nft_policy_id = "my_nft".to_string();
+    let validator = AlwaysTrueFakeValidator;
+    let val_address = validator.address(0).unwrap();
+    let mut values = Values::default();
+    let policy = PolicyId::NativeToken(nft_policy_id.clone(), None);
+    values.add_one_value(&policy, 1);
+    let input = Output::new_validator(vec![1, 2, 3, 4], 0, val_address.clone(), values, ());
+
+    let output = starting_output::<()>(&minter, starting_amount);
+    let outputs = vec![(minter.clone(), output), (val_address, input.clone())];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(minter.clone(), outputs);
+
+    let policy = SpendsNFTPolicy {
+        policy_id: nft_policy_id,
+    };
+    let id = policy.id().unwrap();
+    let asset_name = None;
+
+    let script_box: Box<dyn MintingPolicy<()>> = Box::new(policy);
+
+    let boxed_validator: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let redeem_info = (input, (), boxed_validator);
+    let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![redeem_info],
+        unbuilt_outputs: vec![],
+        minting: vec![(minting_amount, asset_name.clone(), (), script_box)],
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap();
+
+    let alice_balance = record
+        .balance_at_address(&minter, &PolicyId::NativeToken(id, asset_name))
+        .await
+        .unwrap();
+    assert_eq!(alice_balance, minting_amount);
 }
