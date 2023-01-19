@@ -99,7 +99,7 @@ impl ContextBuilder {
     ) -> InputBuilder {
         InputBuilder {
             outer: self,
-            transaction_id: hex::decode(address).unwrap(),
+            transaction_id: hex::decode(transaction_id).unwrap(),
             address: hex::decode(address).unwrap(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,

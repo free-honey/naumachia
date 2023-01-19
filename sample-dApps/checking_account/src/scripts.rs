@@ -20,7 +20,8 @@ impl ValidatorCode<CheckingAccountDatums, ()> for FakeCheckingAccountValidator {
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {
-        let address = Address::new("fake checking account script");
+        let address =
+            Address::new("addr_test1wpz47fyj9ffqck2fnld04k27zfe04wq6n9zj76u4ghu4xdck8aqy7");
         Ok(address)
     }
 
@@ -42,7 +43,8 @@ impl ValidatorCode<CheckingAccountDatums, ()> for FakePullerValidator {
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {
-        let address = Address::new("fake puller script");
+        let address =
+            Address::new("addr_test1wzl0nd2r9mnegmqr2ec4pjpa5kktgt56r7zzp7fds5p0sac8atl7r");
         Ok(address)
     }
 

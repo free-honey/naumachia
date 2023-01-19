@@ -7,7 +7,6 @@ use std::{
 };
 use tempfile::TempDir;
 use thiserror::Error;
-use uuid::Uuid;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
 use crate::{

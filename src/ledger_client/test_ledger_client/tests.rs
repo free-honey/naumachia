@@ -564,9 +564,8 @@ async fn spends_specific_script_value() {
 
     let script_box: Box<dyn MintingPolicy<()>> = Box::new(policy);
 
-    let redeemer = ();
     let boxed_validator: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
-    let redeem_info = (input, redeemer, boxed_validator);
+    let redeem_info = (input, (), boxed_validator);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V2,
         script_inputs: vec![redeem_info],

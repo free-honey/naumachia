@@ -4,7 +4,6 @@ use std::{
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
-use uuid::Uuid;
 
 use crate::output::UnbuiltOutput;
 use crate::scripts::context::{CtxValue, Input, TxContext, ValidRange};
@@ -327,7 +326,7 @@ where
             self.storage.add_output(&output).await?;
         }
 
-        Ok(TxId::new("Not a real id"))
+        Ok(TxId::new(&hex::encode(construction_ctx.tx_hash())))
     }
 }
 

@@ -217,7 +217,6 @@ where
         let stake_cred = StakeCredential::from_scripthash(&script_hash);
         let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);
         let cml_script_address = enterprise_addr.to_address();
-        let bytes = cml_script_address.to_bytes();
         let script_address_str = cml_script_address
             .to_bech32(None)
             .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?;

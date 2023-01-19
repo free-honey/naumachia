@@ -319,13 +319,7 @@ impl From<CtxValue> for PlutusData {
                 (policy_id, PlutusData::Map(assets))
             })
             .collect();
-        let data = PlutusData::Map(converted_inner);
-        // PlutusData::Constr(Constr {
-        //     tag: 121,
-        //     any_constructor: None,
-        //     fields: vec![data],
-        // })
-        data
+        PlutusData::Map(converted_inner)
     }
 }
 

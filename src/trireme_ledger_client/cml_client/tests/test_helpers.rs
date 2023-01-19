@@ -94,7 +94,7 @@ pub fn output_from_tx<'a, D>(tx_id: &'a str, outputs: &'a Vec<Output<D>>) -> Opt
     for output in outputs {
         let id = output.id();
         let tx_hash = id.tx_hash();
-        let tx_id_bytes = hex::decode(id.tx_hash()).unwrap();
+        let tx_id_bytes = hex::decode(tx_id).unwrap();
         if tx_hash == tx_id_bytes {
             return Some(output);
         }

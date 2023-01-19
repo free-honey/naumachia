@@ -71,7 +71,7 @@ pub enum CheckingAccountDatums {
 
 impl From<CheckingAccountDatums> for PlutusData {
     fn from(_value: CheckingAccountDatums) -> Self {
-        todo!()
+        PlutusData::BoundedBytes(vec![])
     }
 }
 
