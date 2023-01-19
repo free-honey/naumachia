@@ -9,6 +9,7 @@ use tempfile::TempDir;
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
 use crate::{
     address::Address,
     ledger_client::{test_ledger_client::TestLedgerStorage, LedgerClientError, LedgerClientResult},
@@ -48,7 +49,7 @@ impl<Datum> LedgerData<Datum> {
 }
 
 pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
-    let tx_hash = Uuid::new_v4().to_string();
+    let tx_hash = arbitrary_tx_id().to_vec();
     let index = 0;
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, amount);

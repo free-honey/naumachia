@@ -25,6 +25,7 @@ owo-colors = "3.5.0"
 [dependencies]
 async-trait = "0.1.57"
 clap = { version = "3.2.16", features = ["derive"] }
+hex = "0.4.3"
 naumachia = {path = "../..", version = "0.2.0"}
 serde_json = "1.0"
 thiserror = "1.0.24"

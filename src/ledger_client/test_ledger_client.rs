@@ -114,7 +114,7 @@ where
             datum,
         } = self;
         let address = owner.clone();
-        let tx_hash = arbitrary_tx_id();
+        let tx_hash = arbitrary_tx_id().to_vec();
         let index = 0;
         let output = if let Some(datum) = datum {
             Output::new_validator(tx_hash, index, address, values, datum)
@@ -348,20 +348,20 @@ fn check_time_valid(
 }
 
 struct TxIdConstructionCtx {
-    tx_hash: String,
+    tx_hash: Vec<u8>,
     next_index: u64,
 }
 
 impl TxIdConstructionCtx {
     pub fn new() -> Self {
-        let tx_hash = arbitrary_tx_id();
+        let tx_hash = arbitrary_tx_id().to_vec();
         TxIdConstructionCtx {
             tx_hash,
             next_index: 0,
         }
     }
 
-    pub fn tx_hash(&self) -> String {
+    pub fn tx_hash(&self) -> Vec<u8> {
         self.tx_hash.clone()
     }
 
@@ -428,8 +428,7 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
             .owner()
             .bytes()
             .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
-        let transaction_id = hex::decode(id.tx_hash())
-            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+        let transaction_id = id.tx_hash().to_vec();
         let input = Input {
             transaction_id,
             output_index: id.index(),
@@ -450,7 +449,6 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     Ok(ctx)
 }
 
-fn arbitrary_tx_id() -> String {
-    let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
-    hex::encode(random_bytes)
+fn arbitrary_tx_id() -> [u8; 32] {
+    rand::thread_rng().gen()
 }

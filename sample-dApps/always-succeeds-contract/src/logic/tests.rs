@@ -44,6 +44,7 @@ async fn lock_and_claim() {
         .unwrap()
         .pop()
         .unwrap();
+    dbg!(&instance);
     let call = AlwaysSucceedsEndpoints::Claim {
         output_id: instance.id().clone(),
     };

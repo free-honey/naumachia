@@ -53,7 +53,8 @@ async fn main() {
             index,
             guess,
         } => {
-            let output_id = OutputId::new(tx_hash, index);
+            let tx_hash_bytes = hex::decode(tx_hash).unwrap();
+            let output_id = OutputId::new(tx_hash_bytes, index);
             let endpoint = GameEndpoints::Guess { output_id, guess };
             let tx_id = contract.hit_endpoint(endpoint).await.unwrap();
             println!("tx: {:?}", tx_id);

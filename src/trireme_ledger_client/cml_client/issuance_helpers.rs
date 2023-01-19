@@ -412,7 +412,8 @@ pub(crate) fn utxo_to_nau_utxo<Datum: PlutusDataInterop>(
     utxo: &UTxO,
     owner: &Address,
 ) -> LedgerClientResult<Output<Datum>> {
-    let tx_hash = utxo.tx_hash().to_string();
+    let tx_hash = hex::decode(utxo.tx_hash().to_string())
+        .map_err(|e| LedgerClientError::BadTxId(Box::new(e)))?;
     let index = utxo.output_index().into();
     let values = as_nau_values(utxo.amount())?;
 
@@ -573,8 +574,7 @@ pub(crate) async fn sign_tx(
 pub(crate) async fn input_tx_hash<Datum>(
     input: &Output<Datum>,
 ) -> LedgerClientResult<TransactionHash> {
-    let tx_hash_raw = input.id().tx_hash();
-    let tx_hash = TransactionHash::from_hex(tx_hash_raw)
+    let tx_hash = TransactionHash::from_bytes(input.id().tx_hash().to_vec())
         .map_err(|e| CMLLCError::JsError(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
     Ok(tx_hash)
