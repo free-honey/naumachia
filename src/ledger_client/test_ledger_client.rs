@@ -22,6 +22,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use local_persisted_storage::LocalPersistedStorage;
+use rand::Rng;
 use serde::{de::DeserializeOwned, Serialize};
 use tempfile::TempDir;
 use thiserror::Error;
@@ -113,7 +114,7 @@ where
             datum,
         } = self;
         let address = owner.clone();
-        let tx_hash = Uuid::new_v4().to_string();
+        let tx_hash = arbitrary_tx_id();
         let index = 0;
         let output = if let Some(datum) = datum {
             Output::new_validator(tx_hash, index, address, values, datum)
@@ -353,7 +354,7 @@ struct TxIdConstructionCtx {
 
 impl TxIdConstructionCtx {
     pub fn new() -> Self {
-        let tx_hash = Uuid::new_v4().to_string();
+        let tx_hash = arbitrary_tx_id();
         TxIdConstructionCtx {
             tx_hash,
             next_index: 0,
@@ -423,7 +424,6 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         let id = utxo.id();
         let value = CtxValue::from(utxo.values().to_owned());
         let datum = utxo.datum().map(|d| d.to_owned()).into();
-        dbg!(utxo.owner());
         let address = utxo
             .owner()
             .bytes()
@@ -446,4 +446,9 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         inputs,
     };
     Ok(ctx)
+}
+
+fn arbitrary_tx_id() -> String {
+    let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
+    hex::encode(random_bytes)
 }

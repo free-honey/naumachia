@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 
 // TODO: Continue to hone this into a good API. I tried to make the Address generic, but it
 //   made for bad ergonomics. Instead, I want to make this as stable as possible.
+//   Update: This implicitly wants the string to be a valid addr, but nothing is enforcing that.
+//   I don't like that, but I haven't come up with the right design. Creating new issue here:
+//   https://github.com/MitchTurner/naumachia/issues/88
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Address {
     Base(String),

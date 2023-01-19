@@ -37,6 +37,7 @@ dirs = "4.0.0"
 uplc = "0.0.28"
 tempfile = "3.3.0"
 minicbor = "0.18.0"
+rand = "0.8.5"
 
 [dependencies.blockfrost-http-client]
 version = "0.0.11"

@@ -189,7 +189,9 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {
-        Ok(Address::new("script"))
+        Ok(Address::new(
+            "addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu",
+        ))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -199,7 +201,7 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
 
 #[tokio::test]
 async fn redeeming_datum() {
-    let sender = Address::new("alice");
+    let sender = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
