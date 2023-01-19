@@ -21,7 +21,7 @@ pub struct ValidRange {
 
 #[derive(Clone, Debug)]
 pub struct Input {
-    pub transaction_id: String,
+    pub transaction_id: Vec<u8>,
     pub output_index: u64,
     pub address: Vec<u8>,
     pub value: CtxValue,
@@ -99,7 +99,7 @@ impl ContextBuilder {
     ) -> InputBuilder {
         InputBuilder {
             outer: self,
-            transaction_id: transaction_id.to_string(),
+            transaction_id: hex::decode(address).unwrap(),
             address: hex::decode(address).unwrap(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,
@@ -132,7 +132,7 @@ impl ContextBuilder {
 
 pub struct InputBuilder {
     outer: ContextBuilder,
-    transaction_id: String,
+    transaction_id: Vec<u8>,
     output_index: u64,
     address: Vec<u8>,
     value: HashMap<String, HashMap<String, u64>>,

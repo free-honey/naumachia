@@ -237,7 +237,7 @@ fn lower_bound(bound: i64) -> PlutusData {
 impl From<Input> for PlutusData {
     fn from(input: Input) -> Self {
         let output_reference = CtxOutputReference {
-            transaction_id: hex::decode(input.transaction_id).unwrap(), // TODO: make transaction_id bytes
+            transaction_id: input.transaction_id,
             output_index: input.output_index,
         }
         .into();

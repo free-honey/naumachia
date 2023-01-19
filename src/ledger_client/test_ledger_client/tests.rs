@@ -549,7 +549,7 @@ async fn spends_specific_script_value() {
     let mut values = Values::default();
     let policy = PolicyId::NativeToken(nft_policy_id.clone(), None);
     values.add_one_value(&policy, 1);
-    let input = Output::new_validator("123".to_string(), 0, val_address.clone(), values, ());
+    let input = Output::new_validator("abcd".to_string(), 0, val_address.clone(), values, ());
 
     let output = starting_output::<()>(&minter, starting_amount);
     let outputs = vec![(minter.clone(), output), (val_address, input.clone())];

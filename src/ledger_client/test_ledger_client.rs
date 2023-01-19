@@ -428,8 +428,10 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
             .owner()
             .bytes()
             .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+        let transaction_id = hex::decode(id.tx_hash())
+            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
         let input = Input {
-            transaction_id: id.tx_hash().to_string(),
+            transaction_id,
             output_index: id.index(),
             address,
             value,
