@@ -5,7 +5,7 @@ const MINT_NFT_PROJECT: &str = "./aiken/mint_nft";
 
 fn build_project(path: &str) {
     let mut project = Project::new(path.into(), Terminal::default())
-        .expect(&format!("Project not found: {:?}", PROJECT));
+        .expect(&format!("Project not found: {:?}", path));
     let build_result = project.build(false);
 
     if let Err(err) = build_result {
