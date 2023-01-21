@@ -1,3 +1,4 @@
+use crate::output::Output;
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::values::Values;
 use crate::{Address, PolicyId};
@@ -91,15 +92,15 @@ impl ContextBuilder {
         self
     }
 
-    pub fn with_input(
+    pub fn build_input(
         self,
-        transaction_id: &str,
+        transaction_id: &[u8],
         output_index: u64,
         address: &str,
     ) -> InputBuilder {
         InputBuilder {
             outer: self,
-            transaction_id: hex::decode(transaction_id).unwrap(),
+            transaction_id: transaction_id.to_vec(),
             address: hex::decode(address).unwrap(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,
@@ -110,6 +111,26 @@ impl ContextBuilder {
 
     fn add_input(mut self, input: Input) -> ContextBuilder {
         self.inputs.push(input);
+        self
+    }
+
+    pub fn add_specific_input<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
+        let id = input.id();
+        let transaction_id = id.tx_hash().to_vec();
+        let output_index = id.index();
+        let address = input.owner().bytes().unwrap();
+        let value = CtxValue::from(input.values().to_owned());
+        let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
+        let datum = CtxDatum::from(maybe_datum);
+        let ctx_input = Input {
+            transaction_id,
+            output_index,
+            address,
+            value,
+            datum,
+            reference_script: None,
+        };
+        self.inputs.push(ctx_input);
         self
     }
 

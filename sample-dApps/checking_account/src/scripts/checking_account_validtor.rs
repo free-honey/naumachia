@@ -42,8 +42,9 @@ mod tests {
             inner: policy.clone(),
         };
         let ctx = ContextBuilder::new(signer.clone())
-            .with_input(
-                "73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b",
+            .build_input(
+                &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
+                    .unwrap(),
                 0,
                 signer.to_str(),
             )
@@ -65,8 +66,9 @@ mod tests {
             inner: policy.clone(),
         };
         let ctx = ContextBuilder::new(signer.clone())
-            .with_input(
-                "73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b",
+            .build_input(
+                &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
+                    .unwrap(),
                 0,
                 signer.to_str(),
             )
