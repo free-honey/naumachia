@@ -1,4 +1,3 @@
-use hex;
 use naumachia::{
     output::Output as NauOutput,
     scripts::{
@@ -64,6 +63,7 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
     Ok(raw_script_validator)
 }
 
+#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,7 +73,7 @@ mod tests {
     use naumachia::scripts::MintingPolicy;
 
     #[test]
-    fn plutus_data_conversion_works() {
+    fn execute__succeeds_when_output_included() {
         let id = OutputId::new(vec![1, 2, 3, 4], 0);
         let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
         let output = Output::<()>::Wallet {
@@ -91,5 +91,24 @@ mod tests {
             .add_specific_input(&output)
             .build();
         let _eval = script.execute((), ctx).unwrap();
+    }
+
+    #[test]
+    fn execute__fails_when_output_included() {
+        let id = OutputId::new(vec![1, 2, 3, 4], 0);
+        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
+        let output = Output::<()>::Wallet {
+            id,
+            owner: owner.clone(),
+            values: Default::default(),
+        };
+
+        let out_ref = OutputReference::from(&output);
+
+        let param_script = get_parameterized_script().unwrap();
+        let script = param_script.apply(out_ref).unwrap();
+
+        let ctx = ContextBuilder::new(owner).build();
+        let _eval = script.execute((), ctx).unwrap_err();
     }
 }
