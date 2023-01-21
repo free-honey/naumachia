@@ -17,7 +17,8 @@ repository = "https://github.com/MitchTurner/naumachia"
 [workspace]
 members = [
     "sample-dApps/*",
-    "trireme"
+    "trireme",
+    "nau-scripts",
 ]
 
 [dependencies]

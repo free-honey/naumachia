@@ -1,0 +1,9 @@
+[package]
+name = "nau-scripts"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hex = "0.4.3"
+naumachia = {path = "..", version = "0.2.0"}
+serde_json = "1.0"
