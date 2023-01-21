@@ -1,4 +1,4 @@
-use crate::logic::script::{get_parameterized_script, OutputReference};
+// use crate::logic::script::{get_parameterized_script, OutputReference};
 use async_trait::async_trait;
 use naumachia::address::PolicyId;
 use naumachia::output::Output;
@@ -10,7 +10,7 @@ use naumachia::{
 };
 use thiserror::Error;
 
-pub mod script;
+use nau_scripts::one_shot::{get_parameterized_script, OutputReference};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MintNFTLogic;
