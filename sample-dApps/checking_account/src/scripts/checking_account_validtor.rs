@@ -42,7 +42,7 @@ mod tests {
             inner: policy.clone(),
         };
         let ctx = ContextBuilder::new(signer.clone())
-            .with_input(
+            .build_input(
                 "73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b",
                 0,
                 signer.to_str(),
@@ -65,7 +65,7 @@ mod tests {
             inner: policy.clone(),
         };
         let ctx = ContextBuilder::new(signer.clone())
-            .with_input(
+            .build_input(
                 "73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b",
                 0,
                 signer.to_str(),

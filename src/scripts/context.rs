@@ -92,7 +92,7 @@ impl ContextBuilder {
         self
     }
 
-    pub fn with_input(
+    pub fn build_input(
         self,
         transaction_id: &[u8],
         output_index: u64,
