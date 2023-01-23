@@ -35,7 +35,7 @@ mod tests {
 
     #[test]
     fn succeeds_if_spending_token_in_inputs() {
-        let signer = Address::new("6082e016828989cd9d809b50d6976d9efa9bc5b2c1a78d4b3bfa1bb83b");
+        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
         let param_script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
         let spending_token = SpendingTokenPolicy {
@@ -46,7 +46,7 @@ mod tests {
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,
-                signer.to_str(),
+                &signer.bytes().unwrap(),
             )
             .with_value(&hex::encode(&policy), "", 1)
             .finish_input()
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn fails_if_not_spending_token_in_inputs() {
-        let signer = Address::new("6082e016828989cd9d809b50d6976d9efa9bc5b2c1a78d4b3bfa1bb83b");
+        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
         let param_script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
         let spending_token = SpendingTokenPolicy {
@@ -70,7 +70,7 @@ mod tests {
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,
-                signer.to_str(),
+                &signer.bytes().unwrap(),
             )
             .finish_input()
             .build();
