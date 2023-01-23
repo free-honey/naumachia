@@ -96,12 +96,12 @@ impl ContextBuilder {
         self,
         transaction_id: &[u8],
         output_index: u64,
-        address: &str,
+        address: &[u8],
     ) -> InputBuilder {
         InputBuilder {
             outer: self,
             transaction_id: transaction_id.to_vec(),
-            address: hex::decode(address).unwrap(),
+            address: address.to_vec(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,
             reference_script: None,

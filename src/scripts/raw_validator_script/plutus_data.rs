@@ -1,5 +1,6 @@
 use crate::scripts::context::{CtxDatum, CtxValue, Input, TxContext, ValidRange};
 use crate::scripts::ScriptError;
+use crate::Address;
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -93,7 +94,7 @@ impl From<TxContext> for PlutusData {
         let dcert = PlutusData::Array(vec![]);
         let wdrl = PlutusData::Map(BTreeMap::new());
         let valid_range = ctx.range.into();
-        let signatories = PlutusData::Array(vec![]);
+        let signatories = PlutusData::Array(vec![ctx.signer.into()]);
         let redeemers = PlutusData::Map(BTreeMap::new());
         let data = PlutusData::Map(BTreeMap::new());
         let id = PlutusData::Constr(Constr {
@@ -130,6 +131,13 @@ impl From<TxContext> for PlutusData {
             any_constructor: None,
             fields: vec![tx_info, purpose],
         })
+    }
+}
+
+impl From<Address> for PlutusData {
+    fn from(value: Address) -> Self {
+        // TODO: https://github.com/MitchTurner/naumachia/issues/88
+        PlutusData::BoundedBytes(value.bytes().unwrap().to_vec()) // TODO: unwrap()
     }
 }
 
