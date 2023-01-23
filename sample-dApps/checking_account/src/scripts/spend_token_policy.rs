@@ -50,26 +50,30 @@ mod tests {
             inner: vec![1, 2, 3],
         };
         let owner = Owner {
-            inner: vec![1, 2, 3],
+            inner: signer.bytes().unwrap().to_vec(),
         };
         let script = param_script.apply(nft).unwrap().apply(owner).unwrap();
 
         let ctx = ContextBuilder::new(signer).build();
 
-        script.execute((), ctx).unwrap()
+        script.execute((), ctx).unwrap();
     }
 
-    // #[test]
-    // fn execute__incorrect_signer_cannot_mint() {
-    //     let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
-    //     let param_script = spend_token_policy().unwrap();
-    //     let nft = CheckingAccountNFT {
-    //         inner: vec![1, 2, 3],
-    //     };
-    //     let script = param_script.apply(nft).unwrap();
-    //
-    //     let ctx = ContextBuilder::new(signer).build();
-    //
-    //     script.execute((), ctx).unwrap()
-    // }
+    #[test]
+    fn execute__incorrect_signer_cannot_mint() {
+        let correct_signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+        let incorrect_signer = Address::new("addr_test1qqddk5xnz08mxsqw6jdaenvhdah835lhvm62tt5lydk2as7kfjf77qy57hqhnefcqyy7hmhsygj9j38rj984hn9r57fs066hcl");
+        let param_script = spend_token_policy().unwrap();
+        let nft = CheckingAccountNFT {
+            inner: vec![1, 2, 3],
+        };
+        let owner = Owner {
+            inner: correct_signer.bytes().unwrap().to_vec(),
+        };
+        let script = param_script.apply(nft).unwrap().apply(owner).unwrap();
+
+        let ctx = ContextBuilder::new(incorrect_signer).build();
+
+        script.execute((), ctx).unwrap_err();
+    }
 }
