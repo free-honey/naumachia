@@ -100,6 +100,54 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
     }
 }
 
+pub struct TwoParamRawPolicy<One, Two, Redeemer> {
+    version: TransactionVersion,
+    cbor: Vec<u8>,
+    _one: PhantomData<One>,
+    _two: PhantomData<Two>,
+    _redeemer: PhantomData<Redeemer>,
+}
+
+impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamRawPolicy<One, Two, R> {
+    pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(script_file.cborHex)
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let mut outer_decoder = Decoder::new(&cbor);
+        let outer = outer_decoder
+            .bytes()
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_pol = TwoParamRawPolicy {
+            version: TransactionVersion::V2,
+            cbor: outer.to_vec(),
+            _one: Default::default(),
+            _two: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_pol)
+    }
+
+    pub fn apply(&self, one: One) -> RawPlutusScriptResult<OneParamRawPolicy<Two, R>> {
+        let program: Program<NamedDeBruijn> =
+            Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
+                .unwrap()
+                .into();
+        let one_data: PlutusData = one.into();
+        let one_term = Term::Constant(Constant::Data(one_data.into()));
+        let program = program.apply_term(&one_term);
+        let fake: Program<FakeNamedDeBruijn> = program.into();
+        let new_cbor = fake
+            .to_cbor()
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let policy = OneParamRawPolicy {
+            version: self.version.clone(),
+            cbor: new_cbor,
+            _one: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(policy)
+    }
+}
+
 impl<Redeemer> MintingPolicy<Redeemer> for RawPolicy<Redeemer>
 where
     Redeemer: Into<PlutusData> + Send + Sync,

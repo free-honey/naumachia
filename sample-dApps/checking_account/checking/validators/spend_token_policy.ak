@@ -1,6 +1,6 @@
 use aiken/transaction.{ScriptContext}
 use aiken/transaction/value.{PolicyId}
 
-pub fn mint(checking_account_nft: PolicyId, _redeemer, _ctx) -> Bool {
+pub fn mint(checking_account_nft: PolicyId, owner: ByteArray, _redeemer, _ctx) -> Bool {
     True
 }
