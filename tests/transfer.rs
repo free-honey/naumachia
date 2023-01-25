@@ -44,7 +44,7 @@ impl SCLogic for TransferADASmartContract {
 
 #[tokio::test]
 async fn can_transfer_and_keep_remainder() {
-    let me = Address::new("me");
+    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
     let alice = Address::new("alice");
 
     let input_amount = 666;

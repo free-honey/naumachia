@@ -77,8 +77,6 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         self
     }
 
-    // TODO: I don't know if that recipient makes any sense. It can just be included in the default
-    //   outputs or specified outputs (anything unspecified will just go to creator)
     pub fn with_mint(
         mut self,
         amount: u64,
