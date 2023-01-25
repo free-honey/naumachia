@@ -1,6 +1,7 @@
+use crate::CheckingAccountDatums;
 use naumachia::scripts::raw_script::PlutusScriptFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
-use naumachia::scripts::raw_validator_script::OneParamRawValidator;
+use naumachia::scripts::raw_validator_script::{OneParamRawValidator, RawPlutusValidator};
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const SCRIPT_RAW: &str =
@@ -10,17 +11,22 @@ pub struct SpendingTokenPolicy {
     inner: Vec<u8>,
 }
 
+impl From<Vec<u8>> for SpendingTokenPolicy {
+    fn from(value: Vec<u8>) -> Self {
+        SpendingTokenPolicy { inner: value }
+    }
+}
+
 impl From<SpendingTokenPolicy> for PlutusData {
     fn from(value: SpendingTokenPolicy) -> Self {
         PlutusData::BoundedBytes(value.inner)
     }
 }
 
-pub fn checking_account_validator(
-) -> ScriptResult<OneParamRawValidator<SpendingTokenPolicy, (), ()>> {
+pub fn checking_account_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums, ()>> {
     let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = OneParamRawValidator::new_v2(script_file)
+    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
@@ -36,7 +42,7 @@ mod tests {
     #[test]
     fn succeeds_if_spending_token_in_inputs() {
         let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
-        let param_script = checking_account_validator().unwrap();
+        let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
         let spending_token = SpendingTokenPolicy {
             inner: policy.clone(),
@@ -52,15 +58,19 @@ mod tests {
             .finish_input()
             .build();
 
-        let script = param_script.apply(spending_token).unwrap();
+        let owner = Address::new("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs");
+        let datum = CheckingAccountDatums::CheckingAccount {
+            owner,
+            spend_token_policy: hex::encode(policy),
+        };
 
-        let _eval = script.execute((), (), ctx).unwrap();
+        let _eval = script.execute(datum, (), ctx).unwrap();
     }
 
     #[test]
     fn fails_if_not_spending_token_in_inputs() {
         let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
-        let param_script = checking_account_validator().unwrap();
+        let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
         let spending_token = SpendingTokenPolicy {
             inner: policy.clone(),
@@ -75,8 +85,12 @@ mod tests {
             .finish_input()
             .build();
 
-        let script = param_script.apply(spending_token).unwrap();
+        let owner = Address::new("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs");
+        let datum = CheckingAccountDatums::CheckingAccount {
+            owner,
+            spend_token_policy: hex::encode(policy),
+        };
 
-        let _eval = script.execute((), (), ctx).unwrap_err();
+        let _eval = script.execute(datum, (), ctx).unwrap_err();
     }
 }

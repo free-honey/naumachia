@@ -1,3 +1,4 @@
+use naumachia::address::Address;
 use naumachia::scripts::raw_policy_script::TwoParamRawPolicy;
 use naumachia::scripts::raw_script::PlutusScriptFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
@@ -10,6 +11,12 @@ pub struct CheckingAccountNFT {
     inner: Vec<u8>,
 }
 
+impl From<Vec<u8>> for CheckingAccountNFT {
+    fn from(value: Vec<u8>) -> Self {
+        CheckingAccountNFT { inner: value }
+    }
+}
+
 impl From<CheckingAccountNFT> for PlutusData {
     fn from(value: CheckingAccountNFT) -> Self {
         PlutusData::BoundedBytes(value.inner)
@@ -18,6 +25,13 @@ impl From<CheckingAccountNFT> for PlutusData {
 
 pub struct Owner {
     inner: Vec<u8>,
+}
+
+impl From<Address> for Owner {
+    fn from(value: Address) -> Self {
+        let inner = value.bytes().unwrap(); // TODO
+        Owner { inner }
+    }
 }
 
 impl From<Owner> for PlutusData {

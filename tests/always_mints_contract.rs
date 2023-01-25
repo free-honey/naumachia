@@ -80,7 +80,7 @@ fn mint(amount: u64, _recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
 
 #[tokio::test]
 async fn can_mint_from_always_true_minting_policy() {
-    let me = Address::new("me");
+    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
     let policy = PolicyId::native_token(MINT_POLICY_ID, &None);
     let backend = TestBackendsBuilder::new(&me).build_in_memory();
     // Call mint endpoint
