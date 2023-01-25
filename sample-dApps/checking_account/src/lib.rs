@@ -44,20 +44,17 @@ pub enum CheckingAccountEndpoints {
     FundAccount {
         output_id: OutputId,
         fund_amount: u64,
-        spending_token_id: String,
     },
     /// Remove funds from a checking account
     WithdrawFromAccount {
         output_id: OutputId,
         withdraw_amount: u64,
-        spending_token_id: String,
     },
     /// Use allowed puller validator to pull from checking account
     PullFromCheckingAccount {
         allow_pull_output_id: OutputId,
         checking_account_output_id: OutputId,
         amount: u64,
-        spending_token_id: String,
     },
 }
 
@@ -94,9 +91,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                     fields: vec![owner_data, policy_data],
                 })
             }
-            CheckingAccountDatums::AllowedPuller { .. } => {
-                todo!()
-            }
+            CheckingAccountDatums::AllowedPuller { .. } => PlutusData::BoundedBytes(vec![]),
         }
     }
 }
@@ -141,28 +136,21 @@ impl SCLogic for CheckingAccountLogic {
             CheckingAccountEndpoints::FundAccount {
                 output_id,
                 fund_amount,
-                spending_token_id,
-            } => fund_account(ledger_client, output_id, fund_amount, spending_token_id).await,
+            } => fund_account(ledger_client, output_id, fund_amount).await,
             CheckingAccountEndpoints::WithdrawFromAccount {
                 output_id,
                 withdraw_amount,
-                spending_token_id,
-            } => {
-                withdraw_from_account(ledger_client, output_id, withdraw_amount, spending_token_id)
-                    .await
-            }
+            } => withdraw_from_account(ledger_client, output_id, withdraw_amount).await,
             CheckingAccountEndpoints::PullFromCheckingAccount {
                 allow_pull_output_id,
                 checking_account_output_id,
                 amount,
-                spending_token_id,
             } => {
                 pull_from_account(
                     ledger_client,
                     allow_pull_output_id,
                     checking_account_output_id,
                     amount,
-                    spending_token_id,
                 )
                 .await
             }
@@ -202,21 +190,19 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .unwrap()
         .apply(owner.clone().into())
         .unwrap();
-    let validator_parameterized =
+    let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let spending_token_id = spending_token_policy.id().unwrap();
-    let spending_token_id_bytes = hex::decode(spending_token_id).unwrap();
-    todo!();
-    // let validator = validator_parameterized
-    //     .apply(spending_token_id_bytes.into())
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    // let address = validator
-    //     .address(0)
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    //
-    // let datum = CheckingAccountDatums::CheckingAccount { owner };
-    // let actions = TxActions::v2().with_script_init(datum, values, address);
-    // Ok(actions)
+    let spend_token_policy = spending_token_policy.id().unwrap();
+    let address = validator
+        .address(0)
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    let datum = CheckingAccountDatums::CheckingAccount {
+        owner,
+        spend_token_policy,
+    };
+    let actions = TxActions::v2().with_script_init(datum, values, address);
+    Ok(actions)
 }
 
 async fn select_any_above_min<LC: LedgerClient<CheckingAccountDatums, ()>>(
@@ -302,86 +288,75 @@ async fn fund_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     output_id: OutputId,
     amount: u64,
-    spending_token_id: String,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let validator_parameterized =
+    let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let spending_token_id_bytes = hex::decode(spending_token_id).unwrap();
-    todo!();
-    // let validator = validator_parameterized
-    //     .apply(spending_token_id_bytes.into())
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    // let address = validator
-    //     .address(0)
-    //     .map_err(SCLogicError::ValidatorScript)?;
-    // let output = ledger_client
-    //     .all_outputs_at_address(&address)
-    //     .await
-    //     .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
-    //     .into_iter()
-    //     .find(|o| o.id() == &output_id)
-    //     .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    //
-    // let new_datum = output
-    //     .datum()
-    //     .ok_or(CheckingAccountError::OutputNotFound(output_id))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-    //     .clone();
-    // let redeemer = ();
-    // let script = Box::new(validator);
-    // let mut values = output.values().to_owned();
-    // values.add_one_value(&PolicyId::ADA, amount);
-    // let actions = TxActions::v2()
-    //     .with_script_redeem(output, redeemer, script)
-    //     .with_script_init(new_datum, values, address);
-    // Ok(actions)
+    let address = validator
+        .address(0)
+        .map_err(SCLogicError::ValidatorScript)?;
+    let output = ledger_client
+        .all_outputs_at_address(&address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .into_iter()
+        .find(|o| o.id() == &output_id)
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    let new_datum = output
+        .datum()
+        .ok_or(CheckingAccountError::OutputNotFound(output_id))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .clone();
+    let redeemer = ();
+    let script = Box::new(validator);
+    let mut values = output.values().to_owned();
+    values.add_one_value(&PolicyId::ADA, amount);
+    let actions = TxActions::v2()
+        .with_script_redeem(output, redeemer, script)
+        .with_script_init(new_datum, values, address);
+    Ok(actions)
 }
 
 async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     output_id: OutputId,
     amount: u64,
-    spending_token_id: String,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let validator_parameterized =
+    let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let spending_token_id_bytes = hex::decode(spending_token_id).unwrap();
-    todo!();
-    // let validator = validator_parameterized
-    //     .apply(spending_token_id_bytes.into())
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    // let address = validator
-    //     .address(0)
-    //     .map_err(SCLogicError::ValidatorScript)?;
-    // let output = ledger_client
-    //     .all_outputs_at_address(&address)
-    //     .await
-    //     .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
-    //     .into_iter()
-    //     .find(|o| o.id() == &output_id)
-    //     .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    //
-    // let new_datum = output
-    //     .datum()
-    //     .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-    //     .clone();
-    // let redeemer = ();
-    // let script = Box::new(validator);
-    // let old_values = output.values().to_owned();
-    // let mut sub_values = Values::default();
-    // sub_values.add_one_value(&PolicyId::ADA, amount);
-    // let new_value = old_values
-    //     .try_subtract(&sub_values)
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-    //     .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    // let actions = TxActions::v2()
-    //     .with_script_redeem(output, redeemer, script)
-    //     .with_script_init(new_datum, new_value, address);
-    // Ok(actions)
+
+    let address = validator
+        .address(0)
+        .map_err(SCLogicError::ValidatorScript)?;
+    let output = ledger_client
+        .all_outputs_at_address(&address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .into_iter()
+        .find(|o| o.id() == &output_id)
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    let new_datum = output
+        .datum()
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .clone();
+    let redeemer = ();
+    let script = Box::new(validator);
+    let old_values = output.values().to_owned();
+    let mut sub_values = Values::default();
+    sub_values.add_one_value(&PolicyId::ADA, amount);
+    let new_value = old_values
+        .try_subtract(&sub_values)
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let actions = TxActions::v2()
+        .with_script_redeem(output, redeemer, script)
+        .with_script_init(new_datum, new_value, address);
+    Ok(actions)
 }
 
 async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
@@ -389,7 +364,6 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     allow_pull_output_id: OutputId,
     checking_account_output_id: OutputId,
     amount: u64,
-    spending_token_id: String,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let allow_pull_validator = FakePullerValidator;
     let allow_pull_address = allow_pull_validator
@@ -406,71 +380,66 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         ))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
-    let validator_parameterized =
+    let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let spending_token_id_bytes = hex::decode(spending_token_id).unwrap();
-    todo!();
-    // let checking_account_validator = validator_parameterized
-    //     .apply(spending_token_id_bytes.into())
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    // let checking_account_address = checking_account_validator
-    //     .address(0)
-    //     .map_err(SCLogicError::ValidatorScript)?;
-    // let checking_account_output = ledger_client
-    //     .all_outputs_at_address(&checking_account_address)
-    //     .await
-    //     .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
-    //     .into_iter()
-    //     .find(|o| o.id() == &checking_account_output_id)
-    //     .ok_or(CheckingAccountError::OutputNotFound(
-    //         checking_account_output_id.clone(),
-    //     ))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    //
-    // let new_allow_pull_datum = allow_pull_output
-    //     .datum()
-    //     .ok_or(CheckingAccountError::OutputNotFound(
-    //         allow_pull_output_id.clone(),
-    //     ))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-    //     .clone();
-    // let allow_pull_redeemer = ();
-    // let allow_pull_script = Box::new(allow_pull_validator);
-    // let allow_pull_value = Values::default();
-    //
-    // let new_checking_account_datum = checking_account_output
-    //     .datum()
-    //     .ok_or(CheckingAccountError::OutputNotFound(
-    //         checking_account_output_id.clone(),
-    //     ))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-    //     .clone();
-    // let checking_account_redeemer = ();
-    // let checking_account_script = Box::new(checking_account_validator);
-    //
-    // let old_values = checking_account_output.values().to_owned();
-    // let mut sub_values = Values::default();
-    // sub_values.add_one_value(&PolicyId::ADA, amount);
-    // let new_account_value = old_values
-    //     .try_subtract(&sub_values)
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-    //     .ok_or(CheckingAccountError::OutputNotFound(
-    //         checking_account_output_id.clone(),
-    //     ))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    //
-    // let actions = TxActions::v2()
-    //     .with_script_redeem(allow_pull_output, allow_pull_redeemer, allow_pull_script)
-    //     .with_script_init(new_allow_pull_datum, allow_pull_value, allow_pull_address)
-    //     .with_script_redeem(
-    //         checking_account_output,
-    //         checking_account_redeemer,
-    //         checking_account_script,
-    //     )
-    //     .with_script_init(
-    //         new_checking_account_datum,
-    //         new_account_value,
-    //         checking_account_address,
-    //     );
-    // Ok(actions)
+    let checking_account_address = validator
+        .address(0)
+        .map_err(SCLogicError::ValidatorScript)?;
+    let checking_account_output = ledger_client
+        .all_outputs_at_address(&checking_account_address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .into_iter()
+        .find(|o| o.id() == &checking_account_output_id)
+        .ok_or(CheckingAccountError::OutputNotFound(
+            checking_account_output_id.clone(),
+        ))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    let new_allow_pull_datum = allow_pull_output
+        .datum()
+        .ok_or(CheckingAccountError::OutputNotFound(
+            allow_pull_output_id.clone(),
+        ))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .clone();
+    let allow_pull_redeemer = ();
+    let allow_pull_script = Box::new(allow_pull_validator);
+    let allow_pull_value = Values::default();
+
+    let new_checking_account_datum = checking_account_output
+        .datum()
+        .ok_or(CheckingAccountError::OutputNotFound(
+            checking_account_output_id.clone(),
+        ))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .clone();
+    let checking_account_redeemer = ();
+    let checking_account_script = Box::new(validator);
+
+    let old_values = checking_account_output.values().to_owned();
+    let mut sub_values = Values::default();
+    sub_values.add_one_value(&PolicyId::ADA, amount);
+    let new_account_value = old_values
+        .try_subtract(&sub_values)
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+        .ok_or(CheckingAccountError::OutputNotFound(
+            checking_account_output_id.clone(),
+        ))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    let actions = TxActions::v2()
+        .with_script_redeem(allow_pull_output, allow_pull_redeemer, allow_pull_script)
+        .with_script_init(new_allow_pull_datum, allow_pull_value, allow_pull_address)
+        .with_script_redeem(
+            checking_account_output,
+            checking_account_redeemer,
+            checking_account_script,
+        )
+        .with_script_init(
+            new_checking_account_datum,
+            new_account_value,
+            checking_account_address,
+        );
+    Ok(actions)
 }

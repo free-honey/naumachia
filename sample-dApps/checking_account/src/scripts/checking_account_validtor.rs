@@ -1,7 +1,7 @@
 use crate::CheckingAccountDatums;
 use naumachia::scripts::raw_script::PlutusScriptFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
-use naumachia::scripts::raw_validator_script::{OneParamRawValidator, RawPlutusValidator};
+use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const SCRIPT_RAW: &str =
@@ -44,9 +44,6 @@ mod tests {
         let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
         let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
-        let spending_token = SpendingTokenPolicy {
-            inner: policy.clone(),
-        };
         let ctx = ContextBuilder::new(signer.clone())
             .build_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
@@ -72,9 +69,6 @@ mod tests {
         let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
         let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
-        let spending_token = SpendingTokenPolicy {
-            inner: policy.clone(),
-        };
         let ctx = ContextBuilder::new(signer.clone())
             .build_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
