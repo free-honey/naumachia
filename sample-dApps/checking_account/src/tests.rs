@@ -38,6 +38,7 @@ async fn init_creates_instance_with_correct_balance() {
 #[tokio::test]
 async fn add_puller_creates_new_datum_for_puller() {
     let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
+    let nft_id = vec![1, 2, 3, 4, 5];
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
@@ -47,6 +48,7 @@ async fn add_puller_creates_new_datum_for_puller() {
 
     let puller = Address::new("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr");
     let endpoint = CheckingAccountEndpoints::AddPuller {
+        checking_account_nft: hex::encode(&nft_id),
         puller: puller.clone(),
         amount_lovelace: 15_000_000,
         period: 1000,
@@ -55,21 +57,36 @@ async fn add_puller_creates_new_datum_for_puller() {
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     let script = FakePullerValidator;
-    let address = script.address(NETWORK).unwrap();
+    let script_address = script.address(NETWORK).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
-        .all_outputs_at_address(&address)
+        .all_outputs_at_address(&script_address)
         .await
         .unwrap();
     let script_output = outputs_at_address.pop().unwrap();
-    let value = script_output.values().get(&PolicyId::ADA).unwrap();
-    assert_eq!(value, 0);
+
+    let parameterized_spending_token_policy = spend_token_policy().unwrap();
+    let policy = parameterized_spending_token_policy
+        .apply(nft_id.into())
+        .unwrap()
+        .apply(me.into())
+        .unwrap();
+    let id = policy.id().unwrap();
+    let value = script_output
+        .values()
+        .get(&PolicyId::NativeToken(
+            id,
+            Some(SPEND_TOKEN_ASSET_NAME.to_string()),
+        ))
+        .unwrap();
+    assert_eq!(value, 1);
 }
 
 #[tokio::test]
 async fn remove_puller__removes_the_allowed_puller() {
     let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
     let start_amount = 100_000_000;
+    let nft_id = vec![1, 2, 3, 4, 5];
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
         .with_value(PolicyId::ADA, start_amount)
@@ -78,6 +95,7 @@ async fn remove_puller__removes_the_allowed_puller() {
 
     let puller = Address::new("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr");
     let add_endpoint = CheckingAccountEndpoints::AddPuller {
+        checking_account_nft: hex::encode(nft_id),
         puller: puller.clone(),
         amount_lovelace: 15_000_000,
         period: 1000,
