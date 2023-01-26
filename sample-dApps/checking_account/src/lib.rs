@@ -33,6 +33,7 @@ pub enum CheckingAccountEndpoints {
     /// Allow puller to pull amount from checking account every period,
     /// starting on the next_pull time, in milliseconds POSIX
     AddPuller {
+        checking_account_nft: String,
         puller: Address,
         amount_lovelace: u64,
         period: i64,
@@ -125,11 +126,22 @@ impl SCLogic for CheckingAccountLogic {
                 init_account(ledger_client, starting_lovelace).await
             }
             CheckingAccountEndpoints::AddPuller {
+                checking_account_nft,
                 puller,
                 amount_lovelace,
                 period,
                 next_pull,
-            } => add_puller(puller, amount_lovelace, period, next_pull).await,
+            } => {
+                add_puller(
+                    ledger_client,
+                    checking_account_nft,
+                    puller,
+                    amount_lovelace,
+                    period,
+                    next_pull,
+                )
+                .await
+            }
             CheckingAccountEndpoints::RemovePuller { output_id } => {
                 remove_puller(ledger_client, output_id).await
             }
@@ -240,25 +252,54 @@ async fn select_any_above_min<LC: LedgerClient<CheckingAccountDatums, ()>>(
     Ok(selected)
 }
 
-// TODO: Include minting puller token
-async fn add_puller(
+pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
+
+async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
+    ledger_client: &LC,
+    checking_account_nft_id: String,
     puller: Address,
     amount_lovelace: u64,
     period: i64,
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, 0);
+    let me = ledger_client
+        .signer()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
     let datum = CheckingAccountDatums::AllowedPuller {
         puller,
         amount_lovelace,
         period,
         next_pull,
     };
+    let parameterized_spending_token_policy = spend_token_policy().unwrap();
+    let nft_id_bytes = hex::decode(checking_account_nft_id).unwrap();
+    let policy = parameterized_spending_token_policy
+        .apply(nft_id_bytes.into())
+        .unwrap()
+        .apply(me.into())
+        .unwrap();
+    let id = policy.id().unwrap();
+    let boxed_policy = Box::new(policy);
+
     let address = FakePullerValidator
         .address(0)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let actions = TxActions::v2().with_script_init(datum, values, address);
+
+    let mut values = Values::default();
+    values.add_one_value(
+        &PolicyId::NativeToken(id, Some(SPEND_TOKEN_ASSET_NAME.to_string())),
+        1,
+    );
+    let actions = TxActions::v2()
+        .with_mint(
+            1,
+            Some(SPEND_TOKEN_ASSET_NAME.to_string()),
+            (),
+            boxed_policy,
+        )
+        .with_script_init(datum, values, address);
     Ok(actions)
 }
 
