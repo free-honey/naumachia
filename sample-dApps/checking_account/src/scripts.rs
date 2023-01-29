@@ -4,6 +4,7 @@ use naumachia::scripts::context::TxContext;
 use naumachia::scripts::{ScriptResult, ValidatorCode};
 
 pub mod checking_account_validtor;
+pub mod pull_validator;
 pub mod spend_token_policy;
 
 pub struct FakePullerValidator;

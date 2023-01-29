@@ -1,17 +1,18 @@
-use crate::scripts::checking_account_validtor::checking_account_validator;
-use crate::scripts::spend_token_policy::spend_token_policy;
-use crate::scripts::FakePullerValidator;
+use crate::scripts::{
+    checking_account_validtor::checking_account_validator, spend_token_policy::spend_token_policy,
+    FakePullerValidator,
+};
 use async_trait::async_trait;
-use nau_scripts::one_shot;
-use nau_scripts::one_shot::OutputReference;
-use naumachia::output::{Output, OutputId};
-use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
-use naumachia::scripts::{MintingPolicy, ScriptError};
+use nau_scripts::{one_shot, one_shot::OutputReference};
 use naumachia::{
     address::{Address, PolicyId},
     ledger_client::LedgerClient,
     logic::{SCLogic, SCLogicError, SCLogicResult},
-    scripts::ValidatorCode,
+    output::{Output, OutputId},
+    scripts::{
+        raw_validator_script::plutus_data::{Constr, PlutusData},
+        MintingPolicy, ScriptError, ValidatorCode,
+    },
     transaction::TxActions,
     values::Values,
 };
@@ -69,9 +70,9 @@ pub enum CheckingAccountDatums {
         spend_token_policy: String,
     },
     AllowedPuller {
-        puller: Address,
-        amount_lovelace: u64,
-        period: i64,
+        // puller: Address,
+        // amount_lovelace: u64,
+        // period: i64,
         next_pull: i64,
     },
 }
@@ -248,7 +249,6 @@ async fn select_any_above_min<LC: LedgerClient<CheckingAccountDatums, ()>>(
             CheckingAccountError::InputNotFound,
         )))?
         .to_owned();
-    println!("input id: {:?}", selected.id());
     Ok(selected)
 }
 
@@ -268,9 +268,9 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let datum = CheckingAccountDatums::AllowedPuller {
-        puller,
-        amount_lovelace,
-        period,
+        // puller,
+        // amount_lovelace,
+        // period,
         next_pull,
     };
     let parameterized_spending_token_policy = spend_token_policy().unwrap();
