@@ -1,12 +1,25 @@
 use aiken/transaction.{ScriptContext}
+use aiken/interval.{IntervalBoundType, Finite}
 
-type Datum {
+pub type Datum {
     next_pull: Int,
 }
 
-pub fn spend(_datum, _redeemer, ctx: ScriptContext) -> Bool {
+fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
+    let next_pull = datum.next_pull
+    let is_inclusive = ctx.transaction.validity_range.lower_bound.is_inclusive
+    when ctx.transaction.validity_range.lower_bound.bound_type is {
+        Finite(lower) -> {
+            if is_inclusive { next_pull <= lower } else { next_pull < lower }
+        }
+        _ -> False
+    }
+}
+
+pub fn spend(datum: Datum, _redeemer, ctx: ScriptContext) -> Bool {
     // This Script
     // 1. Check that it's past date
+    past_next_pull_date(datum, ctx) &&
     // 2. Check taht new datum is made
     //    a. Datum has updated date (old_date + period)
     //    b. Everything else matches

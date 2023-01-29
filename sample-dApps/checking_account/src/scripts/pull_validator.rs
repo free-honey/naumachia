@@ -14,10 +14,6 @@ pub fn spend_token_policy() -> ScriptResult<RawPlutusValidator<CheckingAccountDa
     Ok(raw_script_validator)
 }
 
-pub struct Datum {
-    next_pull: u64,
-}
-
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
@@ -35,7 +31,45 @@ mod tests {
             .with_range(Some((11, true)), None)
             .build();
 
-        let owner = Address::new("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs");
+        let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
+
+        let _eval = script.execute(datum, (), ctx).unwrap();
+    }
+
+    #[test]
+    fn execute__before_next_pull_date_fails() {
+        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+        let script = spend_token_policy().unwrap();
+        let ctx = ContextBuilder::new(signer.clone())
+            .with_range(Some((8, true)), None)
+            .build();
+
+        let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
+
+        let _eval = script.execute(datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
+    fn execute__same_date_not_inclusive_fails() {
+        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+        let script = spend_token_policy().unwrap();
+        let ctx = ContextBuilder::new(signer.clone())
+            .with_range(Some((10, false)), None)
+            .build();
+
+        let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
+
+        let _eval = script.execute(datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
+    fn execute__same_date_inclusive_succeeds() {
+        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+        let script = spend_token_policy().unwrap();
+        let ctx = ContextBuilder::new(signer.clone())
+            .with_range(Some((10, true)), None)
+            .build();
+
         let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
 
         let _eval = script.execute(datum, (), ctx).unwrap();

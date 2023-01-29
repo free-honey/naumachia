@@ -93,7 +93,14 @@ impl From<CheckingAccountDatums> for PlutusData {
                     fields: vec![owner_data, policy_data],
                 })
             }
-            CheckingAccountDatums::AllowedPuller { .. } => PlutusData::BoundedBytes(vec![]),
+            CheckingAccountDatums::AllowedPuller { next_pull } => {
+                let next_pull = PlutusData::BigInt(next_pull.into());
+                PlutusData::Constr(Constr {
+                    tag: 121,
+                    any_constructor: None,
+                    fields: vec![next_pull],
+                })
+            }
         }
     }
 }
@@ -257,9 +264,9 @@ pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
 async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     checking_account_nft_id: String,
-    puller: Address,
-    amount_lovelace: u64,
-    period: i64,
+    _puller: Address,
+    _amount_lovelace: u64,
+    _period: i64,
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let me = ledger_client
