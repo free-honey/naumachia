@@ -4,7 +4,7 @@ use crate::{
     output::Output,
     transaction::TxId,
     trireme_ledger_client::raw_secret_phrase::RawSecretPhraseKeys,
-    Address, UnbuiltTransaction,
+    UnbuiltTransaction,
 };
 
 use crate::trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey;
@@ -14,6 +14,7 @@ use cml_client::{
     blockfrost_ledger::BlockFrostLedger, plutus_data_interop::PlutusDataInterop, CMLLedgerCLient,
 };
 use dirs::home_dir;
+use pallas_addresses::Address;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
 use std::fmt::Debug;
 use std::{marker::PhantomData, path::PathBuf};

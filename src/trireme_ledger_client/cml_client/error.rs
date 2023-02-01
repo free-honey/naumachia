@@ -1,5 +1,5 @@
 use crate::ledger_client::LedgerClientError;
-use crate::Address;
+use pallas_addresses::Address;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

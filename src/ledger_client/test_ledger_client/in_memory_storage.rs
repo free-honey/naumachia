@@ -2,7 +2,7 @@ use crate::ledger_client::test_ledger_client::{TestLCError, TestLedgerStorage};
 use crate::ledger_client::LedgerClientError::FailedToIssueTx;
 use crate::ledger_client::{LedgerClientError, LedgerClientResult};
 use crate::output::Output;
-use crate::Address;
+use pallas_addresses::Address;
 use std::sync::{Arc, Mutex};
 
 type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;

@@ -1,9 +1,8 @@
-use crate::address::shelley_address::{ShelleyDelegationPart, ShelleyPaymentPart};
 use crate::scripts::context::{
     CtxDatum, CtxOutput, CtxValue, Input, PubKey, TxContext, ValidRange,
 };
 use crate::scripts::ScriptError;
-use crate::Address;
+use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -156,8 +155,8 @@ impl From<Address> for PlutusData {
         // PlutusData::BoundedBytes(value.bytes().unwrap().to_vec()) // TODO: unwrap()
         match value {
             Address::Shelley(shelley_address) => {
-                let payment_part = shelley_address.shelley_payment_part;
-                let stake_part = shelley_address.shelley_delegation_part;
+                let payment_part = shelley_address.payment();
+                let stake_part = shelley_address.delegation();
 
                 let payment_part_plutus_data = match payment_part {
                     ShelleyPaymentPart::Key(payment_keyhash) => {

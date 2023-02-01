@@ -16,7 +16,7 @@ use crate::{
         },
         plutus_data_interop::PlutusDataInterop,
     },
-    Address, UnbuiltTransaction,
+    UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::{
@@ -38,6 +38,7 @@ use cardano_multiplatform_lib::{
     TransactionInput, TransactionOutput,
 };
 use error::*;
+use pallas_addresses::Address;
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, ops::Deref};
 
 pub mod blockfrost_ledger;
@@ -566,7 +567,8 @@ where
             .to_bech32(None)
             .map_err(|e| CMLLCError::JsError(e.to_string()))
             .map_err(|e| LedgerClientError::BaseAddress(Box::new(e)))?;
-        let signer_addr = Address::Base(addr_string);
+        let signer_addr = Address::from_bech32(&addr_string)
+            .map_err(|e| LedgerClientError::BaseAddress(Box::new(e)))?;
         Ok(signer_addr)
     }
 
@@ -575,17 +577,12 @@ where
         address: &Address,
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        let addr_string = match address {
-            Address::Base(addr_string) => addr_string,
-            Address::Script(addr_string) => addr_string,
-            Address::Raw(_) => unimplemented!("Doesn't make sense here"),
-            Address::Shelley(_) => {
-                todo!()
-            }
-        };
+        let addr_string = address
+            .to_bech32()
+            .map_err(|e| LedgerClientError::BadAddress(Box::new(e)))?;
         let cml_addr = self
             .keys
-            .addr_from_bech_32(addr_string)
+            .addr_from_bech_32(&addr_string)
             .await
             .map_err(as_failed_to_retrieve_by_address(address))?;
 
@@ -607,17 +604,10 @@ where
         &self,
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
-        let addr_string = match address {
-            Address::Base(addr_string) => addr_string,
-            Address::Script(addr_string) => addr_string,
-            Address::Raw(_) => unimplemented!("Doesn't make sense here"),
-            Address::Shelley(_) => {
-                todo!()
-            }
-        };
+        let addr_string = address.to_bech32().expect("Already Validated");
         let cml_addr = self
             .keys
-            .addr_from_bech_32(addr_string)
+            .addr_from_bech_32(&addr_string)
             .await
             .map_err(as_failed_to_retrieve_by_address(address))?;
 

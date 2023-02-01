@@ -1,7 +1,8 @@
 use crate::output::Output;
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::values::Values;
-use crate::{Address, PolicyId};
+use crate::PolicyId;
+use pallas_addresses::Address;
 use std::collections::HashMap;
 
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
@@ -107,7 +108,7 @@ pub struct ContextBuilder {
 impl ContextBuilder {
     pub fn new(signer: Address) -> Self {
         // TODO: This is completely wrong, pubkey can't be derived from an address
-        let signer = PubKey::new(&signer.bytes().unwrap());
+        let signer = PubKey::new(&signer.to_vec());
         ContextBuilder {
             signer,
             range: None,
@@ -150,7 +151,7 @@ impl ContextBuilder {
         let id = input.id();
         let transaction_id = id.tx_hash().to_vec();
         let output_index = id.index();
-        let address = input.owner().bytes().unwrap();
+        let address = input.owner().to_vec();
         let value = CtxValue::from(input.values().to_owned());
         let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
         let datum = CtxDatum::from(maybe_datum);
@@ -182,7 +183,7 @@ impl ContextBuilder {
     }
 
     pub fn add_specific_output<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
-        let address = input.owner().bytes().unwrap();
+        let address = input.owner().to_vec();
         let value = CtxValue::from(input.values().to_owned());
         let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
         let datum = CtxDatum::from(maybe_datum);
@@ -197,7 +198,7 @@ impl ContextBuilder {
     }
 
     pub fn add_signatory(mut self, signer: &Address) -> Self {
-        let pubkey = PubKey::new(&signer.bytes().unwrap());
+        let pubkey = PubKey::new(&signer.to_vec());
         self.extra_signatories.push(pubkey);
         self
     }

@@ -9,7 +9,6 @@ use crate::{
         ScriptError, ScriptResult, ValidatorCode,
     },
     transaction::TransactionVersion,
-    Address,
 };
 use cardano_multiplatform_lib::{
     address::{EnterpriseAddress, StakeCredential},
@@ -18,6 +17,7 @@ use cardano_multiplatform_lib::{
 use minicbor::{Decoder, Encoder};
 
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
+use pallas_addresses::Address;
 use std::marker::PhantomData;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
@@ -248,7 +248,8 @@ where
         let script_address_str = cml_script_address
             .to_bech32(None)
             .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?;
-        let address = Address::Script(script_address_str);
+        let address = Address::from_bech32(&script_address_str)
+            .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?;
         Ok(address)
     }
 
