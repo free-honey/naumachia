@@ -1,4 +1,4 @@
-use crate::scripts::context::{CtxDatum, CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::context::{CtxDatum, CtxOutput, CtxValue, Input, TxContext, ValidRange};
 use crate::scripts::ScriptError;
 use crate::Address;
 use std::collections::BTreeMap;
@@ -76,7 +76,7 @@ impl From<TxContext> for PlutusData {
     fn from(ctx: TxContext) -> Self {
         let inputs = PlutusData::Array(ctx.inputs.into_iter().map(Into::into).collect());
         let reference_inputs = PlutusData::Array(vec![]);
-        let outputs = PlutusData::Array(vec![]);
+        let outputs = PlutusData::Array(ctx.outputs.into_iter().map(Into::into).collect());
         let fee = PlutusData::Map(BTreeMap::from([(
             PlutusData::BoundedBytes(Vec::new()),
             PlutusData::Map(BTreeMap::from([(
@@ -94,9 +94,16 @@ impl From<TxContext> for PlutusData {
         let dcert = PlutusData::Array(vec![]);
         let wdrl = PlutusData::Map(BTreeMap::new());
         let valid_range = ctx.range.into();
-        let signatories = PlutusData::Array(vec![ctx.signer.into()]);
+        let mut signers: Vec<_> = ctx.extra_signatories.into_iter().map(Into::into).collect();
+        signers.push(ctx.signer.into());
+        let signatories = PlutusData::Array(signers);
         let redeemers = PlutusData::Map(BTreeMap::new());
-        let data = PlutusData::Map(BTreeMap::new());
+        let data = PlutusData::Map(
+            ctx.datums
+                .into_iter()
+                .map(|(hash, data)| (PlutusData::BoundedBytes(hash), data))
+                .collect(),
+        );
         let id = PlutusData::Constr(Constr {
             tag: 121,
             any_constructor: None,
@@ -285,14 +292,6 @@ impl From<CtxOutputReference> for PlutusData {
             fields: vec![transaction_id, output_index],
         })
     }
-}
-
-// TODO: Move into `Input`
-struct CtxOutput {
-    address: Vec<u8>,
-    value: CtxValue,
-    datum: CtxDatum,
-    reference_script: Option<Vec<u8>>,
 }
 
 impl From<CtxOutput> for PlutusData {
