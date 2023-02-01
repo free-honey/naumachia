@@ -1,11 +1,11 @@
 use super::*;
-use naumachia::address::Address;
 use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
+use naumachia::Address;
 
 #[tokio::test]
 async fn lock_and_claim() {
-    let me = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+    let me = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)

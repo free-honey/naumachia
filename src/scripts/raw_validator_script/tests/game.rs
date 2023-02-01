@@ -53,7 +53,7 @@ fn execute_game_passes() {
 
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(word);
-    let signer = Address::new("placeholder");
+    let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
     let ctx = ContextBuilder::new(signer).build();
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_ok());
@@ -73,7 +73,7 @@ fn execute_game_fails() {
 
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(bad_guess);
-    let signer = Address::new("placeholder");
+    let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
     let ctx = ContextBuilder::new(signer).build();
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_err()); // TODO: Make more specific

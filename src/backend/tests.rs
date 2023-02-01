@@ -16,7 +16,8 @@ prop_compose! {
     fn arb_address()(
         addr: String
     ) -> Address {
-        Address::new(&addr)
+        todo!();
+        // Address::new(&addr)
     }
 }
 

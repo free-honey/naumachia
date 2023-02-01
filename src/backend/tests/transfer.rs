@@ -15,8 +15,8 @@ prop_compose! {
         their_utxo_count: u8,
         decoys in prop::collection::vec(arb_policy_id(), 0..10),
     ) -> (Address, Address, u64, Backend<(),(), TestLedgerClient<(),(), InMemoryStorage<()>>>, Vec<PolicyId>) {
-        let signer = Address::new("alice");
-        let recipient = Address::new("bob");
+        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+        let recipient = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
         let mut total: u64 = 0;
         let mut builder = TestBackendsBuilder::<(), ()>::new(&signer);
         while total < min_amount as u64 {

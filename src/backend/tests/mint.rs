@@ -11,7 +11,7 @@ const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870
 
 impl<R> MintingPolicy<R> for AliceCanMintPolicy {
     fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<()> {
-        if ctx.signer.bytes() == Address::new(ALICE).bytes().unwrap() {
+        if ctx.signer.bytes() == Address::from_bech32(ALICE).unwrap().to_vec() {
             Ok(())
         } else {
             Err(ScriptError::FailedToExecute(
@@ -31,7 +31,7 @@ impl<R> MintingPolicy<R> for AliceCanMintPolicy {
 
 #[tokio::test]
 async fn mint__alice_can_mint() {
-    let signer = Address::new(ALICE);
+    let signer = Address::from_bech32(ALICE).unwrap();
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build_in_memory();
     let amount = 100;
 

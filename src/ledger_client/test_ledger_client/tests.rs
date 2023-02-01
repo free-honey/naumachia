@@ -13,10 +13,11 @@ use crate::{
 };
 
 const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
+const BOB: &str = "addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua";
 
 #[tokio::test]
 async fn outputs_at_address() {
-    let signer = Address::new(ALICE);
+    let signer = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let output = starting_output::<()>(&signer, starting_amount);
     let outputs = vec![(signer.clone(), output)];
@@ -32,7 +33,7 @@ async fn outputs_at_address() {
 
 #[tokio::test]
 async fn balance_at_address() {
-    let signer = Address::new(ALICE);
+    let signer = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let output = starting_output::<()>(&signer, starting_amount);
     let outputs = vec![(signer.clone(), output)];
@@ -48,7 +49,7 @@ async fn balance_at_address() {
 
 #[tokio::test]
 async fn issue_transfer() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let transfer_amount = 3_000_000;
     let output = starting_output::<()>(&sender, starting_amount);
@@ -58,7 +59,7 @@ async fn issue_transfer() {
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, transfer_amount);
-    let recipient = Address::new("bob");
+    let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V2,
@@ -95,7 +96,7 @@ async fn issue_transfer() {
 
 #[tokio::test]
 async fn errors_if_spending_more_than_you_own() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let transfer_amount = 3_000_000;
     let outputs = vec![];
     let record: TestLedgerClient<(), (), _> =
@@ -103,7 +104,7 @@ async fn errors_if_spending_more_than_you_own() {
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, transfer_amount);
-    let recipient = Address::new("bob");
+    let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V2,
@@ -120,7 +121,7 @@ async fn errors_if_spending_more_than_you_own() {
 
 #[tokio::test]
 async fn cannot_transfer_before_valid_range() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let transfer_amount = 3_000_000;
 
@@ -135,7 +136,7 @@ async fn cannot_transfer_before_valid_range() {
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, transfer_amount);
-    let recipient = Address::new("bob");
+    let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V1,
@@ -152,7 +153,7 @@ async fn cannot_transfer_before_valid_range() {
 
 #[tokio::test]
 async fn cannot_transfer_after_valid_range() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let transfer_amount = 3_000_000;
 
@@ -167,7 +168,7 @@ async fn cannot_transfer_after_valid_range() {
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::ADA, transfer_amount);
-    let recipient = Address::new("bob");
+    let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V2,
@@ -191,9 +192,10 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {
-        Ok(Address::new(
-            "addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu",
-        ))
+        Ok(
+            Address::from_bech32("addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu")
+                .unwrap(),
+        )
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -203,7 +205,7 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
 
 #[tokio::test]
 async fn redeeming_datum() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
@@ -283,7 +285,10 @@ impl ValidatorCode<(), ()> for AlwaysFailsFakeValidator {
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {
-        Ok(Address::new("script"))
+        Ok(
+            Address::from_bech32("addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu")
+                .unwrap(),
+        )
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -293,7 +298,7 @@ impl ValidatorCode<(), ()> for AlwaysFailsFakeValidator {
 
 #[tokio::test]
 async fn failing_script_will_not_redeem() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
@@ -354,7 +359,7 @@ async fn failing_script_will_not_redeem() {
 
 #[tokio::test]
 async fn cannot_redeem_datum_twice() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
@@ -435,7 +440,7 @@ impl MintingPolicy<()> for AlwaysTruePolicy {
 
 #[tokio::test]
 async fn mint_always_true() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let minting_amount = 3_000_000;
 
@@ -483,7 +488,7 @@ impl MintingPolicy<()> for AlwaysFailsPolicy {
 
 #[tokio::test]
 async fn mint_always_fails_errors() {
-    let sender = Address::new(ALICE);
+    let sender = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let minting_amount = 3_000_000;
 
@@ -541,7 +546,7 @@ impl MintingPolicy<()> for SpendsNFTPolicy {
 
 #[tokio::test]
 async fn spends_specific_script_value() {
-    let minter = Address::new(ALICE);
+    let minter = Address::from_bech32(ALICE).unwrap();
     let starting_amount = 10_000_000;
     let minting_amount = 3_000_000;
 

@@ -186,7 +186,7 @@ mod tests {
 
     #[tokio::test]
     async fn outputs_at_address() {
-        let signer = Address::new("alice");
+        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
         let storage = LocalPersistedStorage::<()>::init(tmp_dir, signer.clone(), starting_amount);
@@ -200,7 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn current_time() {
-        let signer = Address::new("alice");
+        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
         let mut storage =

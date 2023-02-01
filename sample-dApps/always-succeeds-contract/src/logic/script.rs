@@ -23,15 +23,15 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<(), ()>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::address::Address;
     use naumachia::scripts::context::ContextBuilder;
     use naumachia::scripts::ValidatorCode;
+    use naumachia::Address;
 
     #[test]
     fn test() {
         let script = get_script().unwrap();
 
-        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
+        let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
 
         let ctx = ContextBuilder::new(owner).build();
         script.execute((), (), ctx).unwrap();
