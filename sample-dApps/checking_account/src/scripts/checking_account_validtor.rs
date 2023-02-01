@@ -1,11 +1,11 @@
 use crate::CheckingAccountDatums;
-use naumachia::scripts::raw_script::PlutusScriptFile;
+use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
-const SCRIPT_RAW: &str =
-    include_str!("../../checking/assets/checking_account_validator/spend/payment_script.json");
+const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
+const VALIDATOR_NAME: &str = "checking_account_validator";
 
 pub struct SpendingTokenPolicy {
     inner: Vec<u8>,
@@ -24,9 +24,16 @@ impl From<SpendingTokenPolicy> for PlutusData {
 }
 
 pub fn checking_account_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums, ()>> {
-    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+    let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
+    let validator_blueprint =
+        script_file
+            .get_validator(VALIDATOR_NAME)
+            .ok_or(ScriptError::FailedToConstruct(format!(
+                "Validator not listed in Blueprint: {:?}",
+                VALIDATOR_NAME
+            )))?;
+    let raw_script_validator = RawPlutusValidator::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }

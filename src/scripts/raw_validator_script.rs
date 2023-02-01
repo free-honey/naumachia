@@ -1,6 +1,14 @@
 use crate::{
-    scripts::as_failed_to_execute,
-    scripts::{ScriptResult, ValidatorCode},
+    scripts::{
+        as_failed_to_execute,
+        context::TxContext,
+        raw_script::{
+            PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult, ValidatorBlueprint,
+        },
+        raw_validator_script::plutus_data::{BigInt, Constr, PlutusData},
+        ScriptError, ScriptResult, ValidatorCode,
+    },
+    transaction::TransactionVersion,
     Address,
 };
 use cardano_multiplatform_lib::{
@@ -9,16 +17,11 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::{Decoder, Encoder};
 
-use crate::scripts::context::TxContext;
-use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
-use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
-use crate::scripts::ScriptError;
-use crate::transaction::TransactionVersion;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use std::marker::PhantomData;
-use uplc::machine::cost_model::ExBudget;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
+    machine::cost_model::ExBudget,
     BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
 };
 
@@ -67,6 +70,18 @@ impl<D, R> RawPlutusValidator<D, R> {
         };
         Ok(v2_policy)
     }
+
+    pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(blueprint.compiled_code())
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = RawPlutusValidator {
+            version: TransactionVersion::V2,
+            cbor,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_policy)
+    }
 }
 
 pub struct OneParamRawValidator<One, Datum, Redeemer> {
@@ -88,6 +103,19 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
         let v2_val = OneParamRawValidator {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
+            _one: Default::default(),
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_val)
+    }
+
+    pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(blueprint.compiled_code())
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_val = OneParamRawValidator {
+            version: TransactionVersion::V2,
+            cbor,
             _one: Default::default(),
             _datum: Default::default(),
             _redeemer: Default::default(),

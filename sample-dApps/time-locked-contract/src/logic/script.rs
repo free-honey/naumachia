@@ -1,10 +1,10 @@
-use naumachia::scripts::raw_script::PlutusScriptFile;
+use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
 use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
-const SCRIPT_RAW: &str =
-    include_str!("../../time_locked/assets/time_lock/spend/payment_script.json");
+const BLUEPRINT: &str = include_str!("../../time_locked/plutus.json");
+const VALIDATOR_NAME: &str = "time_lock";
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Timestamp {
@@ -60,9 +60,16 @@ impl TryFrom<PlutusData> for Timestamp {
 }
 
 pub fn get_script() -> ScriptResult<RawPlutusValidator<i64, ()>> {
-    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+    let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
+    let validator_blueprint =
+        script_file
+            .get_validator(VALIDATOR_NAME)
+            .ok_or(ScriptError::FailedToConstruct(format!(
+                "Validator not listed in Blueprint: {:?}",
+                VALIDATOR_NAME
+            )))?;
+    let raw_script_validator = RawPlutusValidator::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }

@@ -20,6 +20,66 @@ impl PlutusScriptFile {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlueprintFile {
+    preamble: Preamble,
+    validators: Vec<ValidatorBlueprint>,
+}
+
+impl BlueprintFile {
+    pub fn get_validator(&self, title: &str) -> Option<ValidatorBlueprint> {
+        self.validators.iter().find(|v| v.title == title).cloned()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Preamble {
+    title: String,
+    description: String,
+    version: String,
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ValidatorBlueprint {
+    title: String,
+    purpose: String,
+    datum: serde_json::Value,    // TODO: what is this type actually?
+    redeemer: serde_json::Value, // TODO: what is this type actually?
+    compiledCode: String,
+    hash: String,
+}
+
+impl ValidatorBlueprint {
+    pub fn compiled_code(&self) -> String {
+        self.compiledCode.clone()
+    }
+}
+
+// #[allow(non_snake_case)]
+// #[derive(Serialize, Deserialize, Debug, Clone)]
+// pub struct DatumBlueprint {
+//     title: String,
+//     description: String,
+//     anyOf: Vec<VariantBlueprint>,
+// }
+//
+// #[allow(non_snake_case)]
+// #[derive(Serialize, Deserialize, Debug, Clone)]
+// pub struct RedeemerBlueprint {
+//     title: String,
+//     description: String,
+//     anyOf: Vec<VariantBlueprint>,
+// }
+//
+// #[allow(non_snake_case)]
+// #[derive(Serialize, Deserialize, Debug, Clone)]
+// pub struct VariantBlueprint {
+//     dataType: String,
+//     index: u32,
+//     fields: serde_json::Value, // TODO: what is this type actually?
+// }
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum RawPlutusScriptError {
     #[error("Error in Aiken Apply: {0:?}")]
