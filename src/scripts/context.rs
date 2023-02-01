@@ -12,6 +12,9 @@ pub struct TxContext {
     pub signer: Address,
     pub range: ValidRange,
     pub inputs: Vec<Input>,
+    pub outputs: Vec<CtxOutput>,
+    pub extra_signatories: Vec<Address>,
+    pub datums: Vec<(Vec<u8>, PlutusData)>,
 }
 
 #[derive(Clone, Debug)]
@@ -205,6 +208,9 @@ impl ContextBuilder {
             signer: self.signer.clone(),
             range,
             inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            extra_signatories: self.extra_signatories.clone(),
+            datums: self.datums.clone(),
         }
     }
 }

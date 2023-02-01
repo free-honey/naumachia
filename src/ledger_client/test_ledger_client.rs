@@ -440,10 +440,15 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     }
 
     let range = ValidRange { lower, upper };
+
+    // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
     let ctx = TxContext {
         signer: signer.clone(),
         range,
         inputs,
+        outputs: vec![],
+        extra_signatories: vec![],
+        datums: vec![],
     };
     Ok(ctx)
 }
