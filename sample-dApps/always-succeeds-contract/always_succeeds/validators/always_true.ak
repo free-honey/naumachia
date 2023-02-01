@@ -1,3 +1,3 @@
-pub fn spend(_datum, _redeemer, _ctx) -> Bool {
+pub fn spend(_datum: Void, _redeemer: Void, _ctx) -> Bool {
     True
 }
