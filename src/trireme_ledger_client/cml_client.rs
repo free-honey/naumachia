@@ -579,6 +579,9 @@ where
             Address::Base(addr_string) => addr_string,
             Address::Script(addr_string) => addr_string,
             Address::Raw(_) => unimplemented!("Doesn't make sense here"),
+            Address::Shelley(_) => {
+                todo!()
+            }
         };
         let cml_addr = self
             .keys
@@ -608,6 +611,9 @@ where
             Address::Base(addr_string) => addr_string,
             Address::Script(addr_string) => addr_string,
             Address::Raw(_) => unimplemented!("Doesn't make sense here"),
+            Address::Shelley(_) => {
+                todo!()
+            }
         };
         let cml_addr = self
             .keys

@@ -1,4 +1,6 @@
-use crate::scripts::context::{CtxDatum, CtxOutput, CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::context::{
+    CtxDatum, CtxOutput, CtxValue, Input, PubKey, TxContext, ValidRange,
+};
 use crate::scripts::ScriptError;
 use crate::Address;
 use std::collections::BTreeMap;
@@ -138,6 +140,12 @@ impl From<TxContext> for PlutusData {
             any_constructor: None,
             fields: vec![tx_info, purpose],
         })
+    }
+}
+
+impl From<PubKey> for PlutusData {
+    fn from(value: PubKey) -> Self {
+        PlutusData::BoundedBytes(value.bytes())
     }
 }
 

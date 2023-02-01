@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::output::UnbuiltOutput;
-use crate::scripts::context::{CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::context::{CtxValue, Input, PubKey, TxContext, ValidRange};
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     backend::Backend,
@@ -413,7 +413,7 @@ fn build_outputs<Datum>(
 
 fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     tx: &UnbuiltTransaction<Datum, Redeemer>,
-    signer: &Address,
+    signer_address: &Address,
 ) -> LedgerClientResult<TxContext> {
     let lower = tx.valid_range.0.map(|n| (n, true));
     let upper = tx.valid_range.1.map(|n| (n, false));
@@ -439,11 +439,15 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         inputs.push(input);
     }
 
+    let signer_bytes = signer_address
+        .bytes()
+        .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+    let signer = PubKey::new(&signer_bytes);
     let range = ValidRange { lower, upper };
 
     // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
     let ctx = TxContext {
-        signer: signer.clone(),
+        signer,
         range,
         inputs,
         outputs: vec![],

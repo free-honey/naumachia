@@ -1,6 +1,9 @@
+use crate::address::shelley_address::ShelleyAddress;
 use crate::error::*;
 use cardano_multiplatform_lib::address::Address as CMLAddress;
 use serde::{Deserialize, Serialize};
+
+pub(crate) mod shelley_address;
 
 // TODO: Continue to hone this into a good API. I tried to make the Address generic, but it
 //   made for bad ergonomics. Instead, I want to make this as stable as possible.
@@ -9,6 +12,7 @@ use serde::{Deserialize, Serialize};
 //   https://github.com/MitchTurner/naumachia/issues/88
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Address {
+    Shelley(ShelleyAddress),
     Base(String),
     Script(String),
     Raw(String), // This is a placeholder for now to make tests work
@@ -28,6 +32,9 @@ impl Address {
             Address::Base(inner) => inner,
             Address::Raw(inner) => inner,
             Address::Script(inner) => inner,
+            Address::Shelley(_) => {
+                todo!()
+            }
         }
     }
 
