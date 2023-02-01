@@ -12,6 +12,9 @@ pub struct TxContext {
     pub signer: Address,
     pub range: ValidRange,
     pub inputs: Vec<Input>,
+    pub outputs: Vec<CtxOutput>,
+    pub extra_signatories: Vec<Address>,
+    pub datums: Vec<(Vec<u8>, PlutusData)>,
 }
 
 #[derive(Clone, Debug)]
@@ -24,6 +27,14 @@ pub struct ValidRange {
 pub struct Input {
     pub transaction_id: Vec<u8>,
     pub output_index: u64,
+    pub address: Vec<u8>,
+    pub value: CtxValue,
+    pub datum: CtxDatum,
+    pub reference_script: Option<Vec<u8>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CtxOutput {
     pub address: Vec<u8>,
     pub value: CtxValue,
     pub datum: CtxDatum,
@@ -75,6 +86,9 @@ pub struct ContextBuilder {
     signer: Address,
     range: Option<ValidRange>,
     inputs: Vec<Input>,
+    outputs: Vec<CtxOutput>,
+    extra_signatories: Vec<Address>,
+    datums: Vec<(Vec<u8>, PlutusData)>,
 }
 
 impl ContextBuilder {
@@ -83,6 +97,9 @@ impl ContextBuilder {
             signer,
             range: None,
             inputs: vec![],
+            outputs: vec![],
+            extra_signatories: vec![],
+            datums: vec![],
         }
     }
 
@@ -134,6 +151,46 @@ impl ContextBuilder {
         self
     }
 
+    pub fn build_output(self, address: &[u8]) -> CtxOutputBuilder {
+        CtxOutputBuilder {
+            outer: self,
+            address: address.to_vec(),
+            value: Default::default(),
+            datum: CtxDatum::NoDatum,
+            reference_script: None,
+        }
+    }
+
+    fn add_output(mut self, output: CtxOutput) -> ContextBuilder {
+        self.outputs.push(output);
+        self
+    }
+
+    pub fn add_specific_output<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
+        let address = input.owner().bytes().unwrap();
+        let value = CtxValue::from(input.values().to_owned());
+        let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
+        let datum = CtxDatum::from(maybe_datum);
+        let ctx_input = CtxOutput {
+            address,
+            value,
+            datum,
+            reference_script: None,
+        };
+        self.outputs.push(ctx_input);
+        self
+    }
+
+    pub fn add_signatory(mut self, signer: &Address) -> Self {
+        self.extra_signatories.push(signer.clone());
+        self
+    }
+
+    pub fn add_datum<Datum: Into<PlutusData>>(mut self, datum_hash: &[u8], datum: Datum) -> Self {
+        self.datums.push((datum_hash.to_vec(), datum.into()));
+        self
+    }
+
     pub fn build(&self) -> TxContext {
         let range = if let Some(range) = self.range.clone() {
             range
@@ -147,6 +204,9 @@ impl ContextBuilder {
             signer: self.signer.clone(),
             range,
             inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            extra_signatories: self.extra_signatories.clone(),
+            datums: self.datums.clone(),
         }
     }
 }
@@ -188,6 +248,42 @@ impl InputBuilder {
             reference_script: self.reference_script,
         };
         self.outer.add_input(input)
+    }
+}
+
+pub struct CtxOutputBuilder {
+    outer: ContextBuilder,
+    address: Vec<u8>,
+    value: HashMap<String, HashMap<String, u64>>,
+    datum: CtxDatum,
+    reference_script: Option<Vec<u8>>,
+}
+
+impl CtxOutputBuilder {
+    pub fn with_value(mut self, policy_id: &str, asset_name: &str, amt: u64) -> Self {
+        add_to_nested(&mut self.value, policy_id, asset_name, amt);
+        self
+    }
+
+    pub fn with_inline_datum(mut self, plutus_data: PlutusData) -> Self {
+        self.datum = CtxDatum::InlineDatum(plutus_data);
+        self
+    }
+
+    pub fn with_datum_hash(mut self, datum_hash: Vec<u8>) -> Self {
+        self.datum = CtxDatum::DatumHash(datum_hash);
+        self
+    }
+
+    pub fn finish_output(self) -> ContextBuilder {
+        let value = CtxValue { inner: self.value };
+        let output = CtxOutput {
+            address: self.address,
+            value,
+            datum: self.datum,
+            reference_script: self.reference_script,
+        };
+        self.outer.add_output(output)
     }
 }
 

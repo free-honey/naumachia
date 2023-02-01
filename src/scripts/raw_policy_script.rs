@@ -1,6 +1,7 @@
-use crate::scripts::context::TxContext;
-use crate::scripts::ScriptError;
 use crate::{
+    scripts::context::TxContext,
+    scripts::raw_script::ValidatorBlueprint,
+    scripts::ScriptError,
     scripts::{
         as_failed_to_execute,
         raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult},
@@ -53,6 +54,17 @@ impl<R> RawPolicy<R> {
         };
         Ok(v2_policy)
     }
+
+    pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(blueprint.compiled_code())
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = RawPolicy {
+            version: TransactionVersion::V2,
+            cbor,
+            _redeemer: Default::default(),
+        };
+        Ok(v2_policy)
+    }
 }
 
 pub struct OneParamRawPolicy<One, Redeemer> {
@@ -73,6 +85,18 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
         let v2_val = OneParamRawPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
+            _one: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_val)
+    }
+
+    pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(blueprint.compiled_code())
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_val = OneParamRawPolicy {
+            version: TransactionVersion::V2,
+            cbor,
             _one: Default::default(),
             _redeemer: Default::default(),
         };
@@ -119,6 +143,19 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamRawPolicy<One, Two
         let v2_pol = TwoParamRawPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
+            _one: Default::default(),
+            _two: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_pol)
+    }
+
+    pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(blueprint.compiled_code())
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_pol = TwoParamRawPolicy {
+            version: TransactionVersion::V2,
+            cbor,
             _one: Default::default(),
             _two: Default::default(),
             _redeemer: Default::default(),

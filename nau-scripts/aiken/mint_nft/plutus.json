@@ -1,0 +1,60 @@
+{
+  "preamble": {
+    "title": "sample-dApps/mint_nft",
+    "description": "Aiken contracts",
+    "version": "0.1.0"
+  },
+  "validators": [
+    {
+      "title": "one_shot_nft",
+      "purpose": "mint",
+      "datum": {
+        "title": "OutputReference",
+        "description": "An `OutputReference` is a unique reference to an output on-chain. The `output_index`\n corresponds to the position in the output list of the transaction (identified by its id)\n that produced that output",
+        "anyOf": [
+          {
+            "title": "OutputReference",
+            "dataType": "constructor",
+            "index": 0,
+            "fields": [
+              {
+                "title": "transaction_id",
+                "description": "A unique transaction identifier, as the hash of a transaction body. Note that the transaction id\n isn't a direct hash of the `Transaction` as visible on-chain. Rather, they correspond to hash\n digests of transaction body as they are serialized on the network.",
+                "anyOf": [
+                  {
+                    "title": "TransactionId",
+                    "dataType": "constructor",
+                    "index": 0,
+                    "fields": [
+                      {
+                        "title": "hash",
+                        "dataType": "bytes"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "output_index",
+                "dataType": "integer"
+              }
+            ]
+          }
+        ]
+      },
+      "redeemer": {
+        "title": "Unit",
+        "description": "The nullary constructor.",
+        "anyOf": [
+          {
+            "dataType": "constructor",
+            "index": 0,
+            "fields": []
+          }
+        ]
+      },
+      "compiledCode": "58af01000032322225333573464646464646466002008006600200244464a666aae7c004528099192999ab9a300400214a2266600c00c0020086ae88008d5d0800801119baf3300330040014800001cdd6198009801198009801001a400090001119199800800a40000064446666ae68cdc38020012ba123330040043370000690011aba2001001235573c6ea800452616300100122253335573e004293099ab9b3001357420046660060066ae88008005",
+      "hash": "b5123d496f0e43cecf8058b14614d543b927577726295a6f189fa83b"
+    }
+  ]
+}

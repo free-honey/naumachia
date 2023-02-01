@@ -1,0 +1,66 @@
+{
+  "preamble": {
+    "title": "sample/checking",
+    "description": "Aiken contracts for project 'sample/checking'",
+    "version": "0.0.0"
+  },
+  "validators": [
+    {
+      "title": "checking_account_validator",
+      "purpose": "spend",
+      "datum": {
+        "title": "CheckingAccountDatum",
+        "anyOf": [
+          {
+            "title": "CheckingAccountDatum",
+            "dataType": "constructor",
+            "index": 0,
+            "fields": [
+              {
+                "title": "owner",
+                "dataType": "bytes"
+              },
+              {
+                "title": "spend_token_policy",
+                "dataType": "bytes"
+              }
+            ]
+          }
+        ]
+      },
+      "redeemer": {
+        "title": "Unit",
+        "description": "The nullary constructor.",
+        "anyOf": [
+          {
+            "dataType": "constructor",
+            "index": 0,
+            "fields": []
+          }
+        ]
+      },
+      "compiledCode": "59017201000032322225333573464646464a666ae68c8c8c8c8c8c8c8cc004030dd7198051805807240044464646600a6eb0cc034c038cc034c0380112000480000048c8cc03000400cc01cdd5998069807198069807000a40049001119b8f00100230010012223253335573e00229404c8c94ccd5cd18020010a511333006006001004357440046ae840040088c0080048c008004c00400488c94ccd55cf8008a5eb804c8c8c8c8cd5d01ba900133007007003375c6aae7400cdd59aab9e002357440046ae84004004528899198008031bae3300430050084800088c8cc010dd6198031803998031803801a40009008000919b8f00100230010012223253335573e00229404c8c94ccd5cd18020010a511333006006001004357440046eb8d5d08008011119199800800a40000064446666ae68cdc38020012ba123330040043370000690011aba2001001235573c6ea800452616300100122253335573e004293099ab9b3001357420046660060066ae88008005",
+      "hash": "2766532b368aac8b4779c9a1f19f38a247a6a4b567720abd97f05612"
+    },
+    {
+      "title": "spend_token_policy",
+      "purpose": "mint",
+      "datum": {
+        "dataType": "bytes"
+      },
+      "redeemer": {
+        "title": "Unit",
+        "description": "The nullary constructor.",
+        "anyOf": [
+          {
+            "dataType": "constructor",
+            "index": 0,
+            "fields": []
+          }
+        ]
+      },
+      "compiledCode": "58ac0100003232232232225333573464646464660026eb0cc00cc010cc00cc01001520004804001cc004004888c94ccd55cf8008a50132325333573466e3c00801052889998030030008021aba2002375c6ae8400400888c8ccc00400520000032223333573466e1c0100095d0919980200219b8000348008d5d100080091aab9e37540022930b1bae001375c0026002002444a666aae7c008526133573660026ae84008ccc00c00cd5d10010009",
+      "hash": "4f775cabb922e7f05dbb93744dff5fa6460c07202423ef5661ee3cd4"
+    }
+  ]
+}

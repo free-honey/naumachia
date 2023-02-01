@@ -1,15 +1,15 @@
+use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::{
     output::Output as NauOutput,
     scripts::{
         raw_policy_script::OneParamRawPolicy,
-        raw_script::PlutusScriptFile,
         raw_validator_script::plutus_data::{Constr, PlutusData},
         ScriptError, ScriptResult,
     },
 };
 
-const SCRIPT_RAW: &str =
-    include_str!("../aiken/mint_nft/assets/one_shot_nft/mint/payment_script.json");
+const BLUEPRINT: &str = include_str!("../aiken/mint_nft/plutus.json");
+const VALIDATOR_NAME: &str = "one_shot_nft";
 
 // pub type OutputReference {
 //   transction_id: TransactionId,
@@ -56,9 +56,16 @@ impl From<OutputReference> for PlutusData {
 }
 
 pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputReference, ()>> {
-    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+    let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = OneParamRawPolicy::new_v2(script_file)
+    let validator_blueprint =
+        script_file
+            .get_validator(VALIDATOR_NAME)
+            .ok_or(ScriptError::FailedToConstruct(format!(
+                "Validator not listed in Blueprint: {:?}",
+                VALIDATOR_NAME
+            )))?;
+    let raw_script_validator = OneParamRawPolicy::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }

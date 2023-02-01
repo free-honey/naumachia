@@ -26,7 +26,7 @@ fn ctx_contains_owner_signature(ctx: ScriptContext, owner: ByteArray) -> Bool {
     any(ctx.transaction.extra_signatories, equals_owner)
 }
 
-pub fn spend(datum: CheckingAccountDatum, _redeemer, ctx: ScriptContext) -> Bool {
+pub fn spend(datum: CheckingAccountDatum, _redeemer: Void, ctx: ScriptContext) -> Bool {
     ctx_contains_spend_token(ctx, datum.spend_token_policy)
     || ctx_contains_owner_signature(ctx, datum.owner)
 }
