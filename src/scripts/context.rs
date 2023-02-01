@@ -279,7 +279,7 @@ impl CtxOutputBuilder {
         self
     }
 
-    pub fn finish_input(self) -> ContextBuilder {
+    pub fn finish_output(self) -> ContextBuilder {
         let value = CtxValue { inner: self.value };
         let output = CtxOutput {
             address: self.address,
