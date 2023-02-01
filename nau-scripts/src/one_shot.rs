@@ -74,7 +74,7 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::output::{Output, OutputId};
+    use naumachia::output::Output;
     use naumachia::scripts::context::ContextBuilder;
     use naumachia::scripts::MintingPolicy;
     use naumachia::Address;
