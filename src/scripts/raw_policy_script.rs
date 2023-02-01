@@ -1,7 +1,7 @@
-use crate::scripts::context::TxContext;
-use crate::scripts::raw_script::ValidatorBlueprint;
-use crate::scripts::ScriptError;
 use crate::{
+    scripts::context::TxContext,
+    scripts::raw_script::ValidatorBlueprint,
+    scripts::ScriptError,
     scripts::{
         as_failed_to_execute,
         raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult},

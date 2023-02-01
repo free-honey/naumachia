@@ -186,12 +186,8 @@ impl ContextBuilder {
         self
     }
 
-    pub fn add_datum<Datum: Into<PlutusData>>(
-        mut self,
-        datum_hash: &Vec<u8>,
-        datum: Datum,
-    ) -> Self {
-        self.datums.push((datum_hash.clone(), datum.into()));
+    pub fn add_datum<Datum: Into<PlutusData>>(mut self, datum_hash: &[u8], datum: Datum) -> Self {
+        self.datums.push((datum_hash.to_vec(), datum.into()));
         self
     }
 
