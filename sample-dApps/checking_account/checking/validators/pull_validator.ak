@@ -16,6 +16,10 @@ fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
     }
 }
 
+fn only_one_spend_token(datum: Datum, ctx: ScriptContext) -> Bool {
+    True
+}
+
 pub fn spend(datum: Datum, _redeemer, ctx: ScriptContext) -> Bool {
     // This Script
     // 1. Check that it's past date
@@ -25,6 +29,7 @@ pub fn spend(datum: Datum, _redeemer, ctx: ScriptContext) -> Bool {
     //    b. Everything else matches
     // 3. Check that datum is at current address
     // 4. Check that UTxO includes spending token!
+    //  5. Only one spend token -- actually, should this be on the checking account I think
     // That Script
     // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
     // 2. Check that CA datum on new Output && matches
