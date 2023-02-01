@@ -12,9 +12,11 @@ use crate::{
     PolicyId, UnbuiltTransaction,
 };
 
+const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
+
 #[tokio::test]
 async fn outputs_at_address() {
-    let signer = Address::new("alice");
+    let signer = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let output = starting_output::<()>(&signer, starting_amount);
     let outputs = vec![(signer.clone(), output)];
@@ -30,7 +32,7 @@ async fn outputs_at_address() {
 
 #[tokio::test]
 async fn balance_at_address() {
-    let signer = Address::new("alice");
+    let signer = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let output = starting_output::<()>(&signer, starting_amount);
     let outputs = vec![(signer.clone(), output)];
@@ -46,7 +48,7 @@ async fn balance_at_address() {
 
 #[tokio::test]
 async fn issue_transfer() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let transfer_amount = 3_000_000;
     let output = starting_output::<()>(&sender, starting_amount);
@@ -93,7 +95,7 @@ async fn issue_transfer() {
 
 #[tokio::test]
 async fn errors_if_spending_more_than_you_own() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let transfer_amount = 3_000_000;
     let outputs = vec![];
     let record: TestLedgerClient<(), (), _> =
@@ -118,7 +120,7 @@ async fn errors_if_spending_more_than_you_own() {
 
 #[tokio::test]
 async fn cannot_transfer_before_valid_range() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let transfer_amount = 3_000_000;
 
@@ -150,7 +152,7 @@ async fn cannot_transfer_before_valid_range() {
 
 #[tokio::test]
 async fn cannot_transfer_after_valid_range() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let transfer_amount = 3_000_000;
 
@@ -201,7 +203,7 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
 
 #[tokio::test]
 async fn redeeming_datum() {
-    let sender = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
@@ -291,7 +293,7 @@ impl ValidatorCode<(), ()> for AlwaysFailsFakeValidator {
 
 #[tokio::test]
 async fn failing_script_will_not_redeem() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
@@ -352,7 +354,7 @@ async fn failing_script_will_not_redeem() {
 
 #[tokio::test]
 async fn cannot_redeem_datum_twice() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let locking_amount = 3_000_000;
 
@@ -433,7 +435,7 @@ impl MintingPolicy<()> for AlwaysTruePolicy {
 
 #[tokio::test]
 async fn mint_always_true() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let minting_amount = 3_000_000;
 
@@ -481,7 +483,7 @@ impl MintingPolicy<()> for AlwaysFailsPolicy {
 
 #[tokio::test]
 async fn mint_always_fails_errors() {
-    let sender = Address::new("alice");
+    let sender = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let minting_amount = 3_000_000;
 
@@ -539,7 +541,7 @@ impl MintingPolicy<()> for SpendsNFTPolicy {
 
 #[tokio::test]
 async fn spends_specific_script_value() {
-    let minter = Address::new("alice");
+    let minter = Address::new(ALICE);
     let starting_amount = 10_000_000;
     let minting_amount = 3_000_000;
 

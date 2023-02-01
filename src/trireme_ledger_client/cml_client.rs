@@ -194,7 +194,7 @@ where
             let recipient = unbuilt_output.owner();
             let recp_addr = self
                 .keys
-                .addr_from_bech_32(recipient.to_str())
+                .addr_from_bech_32(&recipient.to_string())
                 .await
                 .map_err(as_failed_to_issue_tx)?;
             let mut output = TransactionOutput::new(&recp_addr, &cml_values);
@@ -523,7 +523,7 @@ where
             let input = TransactionInput::new(&transaction_id, &index);
             let address = self
                 .keys
-                .addr_from_bech_32(specific_input.owner().to_str())
+                .addr_from_bech_32(&specific_input.owner().to_string())
                 .await
                 .map_err(|e| CMLLCError::JsError(e.to_string()))
                 .map_err(as_failed_to_issue_tx)?;

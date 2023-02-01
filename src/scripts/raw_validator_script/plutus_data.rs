@@ -4,9 +4,7 @@ use crate::scripts::context::{
 };
 use crate::scripts::ScriptError;
 use crate::Address;
-use cardano_multiplatform_lib::ledger::common::value::Int;
 use std::collections::BTreeMap;
-use uplc::machine::Value::Con;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum PlutusData {
@@ -184,7 +182,14 @@ impl From<Address> for PlutusData {
                         wrap_with_constr(0, inner)
                     }
                     ShelleyDelegationPart::Pointer(pointer) => {
-                        let inner = wrap_multiple_with_constr(1, vec![]);
+                        let inner = wrap_multiple_with_constr(
+                            1,
+                            vec![
+                                pointer.slot().into(),
+                                pointer.tx_idx().into(),
+                                pointer.cert_idx().into(),
+                            ],
+                        );
                         wrap_with_constr(0, inner)
                     }
                     ShelleyDelegationPart::Null => empty_constr(1),
