@@ -40,3 +40,17 @@ pub enum ShelleyDelegationPart {
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize, PartialOrd, Ord)]
 pub struct Pointer(u64, u64, u64);
+
+impl Pointer {
+    pub fn slot(&self) -> u64 {
+        self.0
+    }
+
+    pub fn tx_idx(&self) -> u64 {
+        self.1
+    }
+
+    pub fn cert_idx(&self) -> u64 {
+        self.2
+    }
+}

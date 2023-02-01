@@ -9,7 +9,7 @@ struct AliceCanMintPolicy;
 
 impl<R> MintingPolicy<R> for AliceCanMintPolicy {
     fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<()> {
-        if ctx.signer == Address::new("alice") {
+        if ctx.signer.bytes() == Address::new("alice").bytes().unwrap() {
             Ok(())
         } else {
             Err(ScriptError::FailedToExecute(

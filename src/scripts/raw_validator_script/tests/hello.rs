@@ -28,8 +28,8 @@ fn execute_hello_passes() {
     let script_file = hello_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
-    let datum = 50;
-    let redeemer = 49;
+    let datum: u64 = 50;
+    let redeemer: u64 = 49;
     let signer = Address::new("placeholder");
     let ctx = ContextBuilder::new(signer).build();
     script.execute(datum, redeemer, ctx).unwrap();
@@ -43,8 +43,8 @@ fn execute_hello_fails() {
     let script_file = hello_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
-    let datum = 50;
-    let redeemer = 51;
+    let datum: u64 = 50;
+    let redeemer: u64 = 51;
 
     let signer = Address::new("placeholder");
     let ctx = ContextBuilder::new(signer).build();
