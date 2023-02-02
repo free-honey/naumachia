@@ -27,7 +27,7 @@ mod tests {
 
         let script = get_policy().unwrap();
 
-        let ctx = ContextBuilder::new(owner).build_mint(&vec![]);
+        let ctx = ContextBuilder::new(owner).build_mint(&[]);
 
         let _eval = script.execute((), ctx).unwrap();
     }

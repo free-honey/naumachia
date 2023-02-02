@@ -15,7 +15,7 @@ fn execute_always_succeeds() {
 
     let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
 
-    let ctx = ContextBuilder::new(signer).build_spend(&vec![], 0);
+    let ctx = ContextBuilder::new(signer).build_spend(&[], 0);
 
     script.execute((), (), ctx).unwrap();
 }
