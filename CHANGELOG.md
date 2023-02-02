@@ -4,6 +4,8 @@
 
 ### Added
 
+**naumachia**: Use Pallas Addresses
+**naumachia**: Add Outputs, Signatories, and Datums to Context Builder
 **naumachia**: Use BF CLient that supports Preprod Network  
 **naumachia**: Add Mint and Spend script checks in test ledgers  
 **naumachia**: Upgrade Test Ledger  
