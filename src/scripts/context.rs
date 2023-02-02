@@ -10,12 +10,20 @@ use std::collections::HashMap;
 //   expose all the primitives in case people want to use them for params, datums, etc...
 #[derive(Clone, Debug)]
 pub struct TxContext {
+    pub purpose: CtxScriptPurpose,
     pub signer: PubKey,
     pub range: ValidRange,
     pub inputs: Vec<Input>,
     pub outputs: Vec<CtxOutput>,
     pub extra_signatories: Vec<PubKey>,
     pub datums: Vec<(Vec<u8>, PlutusData)>,
+}
+
+pub enum CtxScriptPurpose {
+    Mint(Vec<u8>),
+    Spend(Vec<u8>, u64),
+    WithdrawFrom,
+    Publish,
 }
 
 #[derive(Clone, Debug)]
@@ -208,7 +216,7 @@ impl ContextBuilder {
         self
     }
 
-    pub fn build(&self) -> TxContext {
+    pub fn build_spend(&self, tx_id: &[u8], index: u64) -> TxContext {
         let range = if let Some(range) = self.range.clone() {
             range
         } else {
@@ -218,6 +226,7 @@ impl ContextBuilder {
             }
         };
         TxContext {
+            purpose: CtxScriptPurpose::Spend(tx_id.to_vec(), index),
             signer: self.signer.clone(),
             range,
             inputs: self.inputs.clone(),
