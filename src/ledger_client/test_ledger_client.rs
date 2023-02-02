@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::output::UnbuiltOutput;
-use crate::scripts::context::{CtxValue, Input, PubKey, TxContext, ValidRange};
+use crate::scripts::context::{CtxScriptPurpose, CtxValue, Input, PubKey, TxContext, ValidRange};
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     backend::Backend,
@@ -416,6 +416,7 @@ fn build_outputs<Datum>(
         .collect()
 }
 
+// TODO: Allow specifying script purpose
 fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     tx: &UnbuiltTransaction<Datum, Redeemer>,
     signer_address: &Address,
@@ -444,9 +445,12 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     let signer_bytes = signer_address.to_vec();
     let signer = PubKey::new(&signer_bytes);
     let range = ValidRange { lower, upper };
+    // Placeholder
+    let purpose = CtxScriptPurpose::Spend(vec![], 0);
 
     // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
     let ctx = TxContext {
+        purpose,
         signer,
         range,
         inputs,

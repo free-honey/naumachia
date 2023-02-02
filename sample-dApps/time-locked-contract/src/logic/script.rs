@@ -89,7 +89,7 @@ mod tests {
 
         let ctx = ContextBuilder::new(owner)
             .with_range(Some((80, true)), None)
-            .build();
+            .build_spend(&vec![], 0);
 
         let datum = 69_i64;
         script.execute(datum, (), ctx).unwrap();
@@ -103,7 +103,7 @@ mod tests {
 
         let ctx = ContextBuilder::new(owner)
             .with_range(Some((10, true)), None)
-            .build();
+            .build_spend(&vec![], 0);
 
         let datum = 69_i64;
         let error = script.execute(datum, (), ctx);

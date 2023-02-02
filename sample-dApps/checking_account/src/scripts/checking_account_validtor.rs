@@ -60,7 +60,7 @@ mod tests {
             )
             .with_value(&hex::encode(&policy), "", 1)
             .finish_input()
-            .build();
+            .build_spend(&vec![], 0);
 
         let owner =
             Address::from_bech32("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs")
@@ -86,7 +86,7 @@ mod tests {
                 &signer.to_vec(),
             )
             .finish_input()
-            .build();
+            .build_spend(&vec![], 0);
 
         let owner =
             Address::from_bech32("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs")

@@ -1,5 +1,5 @@
 use crate::scripts::context::{
-    CtxDatum, CtxOutput, CtxValue, Input, PubKey, TxContext, ValidRange,
+    CtxDatum, CtxOutput, CtxScriptPurpose, CtxValue, Input, PubKey, TxContext, ValidRange,
 };
 use crate::scripts::ScriptError;
 use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
@@ -130,11 +130,26 @@ impl From<TxContext> for PlutusData {
             ],
         });
         // Spending
-        let purpose = PlutusData::Constr(Constr {
-            tag: 122,
-            any_constructor: None,
-            fields: vec![],
-        });
+        let purpose = match ctx.purpose {
+            CtxScriptPurpose::Mint(policy_id) => {
+                let policy_id_data = PlutusData::BoundedBytes(policy_id);
+                wrap_with_constr(0, policy_id_data)
+            }
+            CtxScriptPurpose::Spend(tx_id, index) => {
+                let tx_id_data = PlutusData::BoundedBytes(tx_id);
+                let index_data = PlutusData::BigInt((index as i64).into());
+                let out_ref_data = PlutusData::Constr(Constr {
+                    tag: 121,
+                    any_constructor: None,
+                    fields: vec![tx_id_data, index_data],
+                });
+                wrap_with_constr(1, out_ref_data)
+            }
+            _ => {
+                todo!()
+            }
+        };
+
         PlutusData::Constr(Constr {
             tag: 121,
             any_constructor: None,
@@ -151,8 +166,6 @@ impl From<PubKey> for PlutusData {
 
 impl From<Address> for PlutusData {
     fn from(value: Address) -> Self {
-        // // TODO: https://github.com/MitchTurner/naumachia/issues/88
-        // PlutusData::BoundedBytes(value.bytes().unwrap().to_vec()) // TODO: unwrap()
         match value {
             Address::Shelley(shelley_address) => {
                 let payment_part = shelley_address.payment();

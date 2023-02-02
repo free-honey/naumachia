@@ -19,6 +19,7 @@ pub struct TxContext {
     pub datums: Vec<(Vec<u8>, PlutusData)>,
 }
 
+#[derive(Clone, Debug)]
 pub enum CtxScriptPurpose {
     Mint(Vec<u8>),
     Spend(Vec<u8>, u64),
@@ -227,6 +228,26 @@ impl ContextBuilder {
         };
         TxContext {
             purpose: CtxScriptPurpose::Spend(tx_id.to_vec(), index),
+            signer: self.signer.clone(),
+            range,
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            extra_signatories: self.extra_signatories.clone(),
+            datums: self.datums.clone(),
+        }
+    }
+
+    pub fn build_mint(&self, policy_id: &[u8]) -> TxContext {
+        let range = if let Some(range) = self.range.clone() {
+            range
+        } else {
+            ValidRange {
+                lower: None,
+                upper: None,
+            }
+        };
+        TxContext {
+            purpose: CtxScriptPurpose::Mint(policy_id.to_vec()),
             signer: self.signer.clone(),
             range,
             inputs: self.inputs.clone(),

@@ -74,7 +74,7 @@ mod tests {
         };
         let script = param_script.apply(nft).unwrap().apply(owner).unwrap();
 
-        let ctx = ContextBuilder::new(signer).build();
+        let ctx = ContextBuilder::new(signer).build_mint(&vec![]);
 
         script.execute((), ctx).unwrap();
     }
@@ -92,7 +92,7 @@ mod tests {
         };
         let script = param_script.apply(nft).unwrap().apply(owner).unwrap();
 
-        let ctx = ContextBuilder::new(incorrect_signer).build();
+        let ctx = ContextBuilder::new(incorrect_signer).build_mint(&vec![]);
 
         script.execute((), ctx).unwrap_err();
     }
