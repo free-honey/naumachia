@@ -80,7 +80,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
             .lock()
             .map_err(|e| TestLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
-        ledger_utxos.push((output.owner().clone(), output.clone()));
+        ledger_utxos.push((output.owner(), output.clone()));
         Ok(())
     }
 

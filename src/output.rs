@@ -36,10 +36,10 @@ impl<Datum> UnbuiltOutput<Datum> {
     pub fn owner(&self) -> Address {
         match self {
             UnbuiltOutput::Wallet { owner, .. } => {
-                Address::from_bech32(&owner).expect("Already Validated")
+                Address::from_bech32(owner).expect("Already Validated")
             }
             UnbuiltOutput::Validator { script_address, .. } => {
-                Address::from_bech32(&script_address).expect("Already Validated")
+                Address::from_bech32(script_address).expect("Already Validated")
             }
         }
     }
@@ -134,11 +134,9 @@ impl<Datum> Output<Datum> {
 
     pub fn owner(&self) -> Address {
         match self {
-            Output::Wallet { owner, .. } => {
-                Address::from_bech32(&owner).expect("Already Validated")
-            }
+            Output::Wallet { owner, .. } => Address::from_bech32(owner).expect("Already Validated"),
             Output::Validator { owner, .. } => {
-                Address::from_bech32(&owner).expect("Already Validated")
+                Address::from_bech32(owner).expect("Already Validated")
             }
         }
     }
