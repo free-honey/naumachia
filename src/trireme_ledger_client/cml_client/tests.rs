@@ -37,7 +37,7 @@ async fn get_test_client<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
 async fn get_all_my_utxos() {
     let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
-    let my_addr = Address::Base(addr_string);
+    let my_addr = Address::from_bech32(&addr_string).unwrap();
     let my_utxos = client.all_outputs_at_address(&my_addr).await.unwrap();
 
     dbg!(my_utxos);
@@ -48,7 +48,7 @@ async fn get_all_my_utxos() {
 async fn get_my_lovelace_balance() {
     let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
-    let my_addr = Address::Base(addr_string);
+    let my_addr = Address::from_bech32(&addr_string).unwrap();
     let my_balance = client
         .balance_at_address(&my_addr, &PolicyId::ADA)
         .await
@@ -63,7 +63,7 @@ async fn get_my_lovelace_balance() {
 async fn get_my_native_token_balance() {
     let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
-    let my_addr = Address::Base(addr_string);
+    let my_addr = Address::from_bech32(&addr_string).unwrap();
     let policy = PolicyId::native_token(
         "57fca08abbaddee36da742a839f7d83a7e1d2419f1507fcbf3916522",
         &None,
@@ -79,7 +79,7 @@ async fn get_my_native_token_balance() {
 async fn transfer_self_tx() {
     let (client, base_addr) = get_test_client::<(), ()>().await;
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
-    let my_addr = Address::Base(addr_string);
+    let my_addr = Address::from_bech32(&addr_string).unwrap();
     let transfer_amount = 6_000_000;
     let unbuilt_tx = transfer_tx(my_addr, transfer_amount);
     let res = client.issue(unbuilt_tx).await.unwrap();

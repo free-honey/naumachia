@@ -1,5 +1,5 @@
-use crate::address::Address;
 use context::TxContext;
+use pallas_addresses::Address;
 use std::fmt::Debug;
 use thiserror::Error;
 

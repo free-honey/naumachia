@@ -1,12 +1,13 @@
 use crate::transaction::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs};
 use crate::{
-    address::{Address, PolicyId},
+    address::PolicyId,
     backend::RedemptionDetails,
     error::*,
     output::{Output, UnbuiltOutput},
     scripts::{MintingPolicy, ValidatorCode},
     values::Values,
 };
+use pallas_addresses::Address;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -139,7 +140,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
             actions,
             ..
         } = self;
-        let mut min_output_values: HashMap<Address, RefCell<Values>> = HashMap::new();
+        let mut min_output_values: HashMap<String, RefCell<Values>> = HashMap::new();
         let mut minting = Vec::new();
         let mut script_inputs: Vec<RedemptionDetails<Datum, Redeemer>> = Vec::new();
         let mut specific_outputs: Vec<UnbuiltOutput<Datum>> = Vec::new();
@@ -167,7 +168,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
                     values,
                     address,
                 } => {
-                    let owner = address;
+                    let owner = address.to_bech32().expect("Already Validated");
                     let output = UnbuiltOutput::Validator {
                         script_address: owner,
                         values,
@@ -203,9 +204,9 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
 }
 
 fn create_outputs_for<Datum>(
-    values: Vec<(Address, Vec<(PolicyId, u64)>)>,
+    values: Vec<(String, Vec<(PolicyId, u64)>)>,
 ) -> Result<Vec<UnbuiltOutput<Datum>>> {
-    let outputs = values
+    let outputs: Result<Vec<_>> = values
         .into_iter()
         .map(|(owner, val_vec)| {
             let values = val_vec
@@ -214,10 +215,12 @@ fn create_outputs_for<Datum>(
                     acc.add_one_value(policy, *amt);
                     acc
                 });
-            UnbuiltOutput::new_wallet(owner, values)
+            let addr = Address::from_bech32(&owner)
+                .map_err(|e| Error::Address(format!("Bad Bech32: {:?}", e)))?;
+            Ok(UnbuiltOutput::new_wallet(addr, values))
         })
         .collect();
-    Ok(outputs)
+    outputs
 }
 
 #[derive(Clone)]

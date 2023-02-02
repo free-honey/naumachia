@@ -1,6 +1,8 @@
-use crate::scripts::context::{CtxDatum, CtxOutput, CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::context::{
+    CtxDatum, CtxOutput, CtxValue, Input, PubKey, TxContext, ValidRange,
+};
 use crate::scripts::ScriptError;
-use crate::Address;
+use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -141,11 +143,91 @@ impl From<TxContext> for PlutusData {
     }
 }
 
+impl From<PubKey> for PlutusData {
+    fn from(value: PubKey) -> Self {
+        PlutusData::BoundedBytes(value.bytes())
+    }
+}
+
 impl From<Address> for PlutusData {
     fn from(value: Address) -> Self {
-        // TODO: https://github.com/MitchTurner/naumachia/issues/88
-        PlutusData::BoundedBytes(value.bytes().unwrap().to_vec()) // TODO: unwrap()
+        // // TODO: https://github.com/MitchTurner/naumachia/issues/88
+        // PlutusData::BoundedBytes(value.bytes().unwrap().to_vec()) // TODO: unwrap()
+        match value {
+            Address::Shelley(shelley_address) => {
+                let payment_part = shelley_address.payment();
+                let stake_part = shelley_address.delegation();
+
+                let payment_part_plutus_data = match payment_part {
+                    ShelleyPaymentPart::Key(payment_keyhash) => {
+                        let inner = PlutusData::BoundedBytes(payment_keyhash.to_vec());
+                        wrap_with_constr(0, inner)
+                    }
+                    ShelleyPaymentPart::Script(script_hash) => {
+                        let inner = PlutusData::BoundedBytes(script_hash.to_vec());
+                        wrap_with_constr(1, inner)
+                    }
+                };
+
+                let stake_part_plutus_data = match stake_part {
+                    ShelleyDelegationPart::Key(stake_keyhash) => {
+                        let bytes_data = PlutusData::BoundedBytes(stake_keyhash.to_vec());
+                        let inner = wrap_with_constr(0, bytes_data);
+                        wrap_with_constr(0, inner)
+                    }
+                    ShelleyDelegationPart::Script(script_keyhash) => {
+                        let bytes_data = PlutusData::BoundedBytes(script_keyhash.to_vec());
+                        let inner = wrap_with_constr(1, bytes_data);
+                        wrap_with_constr(0, inner)
+                    }
+                    ShelleyDelegationPart::Pointer(pointer) => {
+                        let inner = wrap_multiple_with_constr(
+                            1,
+                            vec![
+                                pointer.slot().into(),
+                                pointer.tx_idx().into(),
+                                pointer.cert_idx().into(),
+                            ],
+                        );
+                        wrap_with_constr(0, inner)
+                    }
+                    ShelleyDelegationPart::Null => empty_constr(1),
+                };
+
+                wrap_multiple_with_constr(0, vec![payment_part_plutus_data, stake_part_plutus_data])
+            }
+            _ => todo!(),
+        }
     }
+}
+
+fn wrap_with_constr(index: u64, data: PlutusData) -> PlutusData {
+    PlutusData::Constr(Constr {
+        tag: constr_index(index),
+        any_constructor: None,
+        fields: vec![data],
+    })
+}
+
+fn wrap_multiple_with_constr(index: u64, data: Vec<PlutusData>) -> PlutusData {
+    PlutusData::Constr(Constr {
+        tag: constr_index(index),
+        any_constructor: None,
+        fields: data,
+    })
+}
+
+fn empty_constr(index: u64) -> PlutusData {
+    PlutusData::Constr(Constr {
+        tag: constr_index(index),
+        any_constructor: None,
+        fields: vec![],
+    })
+}
+
+/// Translate constructor index to cbor tag.
+fn constr_index(index: u64) -> u64 {
+    121 + index
 }
 
 impl From<ValidRange> for PlutusData {
@@ -383,4 +465,10 @@ impl From<()> for PlutusData {
 
 impl From<PlutusData> for () {
     fn from(_: PlutusData) -> Self {}
+}
+
+impl From<u64> for PlutusData {
+    fn from(value: u64) -> Self {
+        PlutusData::BigInt((value as i64).into()) // TODO: unwrap
+    }
 }

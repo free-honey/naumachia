@@ -1,10 +1,8 @@
 use crate::scripts::context::ContextBuilder;
 use crate::scripts::raw_script::PlutusScriptFile;
 use crate::scripts::raw_validator_script::RawPlutusValidator;
-use crate::{
-    scripts::{ScriptError, ValidatorCode},
-    Address,
-};
+use crate::scripts::{ScriptError, ValidatorCode};
+use pallas_addresses::Address;
 
 /// run :: HelloDatum -> HelloRedeemer -> ScriptContext -> Bool
 /// run (HelloDatum datum) (HelloRedeemer redeemer) _ = redeemer < datum
@@ -28,9 +26,9 @@ fn execute_hello_passes() {
     let script_file = hello_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
-    let datum = 50;
-    let redeemer = 49;
-    let signer = Address::new("placeholder");
+    let datum: u64 = 50;
+    let redeemer: u64 = 49;
+    let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
     let ctx = ContextBuilder::new(signer).build();
     script.execute(datum, redeemer, ctx).unwrap();
 }
@@ -43,10 +41,10 @@ fn execute_hello_fails() {
     let script_file = hello_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
-    let datum = 50;
-    let redeemer = 51;
+    let datum: u64 = 50;
+    let redeemer: u64 = 51;
 
-    let signer = Address::new("placeholder");
+    let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
     let ctx = ContextBuilder::new(signer).build();
 
     // PT5: 'check' input is 'False'

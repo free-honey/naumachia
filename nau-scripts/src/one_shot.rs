@@ -74,20 +74,18 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::address::Address;
-    use naumachia::output::{Output, OutputId};
+    use naumachia::output::Output;
     use naumachia::scripts::context::ContextBuilder;
     use naumachia::scripts::MintingPolicy;
+    use naumachia::Address;
 
     #[test]
     fn execute__succeeds_when_output_included() {
-        let id = OutputId::new(vec![1, 2, 3, 4], 0);
-        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
-        let output = Output::<()>::Wallet {
-            id,
-            owner: owner.clone(),
-            values: Default::default(),
-        };
+        let tx_hash = vec![1, 2, 3, 4];
+        let index = 0;
+        let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
+        let output: Output<()> =
+            Output::new_wallet(tx_hash, index, owner.clone(), Default::default());
 
         let out_ref = OutputReference::from(&output);
 
@@ -102,13 +100,11 @@ mod tests {
 
     #[test]
     fn execute__fails_when_output_included() {
-        let id = OutputId::new(vec![1, 2, 3, 4], 0);
-        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
-        let output = Output::<()>::Wallet {
-            id,
-            owner: owner.clone(),
-            values: Default::default(),
-        };
+        let tx_hash = vec![1, 2, 3, 4];
+        let index = 0;
+        let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
+        let output: Output<()> =
+            Output::new_wallet(tx_hash, index, owner.clone(), Default::default());
 
         let out_ref = OutputReference::from(&output);
 

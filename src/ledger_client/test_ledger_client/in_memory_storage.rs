@@ -2,7 +2,7 @@ use crate::ledger_client::test_ledger_client::{TestLCError, TestLedgerStorage};
 use crate::ledger_client::LedgerClientError::FailedToIssueTx;
 use crate::ledger_client::{LedgerClientError, LedgerClientResult};
 use crate::output::Output;
-use crate::Address;
+use pallas_addresses::Address;
 use std::sync::{Arc, Mutex};
 
 type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
@@ -80,7 +80,7 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
             .lock()
             .map_err(|e| TestLCError::Mutex(format! {"{:?}", e}))
             .map_err(|e| FailedToIssueTx(Box::new(e)))?;
-        ledger_utxos.push((output.owner().clone(), output.clone()));
+        ledger_utxos.push((output.owner(), output.clone()));
         Ok(())
     }
 

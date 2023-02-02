@@ -1,7 +1,9 @@
 use crate::{
-    address::{Address, PolicyId},
+    address::PolicyId,
     transaction::{TxActions, UnbuiltTransaction},
 };
+
+pub use pallas_addresses::Address;
 pub mod error;
 
 pub mod address;

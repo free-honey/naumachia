@@ -5,12 +5,12 @@ pub mod test_ledger_client;
 use async_trait::async_trait;
 
 use crate::{
-    address::Address,
     output::{Output, OutputId},
     transaction::TxId,
     transaction::UnbuiltTransaction,
     PolicyId,
 };
+use pallas_addresses::Address;
 use std::error;
 
 // TODO: Having this bound to a specific Datum/Redeemer doesn't really make sense at this scope.
@@ -20,6 +20,7 @@ use std::error;
 //   (getting all is expensive if you just want the output for a specific ID)
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
+    // TODO: This should be a pubkey, not an address
     async fn signer(&self) -> LedgerClientResult<Address>;
     async fn outputs_at_address(
         &self,
@@ -57,6 +58,8 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 pub enum LedgerClientError {
     #[error("Couldn't retrieve base address")]
     BaseAddress(Box<dyn error::Error + Send + Sync>),
+    #[error("Bad address: {0:?}")]
+    BadAddress(Box<dyn error::Error + Send + Sync>),
     #[error("Couldn't convert TxId")]
     BadTxId(Box<dyn error::Error + Send + Sync>),
     #[error("Failed to retrieve outputs at {0:?}: {1:?}.")]

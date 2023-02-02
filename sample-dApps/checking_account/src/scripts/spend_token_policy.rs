@@ -1,8 +1,8 @@
-use naumachia::address::Address;
 use naumachia::scripts::raw_policy_script::TwoParamRawPolicy;
 use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::scripts::{ScriptError, ScriptResult};
+use naumachia::Address;
 
 const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
 const VALIDATOR_NAME: &str = "spend_token_policy";
@@ -29,7 +29,7 @@ pub struct Owner {
 
 impl From<Address> for Owner {
     fn from(value: Address) -> Self {
-        let inner = value.bytes().unwrap(); // TODO
+        let inner = value.to_vec();
         Owner { inner }
     }
 }
@@ -59,19 +59,18 @@ pub fn spend_token_policy() -> ScriptResult<TwoParamRawPolicy<CheckingAccountNFT
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::address::Address;
     use naumachia::scripts::context::ContextBuilder;
     use naumachia::scripts::MintingPolicy;
 
     #[test]
     fn execute__correct_signer_can_mint() {
-        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+        let signer = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
         let param_script = spend_token_policy().unwrap();
         let nft = CheckingAccountNFT {
             inner: vec![1, 2, 3],
         };
         let owner = Owner {
-            inner: signer.bytes().unwrap().to_vec(),
+            inner: signer.to_vec().to_vec(),
         };
         let script = param_script.apply(nft).unwrap().apply(owner).unwrap();
 
@@ -82,14 +81,14 @@ mod tests {
 
     #[test]
     fn execute__incorrect_signer_cannot_mint() {
-        let correct_signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
-        let incorrect_signer = Address::new("addr_test1qqddk5xnz08mxsqw6jdaenvhdah835lhvm62tt5lydk2as7kfjf77qy57hqhnefcqyy7hmhsygj9j38rj984hn9r57fs066hcl");
+        let correct_signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+        let incorrect_signer = Address::from_bech32("addr_test1qqddk5xnz08mxsqw6jdaenvhdah835lhvm62tt5lydk2as7kfjf77qy57hqhnefcqyy7hmhsygj9j38rj984hn9r57fs066hcl").unwrap();
         let param_script = spend_token_policy().unwrap();
         let nft = CheckingAccountNFT {
             inner: vec![1, 2, 3],
         };
         let owner = Owner {
-            inner: correct_signer.bytes().unwrap().to_vec(),
+            inner: correct_signer.to_vec().to_vec(),
         };
         let script = param_script.apply(nft).unwrap().apply(owner).unwrap();
 

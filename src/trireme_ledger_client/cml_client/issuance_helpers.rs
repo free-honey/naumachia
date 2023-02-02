@@ -8,7 +8,7 @@ use crate::{
         error::CMLLCError::JsError, plutus_data_interop::PlutusDataInterop, UTxO,
     },
     values::Values,
-    Address, PolicyId,
+    PolicyId,
 };
 use blockfrost_http_client::models::Value as BFValue;
 use cardano_multiplatform_lib::crypto::ScriptHash;
@@ -34,6 +34,7 @@ use cardano_multiplatform_lib::{
     AssetName, Assets, MultiAsset, PolicyID, Transaction as CMLTransaction, TransactionInput,
     TransactionOutput, UnitInterval,
 };
+use pallas_addresses::Address;
 use std::collections::BTreeMap;
 
 // TODO: I think some of these values might be dynamic, in which case we should query them

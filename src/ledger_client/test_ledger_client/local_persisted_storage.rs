@@ -1,3 +1,4 @@
+use pallas_addresses::Address;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     fmt::Debug,
@@ -10,7 +11,6 @@ use thiserror::Error;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
 use crate::{
-    address::Address,
     ledger_client::{test_ledger_client::TestLedgerStorage, LedgerClientError, LedgerClientResult},
     output::Output,
     values::Values,
@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct LedgerData<Datum> {
-    signer: Address,
+    signer: String,
     outputs: Vec<Output<Datum>>,
     current_time: i64,
 }
@@ -36,7 +36,7 @@ impl<Datum> LedgerData<Datum> {
     pub fn new(signer: Address) -> Self {
         let outputs = Vec::new();
         LedgerData {
-            signer,
+            signer: signer.to_bech32().expect("Already validated"),
             outputs,
             current_time: 0,
         }
@@ -116,7 +116,7 @@ impl<Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq> Test
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
         let signer = self.get_data().signer;
-        Ok(signer)
+        Address::from_bech32(&signer).map_err(|e| LedgerClientError::BadAddress(Box::new(e)))
     }
 
     async fn outputs_by_count(
@@ -128,7 +128,7 @@ impl<Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq> Test
         let outputs = data
             .outputs
             .into_iter()
-            .filter(|o| o.owner() == address)
+            .filter(|o| &o.owner() == address)
             .take(count)
             .collect();
         Ok(outputs)
@@ -139,7 +139,7 @@ impl<Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq> Test
         let outputs = data
             .outputs
             .into_iter()
-            .filter(|o| o.owner() == address)
+            .filter(|o| &o.owner() == address)
             .collect();
         Ok(outputs)
     }
@@ -186,7 +186,7 @@ mod tests {
 
     #[tokio::test]
     async fn outputs_at_address() {
-        let signer = Address::new("alice");
+        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
         let storage = LocalPersistedStorage::<()>::init(tmp_dir, signer.clone(), starting_amount);
@@ -200,7 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn current_time() {
-        let signer = Address::new("alice");
+        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
         let mut storage =

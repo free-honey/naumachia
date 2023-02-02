@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::output::UnbuiltOutput;
-use crate::scripts::context::{CtxValue, Input, TxContext, ValidRange};
+use crate::scripts::context::{CtxValue, Input, PubKey, TxContext, ValidRange};
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     backend::Backend,
@@ -17,10 +17,11 @@ use crate::{
     output::Output,
     transaction::TxId,
     values::Values,
-    Address, PolicyId, UnbuiltTransaction,
+    PolicyId, UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use local_persisted_storage::LocalPersistedStorage;
+use pallas_addresses::Address;
 use rand::Rng;
 use serde::{de::DeserializeOwned, Serialize};
 use tempfile::TempDir;
@@ -400,20 +401,24 @@ fn build_outputs<Datum>(
         .into_iter()
         .map(|output| match output {
             UnbuiltOutput::Wallet { owner, values } => {
-                new_wallet_output(&owner, &values, construction_ctx)
+                let addr = Address::from_bech32(&owner).expect("Already validated");
+                new_wallet_output(&addr, &values, construction_ctx)
             }
             UnbuiltOutput::Validator {
                 script_address: owner,
                 values,
                 datum,
-            } => new_validator_output(&owner, &values, datum, construction_ctx),
+            } => {
+                let addr = Address::from_bech32(&owner).expect("Already validated");
+                new_validator_output(&addr, &values, datum, construction_ctx)
+            }
         })
         .collect()
 }
 
 fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     tx: &UnbuiltTransaction<Datum, Redeemer>,
-    signer: &Address,
+    signer_address: &Address,
 ) -> LedgerClientResult<TxContext> {
     let lower = tx.valid_range.0.map(|n| (n, true));
     let upper = tx.valid_range.1.map(|n| (n, false));
@@ -423,10 +428,7 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         let id = utxo.id();
         let value = CtxValue::from(utxo.values().to_owned());
         let datum = utxo.datum().map(|d| d.to_owned()).into();
-        let address = utxo
-            .owner()
-            .bytes()
-            .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+        let address = utxo.owner().to_vec();
         let transaction_id = id.tx_hash().to_vec();
         let input = Input {
             transaction_id,
@@ -439,11 +441,13 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         inputs.push(input);
     }
 
+    let signer_bytes = signer_address.to_vec();
+    let signer = PubKey::new(&signer_bytes);
     let range = ValidRange { lower, upper };
 
     // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
     let ctx = TxContext {
-        signer: signer.clone(),
+        signer,
         range,
         inputs,
         outputs: vec![],
