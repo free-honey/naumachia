@@ -19,6 +19,7 @@ use minicbor::{Decoder, Encoder};
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use pallas_addresses::Address;
 use std::marker::PhantomData;
+use std::rc::Rc;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     machine::cost_model::ExBudget,
@@ -129,7 +130,7 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
                 .unwrap()
                 .into();
         let one_data: PlutusData = one.into();
-        let one_term = Term::Constant(Constant::Data(one_data.into()));
+        let one_term = Term::Constant(Rc::new(Constant::Data(one_data.into())));
         let program = program.apply_term(&one_term);
         let fake: Program<FakeNamedDeBruijn> = program.into();
         let new_cbor = fake
@@ -203,13 +204,13 @@ where
                 .into();
         let datum_data: PlutusData = datum.into();
         let aiken_datum_data: uplc::PlutusData = datum_data.into();
-        let datum_term = Term::Constant(Constant::Data(aiken_datum_data));
+        let datum_term = Term::Constant(Rc::new(Constant::Data(aiken_datum_data)));
         let program = program.apply_term(&datum_term);
         let redeemer_data: PlutusData = redeemer.into();
-        let redeemer_term = Term::Constant(Constant::Data(redeemer_data.into()));
+        let redeemer_term = Term::Constant(Rc::new(Constant::Data(redeemer_data.into())));
         let program = program.apply_term(&redeemer_term);
         let ctx_data: PlutusData = ctx.into();
-        let ctx_term = Term::Constant(Constant::Data(ctx_data.into()));
+        let ctx_term = Term::Constant(Rc::new(Constant::Data(ctx_data.into())));
         let program = program.apply_term(&ctx_term);
         let (term, _cost, logs) = match self.version {
             TransactionVersion::V1 => program.eval_v1(),
