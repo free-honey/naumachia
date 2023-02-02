@@ -33,7 +33,7 @@ mod tests {
 
         let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
 
-        let ctx = ContextBuilder::new(owner).build();
+        let ctx = ContextBuilder::new(owner).build_spend(&vec![], 0);
         script.execute((), (), ctx).unwrap();
     }
 }

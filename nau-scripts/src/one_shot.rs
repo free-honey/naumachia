@@ -94,7 +94,7 @@ mod tests {
 
         let ctx = ContextBuilder::new(owner)
             .add_specific_input(&output)
-            .build();
+            .build_mint(&[]);
         let _eval = script.execute((), ctx).unwrap();
     }
 
@@ -111,7 +111,7 @@ mod tests {
         let param_script = get_parameterized_script().unwrap();
         let script = param_script.apply(out_ref).unwrap();
 
-        let ctx = ContextBuilder::new(owner).build();
+        let ctx = ContextBuilder::new(owner).build_mint(&[]);
         let _eval = script.execute((), ctx).unwrap_err();
     }
 }

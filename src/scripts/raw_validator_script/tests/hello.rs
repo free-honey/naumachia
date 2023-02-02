@@ -29,7 +29,7 @@ fn execute_hello_passes() {
     let datum: u64 = 50;
     let redeemer: u64 = 49;
     let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
-    let ctx = ContextBuilder::new(signer).build();
+    let ctx = ContextBuilder::new(signer).build_spend(&[], 0);
     script.execute(datum, redeemer, ctx).unwrap();
 }
 
@@ -45,7 +45,7 @@ fn execute_hello_fails() {
     let redeemer: u64 = 51;
 
     let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
-    let ctx = ContextBuilder::new(signer).build();
+    let ctx = ContextBuilder::new(signer).build_spend(&[], 0);
 
     // PT5: 'check' input is 'False'
     assert_eq!(
