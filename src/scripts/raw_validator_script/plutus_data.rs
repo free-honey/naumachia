@@ -391,7 +391,7 @@ impl From<CtxOutputReference> for PlutusData {
 
 impl From<CtxOutput> for PlutusData {
     fn from(output: CtxOutput) -> Self {
-        let address = PlutusData::BoundedBytes(output.address);
+        let address = output.address.into();
         let value = output.value.into();
         let datum = output.datum.into();
         let reference_script = output.reference_script.into();

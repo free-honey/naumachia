@@ -431,7 +431,7 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         let id = utxo.id();
         let value = CtxValue::from(utxo.values().to_owned());
         let datum = utxo.datum().map(|d| d.to_owned()).into();
-        let address = utxo.owner().to_vec();
+        let address = utxo.owner();
         let transaction_id = id.tx_hash().to_vec();
         let input = Input {
             transaction_id,

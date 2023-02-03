@@ -50,7 +50,7 @@ pub struct ValidRange {
 pub struct Input {
     pub transaction_id: Vec<u8>,
     pub output_index: u64,
-    pub address: Vec<u8>,
+    pub address: Address,
     pub value: CtxValue,
     pub datum: CtxDatum,
     pub reference_script: Option<Vec<u8>>,
@@ -58,7 +58,7 @@ pub struct Input {
 
 #[derive(Clone, Debug)]
 pub struct CtxOutput {
-    pub address: Vec<u8>,
+    pub address: Address,
     pub value: CtxValue,
     pub datum: CtxDatum,
     pub reference_script: Option<Vec<u8>>,
@@ -136,12 +136,12 @@ impl ContextBuilder {
         self,
         transaction_id: &[u8],
         output_index: u64,
-        address: &[u8],
+        address: &Address,
     ) -> InputBuilder {
         InputBuilder {
             outer: self,
             transaction_id: transaction_id.to_vec(),
-            address: address.to_vec(),
+            address: address.clone(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,
             reference_script: None,
@@ -158,7 +158,7 @@ impl ContextBuilder {
         let id = input.id();
         let transaction_id = id.tx_hash().to_vec();
         let output_index = id.index();
-        let address = input.owner().to_vec();
+        let address = input.owner();
         let value = CtxValue::from(input.values().to_owned());
         let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
         let datum = CtxDatum::from(maybe_datum);
@@ -174,10 +174,10 @@ impl ContextBuilder {
         self
     }
 
-    pub fn build_output(self, address: &[u8]) -> CtxOutputBuilder {
+    pub fn build_output(self, address: &Address) -> CtxOutputBuilder {
         CtxOutputBuilder {
             outer: self,
-            address: address.to_vec(),
+            address: address.clone(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,
             reference_script: None,
@@ -190,7 +190,7 @@ impl ContextBuilder {
     }
 
     pub fn add_specific_output<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
-        let address = input.owner().to_vec();
+        let address = input.owner();
         let value = CtxValue::from(input.values().to_owned());
         let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
         let datum = CtxDatum::from(maybe_datum);
@@ -259,7 +259,7 @@ pub struct InputBuilder {
     outer: ContextBuilder,
     transaction_id: Vec<u8>,
     output_index: u64,
-    address: Vec<u8>,
+    address: Address,
     value: HashMap<String, HashMap<String, u64>>,
     datum: CtxDatum,
     reference_script: Option<Vec<u8>>,
@@ -297,7 +297,7 @@ impl InputBuilder {
 
 pub struct CtxOutputBuilder {
     outer: ContextBuilder,
-    address: Vec<u8>,
+    address: Address,
     value: HashMap<String, HashMap<String, u64>>,
     datum: CtxDatum,
     reference_script: Option<Vec<u8>>,
