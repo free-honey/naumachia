@@ -2,6 +2,8 @@ use crate::scripts::context::{
     CtxDatum, CtxOutput, CtxScriptPurpose, CtxValue, Input, PubKeyHash, TxContext, ValidRange,
 };
 use crate::scripts::ScriptError;
+use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
+use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
 use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
 use std::collections::BTreeMap;
 
@@ -12,6 +14,15 @@ pub enum PlutusData {
     BigInt(BigInt),
     BoundedBytes(Vec<u8>),
     Array(Vec<PlutusData>),
+}
+
+impl PlutusData {
+    pub fn hash(&self) -> Vec<u8> {
+        // TODO: move this maybe
+        use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
+        let cml_data = self.to_plutus_data();
+        hash_plutus_data(&cml_data).to_bytes().to_vec()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
