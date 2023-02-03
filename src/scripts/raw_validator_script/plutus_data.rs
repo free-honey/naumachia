@@ -2,7 +2,6 @@ use crate::scripts::context::{
     CtxDatum, CtxOutput, CtxScriptPurpose, CtxValue, Input, PubKeyHash, TxContext, ValidRange,
 };
 use crate::scripts::ScriptError;
-use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
 use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
 use std::collections::BTreeMap;

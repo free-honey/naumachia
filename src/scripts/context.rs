@@ -40,6 +40,18 @@ impl PubKeyHash {
     }
 }
 
+/// Retrieves pubkey if Address is a Shelley
+pub fn pub_key_has_from_address_if_available(address: &Address) -> Option<PubKeyHash> {
+    match address {
+        Address::Shelley(shelley_address) => {
+            let hash = shelley_address.payment().as_hash().to_vec();
+            let pkh = PubKeyHash::new(&hash);
+            Some(pkh)
+        }
+        _ => None,
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ValidRange {
     pub lower: Option<(i64, bool)>,

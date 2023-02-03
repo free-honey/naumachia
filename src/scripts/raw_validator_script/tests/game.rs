@@ -1,6 +1,6 @@
 use super::*;
+use crate::scripts::context::pub_key_has_from_address_if_available;
 use sha2::{Digest, Sha256};
-use crate::scripts::context::PubKeyHash;
 
 struct HashedString {
     inner: Vec<u8>,
@@ -46,7 +46,6 @@ impl From<ClearString> for PlutusData {
 #[ignore]
 #[test]
 fn execute_game_passes() {
-    // let script_file = _game_lite_script_file();
     let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
@@ -55,8 +54,8 @@ fn execute_game_passes() {
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(word);
     let signer_address = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
-    let signer_pkh = PubKeyHash::new(signer_address.)
-    let ctx = ContextBuilder::new(signer_address).build_spend(&[], 0);
+    let signer_pkh = pub_key_has_from_address_if_available(&signer_address).unwrap();
+    let ctx = ContextBuilder::new(signer_pkh).build_spend(&[], 0);
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_ok());
 }
@@ -66,7 +65,6 @@ fn execute_game_passes() {
 #[ignore]
 #[test]
 fn execute_game_fails() {
-    // let script_file = _game_lite_script_file();
     let script_file = game_script_file();
     let script = RawPlutusValidator::new_v1(script_file).unwrap();
 
@@ -76,7 +74,8 @@ fn execute_game_fails() {
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(bad_guess);
     let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
-    let ctx = ContextBuilder::new(signer).build_spend(&[], 0);
+    let signer_pkh = pub_key_has_from_address_if_available(&signer).unwrap();
+    let ctx = ContextBuilder::new(signer_pkh).build_spend(&[], 0);
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_err()); // TODO: Make more specific
 }

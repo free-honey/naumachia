@@ -42,7 +42,7 @@ pub fn checking_account_validator() -> ScriptResult<RawPlutusValidator<CheckingA
 mod tests {
     use super::*;
     use hex;
-    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::context::{pub_key_has_from_address_if_available, ContextBuilder};
     use naumachia::scripts::ValidatorCode;
     use naumachia::Address;
 
@@ -51,12 +51,13 @@ mod tests {
         let signer = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
         let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
-        let ctx = ContextBuilder::new(signer.clone())
+        let signer_pkh = pub_key_has_from_address_if_available(&signer).unwrap();
+        let ctx = ContextBuilder::new(signer_pkh)
             .build_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,
-                &signer.to_vec(),
+                &signer,
             )
             .with_value(&hex::encode(&policy), "", 1)
             .finish_input()
@@ -78,12 +79,13 @@ mod tests {
         let signer = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
         let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
-        let ctx = ContextBuilder::new(signer.clone())
+        let signer_pkh = pub_key_has_from_address_if_available(&signer).unwrap();
+        let ctx = ContextBuilder::new(signer_pkh)
             .build_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,
-                &signer.to_vec(),
+                &signer,
             )
             .finish_input()
             .build_spend(&vec![], 0);
