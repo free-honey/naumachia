@@ -77,7 +77,7 @@ impl TryFrom<PlutusData> for i64 {
     fn try_from(data: PlutusData) -> Result<Self, Self::Error> {
         match data {
             PlutusData::BigInt(inner) => Ok(inner.into()),
-            _ => Err(ScriptError::DatumDeserialization(format!("{:?}", data))),
+            _ => Err(ScriptError::DatumDeserialization(format!("{data:?}"))),
         }
     }
 }

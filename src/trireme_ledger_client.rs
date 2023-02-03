@@ -203,7 +203,7 @@ pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
     let serialized = toml::to_string(&toml_struct).map_err(|e| Error::TOML(Box::new(e)))?;
     let parent_dir = file_path
         .parent()
-        .ok_or_else(|| TomlError::NoParentDir(format!("{:?}", file_path)))
+        .ok_or_else(|| TomlError::NoParentDir(format!("{file_path:?}")))
         .map_err(|e| Error::TOML(Box::new(e)))?;
     fs::create_dir_all(&parent_dir)
         .await

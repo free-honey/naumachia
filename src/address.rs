@@ -20,7 +20,7 @@ impl PolicyId {
             PolicyId::ADA => None,
             PolicyId::NativeToken(id, maybe_asset) => {
                 if let Some(asset) = maybe_asset {
-                    Some(format!("{}-{}", id, asset))
+                    Some(format!("{id}-{asset}"))
                 } else {
                     Some(id.to_string())
                 }

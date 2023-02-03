@@ -206,7 +206,7 @@ where
             TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
         };
         term.map_err(|e| RawPlutusScriptError::AikenEval {
-            error: format!("{:?}", e),
+            error: format!("{e:?}"),
             logs,
         })
         .map_err(as_failed_to_execute)?;
