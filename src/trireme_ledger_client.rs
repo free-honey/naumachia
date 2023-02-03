@@ -154,9 +154,9 @@ pub struct TriremeLedgerClient<Datum: PlutusDataInterop, Redeemer: PlutusDataInt
 impl<Datum: PlutusDataInterop + Send + Sync + Debug, Redeemer: PlutusDataInterop + Send + Sync>
     LedgerClient<Datum, Redeemer> for TriremeLedgerClient<Datum, Redeemer>
 {
-    async fn signer(&self) -> LedgerClientResult<Address> {
+    async fn signer_base_address(&self) -> LedgerClientResult<Address> {
         match &self.inner_client {
-            InnerClient::Cml(cml_client) => cml_client.signer(),
+            InnerClient::Cml(cml_client) => cml_client.signer_base_address(),
         }
         .await
     }

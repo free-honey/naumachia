@@ -20,8 +20,7 @@ use std::error;
 //   (getting all is expensive if you just want the output for a specific ID)
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
-    // TODO: This should be a pubkey, not an address
-    async fn signer(&self) -> LedgerClientResult<Address>;
+    async fn signer_base_address(&self) -> LedgerClientResult<Address>;
     async fn outputs_at_address(
         &self,
         address: &Address,

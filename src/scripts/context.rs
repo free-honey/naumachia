@@ -11,11 +11,11 @@ use std::collections::HashMap;
 #[derive(Clone, Debug)]
 pub struct TxContext {
     pub purpose: CtxScriptPurpose,
-    pub signer: PubKey,
+    pub signer: PubKeyHash,
     pub range: ValidRange,
     pub inputs: Vec<Input>,
     pub outputs: Vec<CtxOutput>,
-    pub extra_signatories: Vec<PubKey>,
+    pub extra_signatories: Vec<PubKeyHash>,
     pub datums: Vec<(Vec<u8>, PlutusData)>,
 }
 
@@ -28,11 +28,11 @@ pub enum CtxScriptPurpose {
 }
 
 #[derive(Clone, Debug)]
-pub struct PubKey(Vec<u8>);
+pub struct PubKeyHash(Vec<u8>);
 
-impl PubKey {
+impl PubKeyHash {
     pub fn new(inner: &[u8]) -> Self {
-        PubKey(inner.to_vec())
+        PubKeyHash(inner.to_vec())
     }
 
     pub fn bytes(&self) -> Vec<u8> {
@@ -106,18 +106,16 @@ impl<D: Clone + Into<PlutusData>> From<Option<D>> for CtxDatum {
 }
 
 pub struct ContextBuilder {
-    signer: PubKey,
+    signer: PubKeyHash,
     range: Option<ValidRange>,
     inputs: Vec<Input>,
     outputs: Vec<CtxOutput>,
-    extra_signatories: Vec<PubKey>,
+    extra_signatories: Vec<PubKeyHash>,
     datums: Vec<(Vec<u8>, PlutusData)>,
 }
 
 impl ContextBuilder {
-    pub fn new(signer: Address) -> Self {
-        // TODO: This is completely wrong, pubkey can't be derived from an address
-        let signer = PubKey::new(&signer.to_vec());
+    pub fn new(signer: PubKeyHash) -> Self {
         ContextBuilder {
             signer,
             range: None,
@@ -206,9 +204,8 @@ impl ContextBuilder {
         self
     }
 
-    pub fn add_signatory(mut self, signer: &Address) -> Self {
-        let pubkey = PubKey::new(&signer.to_vec());
-        self.extra_signatories.push(pubkey);
+    pub fn add_signatory(mut self, signer: PubKeyHash) -> Self {
+        self.extra_signatories.push(signer);
         self
     }
 

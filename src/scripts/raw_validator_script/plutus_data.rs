@@ -1,5 +1,5 @@
 use crate::scripts::context::{
-    CtxDatum, CtxOutput, CtxScriptPurpose, CtxValue, Input, PubKey, TxContext, ValidRange,
+    CtxDatum, CtxOutput, CtxScriptPurpose, CtxValue, Input, PubKeyHash, TxContext, ValidRange,
 };
 use crate::scripts::ScriptError;
 use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
@@ -158,8 +158,8 @@ impl From<TxContext> for PlutusData {
     }
 }
 
-impl From<PubKey> for PlutusData {
-    fn from(value: PubKey) -> Self {
+impl From<PubKeyHash> for PlutusData {
+    fn from(value: PubKeyHash) -> Self {
         PlutusData::BoundedBytes(value.bytes())
     }
 }

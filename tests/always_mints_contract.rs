@@ -56,7 +56,7 @@ impl SCLogic for AlwaysMintsSmartContract {
         match endpoint {
             Endpoint::Mint { amount } => {
                 let recipient = txo_record
-                    .signer()
+                    .signer_base_address()
                     .await
                     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
                 mint(amount, recipient)

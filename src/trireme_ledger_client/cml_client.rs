@@ -556,7 +556,7 @@ where
     Datum: PlutusDataInterop + Send + Sync + Debug,
     Redeemer: PlutusDataInterop + Send + Sync,
 {
-    async fn signer(&self) -> LedgerClientResult<Address> {
+    async fn signer_base_address(&self) -> LedgerClientResult<Address> {
         let base_addr = self
             .keys
             .base_addr()

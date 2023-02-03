@@ -5,9 +5,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::output::UnbuiltOutput;
-use crate::scripts::context::{CtxScriptPurpose, CtxValue, Input, PubKey, TxContext, ValidRange};
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -15,6 +12,11 @@ use crate::{
         LedgerClientResult,
     },
     output::Output,
+    output::UnbuiltOutput,
+    scripts::{
+        context::{CtxScriptPurpose, CtxValue, Input, PubKeyHash, TxContext, ValidRange},
+        raw_validator_script::plutus_data::PlutusData,
+    },
     transaction::TxId,
     values::Values,
     PolicyId, UnbuiltTransaction,
@@ -217,7 +219,7 @@ where
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
-    async fn signer(&self) -> LedgerClientResult<Address> {
+    async fn signer_base_address(&self) -> LedgerClientResult<Address> {
         self.storage.signer().await
     }
 
@@ -243,7 +245,7 @@ where
         check_time_valid(valid_range, current_time)
             .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
-        let signer = self.signer().await?;
+        let signer = self.signer_base_address().await?;
 
         // TODO: Optimize selection
         let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
@@ -443,7 +445,7 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     }
 
     let signer_bytes = signer_address.to_vec();
-    let signer = PubKey::new(&signer_bytes);
+    let signer = PubKeyHash::new(&signer_bytes);
     let range = ValidRange { lower, upper };
     // Placeholder
     let purpose = CtxScriptPurpose::Spend(vec![], 0);

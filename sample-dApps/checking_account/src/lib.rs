@@ -184,7 +184,7 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     starting_lovelace: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let owner = ledger_client
-        .signer()
+        .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let mut values = Values::default();
@@ -224,7 +224,7 @@ async fn select_any_above_min<LC: LedgerClient<CheckingAccountDatums, ()>>(
 ) -> SCLogicResult<Output<CheckingAccountDatums>> {
     const MIN_LOVELACE: u64 = 5_000_000;
     let me = ledger_client
-        .signer()
+        .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
@@ -265,7 +265,7 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let me = ledger_client
-        .signer()
+        .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
