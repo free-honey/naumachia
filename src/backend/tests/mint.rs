@@ -21,7 +21,7 @@ impl<R> MintingPolicy<R> for AliceCanMintPolicy {
     }
 
     fn id(&self) -> ScriptResult<String> {
-        Ok("OnlyAliceCanMint".to_string())
+        Ok(hex::encode(vec![1, 2, 3, 4, 5]))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {

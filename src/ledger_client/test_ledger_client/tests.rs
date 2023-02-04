@@ -430,7 +430,7 @@ impl MintingPolicy<()> for AlwaysTruePolicy {
     }
 
     fn id(&self) -> ScriptResult<String> {
-        Ok("some token".to_string())
+        Ok(hex::encode(vec![1, 1, 1, 1, 1]))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -478,7 +478,7 @@ impl MintingPolicy<()> for AlwaysFailsPolicy {
     }
 
     fn id(&self) -> ScriptResult<String> {
-        Ok("some token".to_string())
+        Ok(hex::encode(vec![2, 2, 2, 2, 2]))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -536,7 +536,7 @@ impl MintingPolicy<()> for SpendsNFTPolicy {
     }
 
     fn id(&self) -> ScriptResult<String> {
-        Ok("some token".to_string())
+        Ok(hex::encode(vec![3, 3, 3, 3, 3]))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
