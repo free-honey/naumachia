@@ -22,9 +22,24 @@ pub struct TxContext {
 #[derive(Clone, Debug)]
 pub enum CtxScriptPurpose {
     Mint(Vec<u8>),
-    Spend(Vec<u8>, u64),
+    Spend(CtxOutputReference),
     WithdrawFrom,
     Publish,
+}
+
+#[derive(Clone, Debug)]
+pub struct CtxOutputReference {
+    pub(crate) transaction_id: Vec<u8>,
+    pub(crate) output_index: u64,
+}
+
+impl CtxOutputReference {
+    pub fn new(transaction_id: Vec<u8>, output_index: u64) -> Self {
+        CtxOutputReference {
+            transaction_id,
+            output_index,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -236,7 +251,7 @@ impl ContextBuilder {
             }
         };
         TxContext {
-            purpose: CtxScriptPurpose::Spend(tx_id.to_vec(), index),
+            purpose: CtxScriptPurpose::Spend(CtxOutputReference::new(tx_id.to_vec(), index)),
             signer: self.signer.clone(),
             range,
             inputs: self.inputs.clone(),

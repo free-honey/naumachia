@@ -1,5 +1,6 @@
 use crate::scripts::context::{
-    CtxDatum, CtxOutput, CtxScriptPurpose, CtxValue, Input, PubKeyHash, TxContext, ValidRange,
+    CtxDatum, CtxOutput, CtxOutputReference, CtxScriptPurpose, CtxValue, Input, PubKeyHash,
+    TxContext, ValidRange,
 };
 use crate::scripts::ScriptError;
 use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
@@ -145,14 +146,8 @@ impl From<TxContext> for PlutusData {
                 let policy_id_data = PlutusData::BoundedBytes(policy_id);
                 wrap_with_constr(0, policy_id_data)
             }
-            CtxScriptPurpose::Spend(tx_id, index) => {
-                let tx_id_data = PlutusData::BoundedBytes(tx_id);
-                let index_data = PlutusData::BigInt((index as i64).into());
-                let out_ref_data = PlutusData::Constr(Constr {
-                    tag: 121,
-                    any_constructor: None,
-                    fields: vec![tx_id_data, index_data],
-                });
+            CtxScriptPurpose::Spend(out_ref) => {
+                let out_ref_data = out_ref.into();
                 wrap_with_constr(1, out_ref_data)
             }
             _ => {
@@ -374,12 +369,6 @@ impl From<Input> for PlutusData {
             fields: vec![output_reference, output],
         })
     }
-}
-
-// TODO: Move into `Input`
-struct CtxOutputReference {
-    transaction_id: Vec<u8>,
-    output_index: u64,
 }
 
 impl From<CtxOutputReference> for PlutusData {

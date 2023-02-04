@@ -5,6 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::scripts::context::CtxOutputReference;
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -448,7 +449,8 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     let signer = PubKeyHash::new(&signer_bytes);
     let range = ValidRange { lower, upper };
     // Placeholder
-    let purpose = CtxScriptPurpose::Spend(vec![], 0);
+    let out_ref = CtxOutputReference::new(vec![], 0);
+    let purpose = CtxScriptPurpose::Spend(out_ref);
 
     // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
     let ctx = TxContext {
