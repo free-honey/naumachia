@@ -4,6 +4,8 @@
 
 ### Added
 
+**naumachia**: Have execution return cost
+**naumachia**: Fix Ctx Builder to use PKH correctly
 **naumachia**: Use Pallas Addresses
 **naumachia**: Add Outputs, Signatories, and Datums to Context Builder
 **naumachia**: Use BF CLient that supports Preprod Network  
