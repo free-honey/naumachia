@@ -75,7 +75,7 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
 mod tests {
     use super::*;
     use naumachia::output::Output;
-    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::context::{pub_key_has_from_address_if_available, ContextBuilder};
     use naumachia::scripts::MintingPolicy;
     use naumachia::Address;
 
@@ -92,7 +92,8 @@ mod tests {
         let param_script = get_parameterized_script().unwrap();
         let script = param_script.apply(out_ref).unwrap();
 
-        let ctx = ContextBuilder::new(owner)
+        let owner_pkh = pub_key_has_from_address_if_available(&owner).unwrap();
+        let ctx = ContextBuilder::new(owner_pkh)
             .add_specific_input(&output)
             .build_mint(&[]);
         let _eval = script.execute((), ctx).unwrap();
@@ -111,7 +112,8 @@ mod tests {
         let param_script = get_parameterized_script().unwrap();
         let script = param_script.apply(out_ref).unwrap();
 
-        let ctx = ContextBuilder::new(owner).build_mint(&[]);
+        let owner_pkh = pub_key_has_from_address_if_available(&owner).unwrap();
+        let ctx = ContextBuilder::new(owner_pkh).build_mint(&[]);
         let _eval = script.execute((), ctx).unwrap_err();
     }
 }

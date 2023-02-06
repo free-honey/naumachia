@@ -55,7 +55,7 @@ async fn get_my_lovelace_balance() {
         .unwrap();
 
     println!();
-    println!("ADA: {:?}", my_balance);
+    println!("ADA: {my_balance:?}");
 }
 
 #[ignore]
@@ -71,7 +71,7 @@ async fn get_my_native_token_balance() {
     let my_balance = client.balance_at_address(&my_addr, &policy).await.unwrap();
 
     println!();
-    println!("Native Token {:?}: {:?}", policy, my_balance);
+    println!("Native Token {policy:?}: {my_balance:?}");
 }
 
 #[ignore]
@@ -83,7 +83,7 @@ async fn transfer_self_tx() {
     let transfer_amount = 6_000_000;
     let unbuilt_tx = transfer_tx(my_addr, transfer_amount);
     let res = client.issue(unbuilt_tx).await.unwrap();
-    println!("{:?}", res);
+    println!("{res:?}");
 }
 
 #[ignore]
@@ -107,12 +107,12 @@ async fn create_datum_wait_and_then_redeem_same_datum() {
             println!("Issuing redeeming tx");
             let unbuilt_tx = claim_always_succeeds_datum_tx(my_output);
             let res = client.issue(unbuilt_tx).await.unwrap();
-            println!("{:?}", res);
+            println!("{res:?}");
             return;
         }
         tries -= 1;
         if tries < 0 {
-            println!("Failed to find UTxO for {:?}", tx_id);
+            println!("Failed to find UTxO for {tx_id:?}");
             return;
         }
     }

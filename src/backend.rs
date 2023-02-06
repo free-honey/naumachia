@@ -53,7 +53,7 @@ where
     }
 
     pub async fn signer(&self) -> Result<Address> {
-        let addr = self.ledger_client.signer().await?;
+        let addr = self.ledger_client.signer_base_address().await?;
         Ok(addr)
     }
 }

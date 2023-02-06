@@ -5,9 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::output::UnbuiltOutput;
-use crate::scripts::context::{CtxScriptPurpose, CtxValue, Input, PubKey, TxContext, ValidRange};
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
+use crate::scripts::context::CtxOutputReference;
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -15,6 +13,11 @@ use crate::{
         LedgerClientResult,
     },
     output::Output,
+    output::UnbuiltOutput,
+    scripts::{
+        context::{CtxScriptPurpose, CtxValue, Input, PubKeyHash, TxContext, ValidRange},
+        raw_validator_script::plutus_data::PlutusData,
+    },
     transaction::TxId,
     values::Values,
     PolicyId, UnbuiltTransaction,
@@ -217,7 +220,7 @@ where
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
-    async fn signer(&self) -> LedgerClientResult<Address> {
+    async fn signer_base_address(&self) -> LedgerClientResult<Address> {
         self.storage.signer().await
     }
 
@@ -243,7 +246,7 @@ where
         check_time_valid(valid_range, current_time)
             .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
-        let signer = self.signer().await?;
+        let signer = self.signer_base_address().await?;
 
         // TODO: Optimize selection
         let mut combined_inputs = self.all_outputs_at_address(&signer).await?;
@@ -252,7 +255,7 @@ where
         for (input, redeemer, script) in tx.script_inputs().iter() {
             if let Some(datum) = input.datum() {
                 if !spending_outputs.contains(input) {
-                    let ctx = tx_context(&tx, &signer)?;
+                    let ctx = spend_tx_context(&tx, &signer, input)?;
                     // TODO: Check that the output is at the script address
                     //  https://github.com/MitchTurner/naumachia/issues/86
                     script
@@ -285,7 +288,7 @@ where
                 .id()
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             let policy_id = PolicyId::native_token(&id, asset_name);
-            let ctx = tx_context(&tx, &signer)?;
+            let ctx = mint_tx_context(&tx, &signer, &id)?;
             policy
                 .execute(redeemer.to_owned(), ctx)
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
@@ -416,10 +419,32 @@ fn build_outputs<Datum>(
         .collect()
 }
 
-// TODO: Allow specifying script purpose
+fn spend_tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
+    tx: &UnbuiltTransaction<Datum, Redeemer>,
+    signer_address: &Address,
+    output: &Output<Datum>,
+) -> LedgerClientResult<TxContext> {
+    let id = output.id();
+    let out_ref = CtxOutputReference::new(id.tx_hash().to_vec(), id.index());
+    let purpose = CtxScriptPurpose::Spend(out_ref);
+    tx_context(tx, signer_address, purpose)
+}
+
+fn mint_tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
+    tx: &UnbuiltTransaction<Datum, Redeemer>,
+    signer_address: &Address,
+    policy_id: &str,
+) -> LedgerClientResult<TxContext> {
+    dbg!(policy_id);
+    let id = hex::decode(policy_id).map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+    let purpose = CtxScriptPurpose::Mint(id);
+    tx_context(tx, signer_address, purpose)
+}
+
 fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     tx: &UnbuiltTransaction<Datum, Redeemer>,
     signer_address: &Address,
+    purpose: CtxScriptPurpose,
 ) -> LedgerClientResult<TxContext> {
     let lower = tx.valid_range.0.map(|n| (n, true));
     let upper = tx.valid_range.1.map(|n| (n, false));
@@ -429,7 +454,7 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         let id = utxo.id();
         let value = CtxValue::from(utxo.values().to_owned());
         let datum = utxo.datum().map(|d| d.to_owned()).into();
-        let address = utxo.owner().to_vec();
+        let address = utxo.owner();
         let transaction_id = id.tx_hash().to_vec();
         let input = Input {
             transaction_id,
@@ -443,10 +468,8 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     }
 
     let signer_bytes = signer_address.to_vec();
-    let signer = PubKey::new(&signer_bytes);
+    let signer = PubKeyHash::new(&signer_bytes);
     let range = ValidRange { lower, upper };
-    // Placeholder
-    let purpose = CtxScriptPurpose::Spend(vec![], 0);
 
     // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
     let ctx = TxContext {

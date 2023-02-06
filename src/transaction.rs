@@ -216,7 +216,7 @@ fn create_outputs_for<Datum>(
                     acc
                 });
             let addr = Address::from_bech32(&owner)
-                .map_err(|e| Error::Address(format!("Bad Bech32: {:?}", e)))?;
+                .map_err(|e| Error::Address(format!("Bad Bech32: {e:?}")))?;
             Ok(UnbuiltOutput::new_wallet(addr, values))
         })
         .collect();

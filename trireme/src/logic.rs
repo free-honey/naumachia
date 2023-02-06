@@ -45,7 +45,10 @@ impl SCLogic for TriremeLogic {
 async fn impl_lovelace_balance<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
 ) -> SCLogicResult<TriremeResponses> {
-    let address = ledger_client.signer().await.map_err(as_lookup_err)?;
+    let address = ledger_client
+        .signer_base_address()
+        .await
+        .map_err(as_lookup_err)?;
     let lovelace = ledger_client
         .balance_at_address(&address, &PolicyId::ADA)
         .await

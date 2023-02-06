@@ -293,7 +293,7 @@ pub fn vasil_v2_tx_builder() -> LedgerClientResult<TransactionBuilder> {
             .map(|&i| Int::from_str(&i.to_string()))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| {
-                LedgerClientError::ConfigError(format!("Cost models misconfigured: {:?}", e))
+                LedgerClientError::ConfigError(format!("Cost models misconfigured: {e:?}"))
             })?,
     );
     let mut cost_models = Costmdls::new();

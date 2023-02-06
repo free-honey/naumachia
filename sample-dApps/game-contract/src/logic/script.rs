@@ -86,7 +86,7 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<HashedString, ClearString
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::context::{pub_key_has_from_address_if_available, ContextBuilder};
     use naumachia::scripts::ValidatorCode;
     use naumachia::Address;
 
@@ -97,8 +97,8 @@ mod tests {
         let script = get_script().unwrap();
 
         let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
-
-        let ctx = ContextBuilder::new(owner).build_spend(&vec![], 0);
+        let owner_pkh = pub_key_has_from_address_if_available(&owner).unwrap();
+        let ctx = ContextBuilder::new(owner_pkh).build_spend(&vec![], 0);
 
         let word = "hello";
 

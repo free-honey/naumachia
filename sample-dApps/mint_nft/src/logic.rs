@@ -74,7 +74,7 @@ async fn select_any_above_min<LC: LedgerClient<(), ()>>(
 ) -> SCLogicResult<Output<()>> {
     const MIN_LOVELACE: u64 = 5_000_000;
     let me = ledger_client
-        .signer()
+        .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 

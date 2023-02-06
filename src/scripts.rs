@@ -38,7 +38,7 @@ pub enum ScriptError {
 }
 
 pub fn as_failed_to_execute<E: Debug>(e: E) -> ScriptError {
-    ScriptError::FailedToExecute(format!("{:?}", e))
+    ScriptError::FailedToExecute(format!("{e:?}"))
 }
 
 pub type ScriptResult<T> = Result<T, ScriptError>;
