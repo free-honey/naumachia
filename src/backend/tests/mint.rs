@@ -1,5 +1,6 @@
 use super::*;
 use crate::scripts::context::TxContext;
+use crate::scripts::ExecutionCost;
 use crate::{
     ledger_client::test_ledger_client::TestBackendsBuilder,
     scripts::{MintingPolicy, ScriptError, ScriptResult},
@@ -10,9 +11,9 @@ struct AliceCanMintPolicy;
 const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
 
 impl<R> MintingPolicy<R> for AliceCanMintPolicy {
-    fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<()> {
+    fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost> {
         if ctx.signer.bytes() == Address::from_bech32(ALICE).unwrap().to_vec() {
-            Ok(())
+            Ok(ExecutionCost::default())
         } else {
             Err(ScriptError::FailedToExecute(
                 "Signer must be `alice`".to_string(),
