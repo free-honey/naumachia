@@ -1,6 +1,6 @@
 use crate::CheckingAccountDatums;
 use naumachia::scripts::context::TxContext;
-use naumachia::scripts::{ScriptResult, ValidatorCode};
+use naumachia::scripts::{ExecutionCost, ScriptResult, ValidatorCode};
 use naumachia::Address;
 
 pub mod checking_account_validtor;
@@ -14,8 +14,8 @@ impl ValidatorCode<CheckingAccountDatums, ()> for FakePullerValidator {
         _datum: CheckingAccountDatums,
         _redeemer: (),
         _ctx: TxContext,
-    ) -> ScriptResult<()> {
-        Ok(())
+    ) -> ScriptResult<ExecutionCost> {
+        Ok(ExecutionCost::default())
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {

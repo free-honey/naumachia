@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use super::*;
-use crate::scripts::{MintingPolicy, ScriptError, ScriptResult, ValidatorCode};
+use crate::scripts::{ExecutionCost, MintingPolicy, ScriptError, ScriptResult, ValidatorCode};
 use crate::transaction::TransactionVersion;
 use crate::{
     ledger_client::{
@@ -187,8 +187,8 @@ async fn cannot_transfer_after_valid_range() {
 struct AlwaysTrueFakeValidator;
 
 impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
-    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
-        Ok(())
+    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
+        Ok(ExecutionCost::default())
     }
 
     fn address(&self, _network: u8) -> ScriptResult<Address> {
@@ -278,7 +278,7 @@ async fn redeeming_datum() {
 struct AlwaysFailsFakeValidator;
 
 impl ValidatorCode<(), ()> for AlwaysFailsFakeValidator {
-    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
         Err(ScriptError::FailedToExecute(
             "Should always fail!".to_string(),
         ))
@@ -425,8 +425,8 @@ async fn cannot_redeem_datum_twice() {
 pub struct AlwaysTruePolicy;
 
 impl MintingPolicy<()> for AlwaysTruePolicy {
-    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
-        Ok(())
+    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
+        Ok(ExecutionCost::default())
     }
 
     fn id(&self) -> ScriptResult<String> {
@@ -473,7 +473,7 @@ async fn mint_always_true() {
 pub struct AlwaysFailsPolicy;
 
 impl MintingPolicy<()> for AlwaysFailsPolicy {
-    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<()> {
+    fn execute(&self, _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
         Err(ScriptError::FailedToExecute("Always fails :@".to_string()))
     }
 
@@ -523,13 +523,13 @@ pub struct SpendsNFTPolicy {
 }
 
 impl MintingPolicy<()> for SpendsNFTPolicy {
-    fn execute(&self, _redeemer: (), ctx: TxContext) -> ScriptResult<()> {
+    fn execute(&self, _redeemer: (), ctx: TxContext) -> ScriptResult<ExecutionCost> {
         if ctx
             .inputs
             .iter()
             .any(|input| input.value.inner.contains_key(&self.policy_id))
         {
-            Ok(())
+            Ok(ExecutionCost::default())
         } else {
             Err(ScriptError::FailedToExecute("input not found".to_string()))
         }

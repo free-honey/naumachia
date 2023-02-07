@@ -16,6 +16,7 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::{Decoder, Encoder};
 
+use crate::scripts::ExecutionCost;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use pallas_addresses::Address;
 use std::marker::PhantomData;
@@ -197,7 +198,12 @@ where
     Datum: Into<PlutusData> + Send + Sync,
     Redeemer: Into<PlutusData> + Send + Sync,
 {
-    fn execute(&self, datum: Datum, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
+    fn execute(
+        &self,
+        datum: Datum,
+        redeemer: Redeemer,
+        ctx: TxContext,
+    ) -> ScriptResult<ExecutionCost> {
         let program: Program<NamedDeBruijn> =
             Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
                 .map_err(as_failed_to_execute)?
@@ -212,16 +218,27 @@ where
         let ctx_data: PlutusData = ctx.into();
         let ctx_term = Term::Constant(Rc::new(Constant::Data(ctx_data.into())));
         let program = program.apply_term(&ctx_term);
-        let (term, _cost, logs) = match self.version {
+        let (term, remaining_budget, logs) = match self.version {
             TransactionVersion::V1 => program.eval_v1(),
             TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
         };
+        let cost = match self.version {
+            TransactionVersion::V1 => {
+                let original = ExBudget::v1();
+                original - remaining_budget
+            }
+            TransactionVersion::V2 => {
+                let original = ExBudget::default();
+                original - remaining_budget
+            }
+        }
+        .into();
         term.map_err(|e| RawPlutusScriptError::AikenEval {
             error: format!("{e:?}"),
             logs,
         })
         .map_err(as_failed_to_execute)?;
-        Ok(())
+        Ok(cost)
     }
 
     fn address(&self, network: u8) -> ScriptResult<Address> {

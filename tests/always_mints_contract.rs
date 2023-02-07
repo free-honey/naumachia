@@ -5,6 +5,7 @@ use naumachia::ledger_client::test_ledger_client::{
 };
 use naumachia::logic::SCLogicError;
 use naumachia::scripts::context::TxContext;
+use naumachia::scripts::ExecutionCost;
 use naumachia::{
     ledger_client::LedgerClient,
     logic::SCLogic,
@@ -19,8 +20,8 @@ use pallas_addresses::Address;
 struct AlwaysMintsPolicy;
 
 impl<R> MintingPolicy<R> for AlwaysMintsPolicy {
-    fn execute(&self, _redeemer: R, _ctx: TxContext) -> ScriptResult<()> {
-        Ok(())
+    fn execute(&self, _redeemer: R, _ctx: TxContext) -> ScriptResult<ExecutionCost> {
+        Ok(ExecutionCost::default())
     }
 
     fn id(&self) -> ScriptResult<String> {

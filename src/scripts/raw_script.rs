@@ -1,5 +1,7 @@
+use crate::scripts::ExecutionCost;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use uplc::machine::cost_model::ExBudget;
 
 #[allow(non_snake_case)]
 #[allow(unused)]
@@ -91,3 +93,11 @@ pub enum RawPlutusScriptError {
 }
 
 pub type RawPlutusScriptResult<T, E = RawPlutusScriptError> = Result<T, E>;
+
+impl From<ExBudget> for ExecutionCost {
+    fn from(value: ExBudget) -> Self {
+        let mem = value.mem;
+        let cpu = value.cpu;
+        ExecutionCost { mem, cpu }
+    }
+}

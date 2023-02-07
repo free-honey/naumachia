@@ -10,15 +10,41 @@ pub mod raw_validator_script;
 pub mod context;
 
 pub trait ValidatorCode<D, R>: Send + Sync {
-    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
+    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost>;
     fn address(&self, network: u8) -> ScriptResult<Address>;
     fn script_hex(&self) -> ScriptResult<String>;
 }
 
 pub trait MintingPolicy<R>: Send + Sync {
-    fn execute(&self, redeemer: R, ctx: TxContext) -> ScriptResult<()>;
+    fn execute(&self, redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost>;
     fn id(&self) -> ScriptResult<String>;
     fn script_hex(&self) -> ScriptResult<String>;
+}
+
+#[derive(Clone, Debug)]
+pub struct ExecutionCost {
+    mem: i64,
+    cpu: i64,
+}
+
+impl ExecutionCost {
+    pub fn new(mem: i64, cpu: i64) -> Self {
+        ExecutionCost { mem, cpu }
+    }
+
+    pub fn mem(&self) -> i64 {
+        self.mem
+    }
+
+    pub fn cpu(&self) -> i64 {
+        self.cpu
+    }
+}
+
+impl Default for ExecutionCost {
+    fn default() -> Self {
+        ExecutionCost::new(0, 0)
+    }
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
