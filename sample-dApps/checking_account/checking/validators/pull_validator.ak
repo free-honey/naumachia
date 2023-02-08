@@ -20,7 +20,7 @@ fn only_one_spend_token(datum: Datum, ctx: ScriptContext) -> Bool {
     True
 }
 
-pub fn spend(datum: Datum, _redeemer, ctx: ScriptContext) -> Bool {
+pub fn spend(datum: Datum, _redeemer: Void, ctx: ScriptContext) -> Bool {
     // This Script
     // 1. Check that it's past date
     past_next_pull_date(datum, ctx) &&

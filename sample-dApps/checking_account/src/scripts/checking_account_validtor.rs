@@ -1,11 +1,11 @@
 use crate::CheckingAccountDatums;
-use naumachia::scripts::raw_script::PlutusScriptFile;
+use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
-const SCRIPT_RAW: &str =
-    include_str!("../../checking/assets/checking_account_validator/spend/payment_script.json");
+const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
+const VALIDATOR_NAME: &str = "checking_account_validator";
 
 pub struct SpendingTokenPolicy {
     inner: Vec<u8>,
@@ -24,9 +24,16 @@ impl From<SpendingTokenPolicy> for PlutusData {
 }
 
 pub fn checking_account_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums, ()>> {
-    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+    let blueprint: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
+    let validator_blueprint =
+        blueprint
+            .get_validator(VALIDATOR_NAME)
+            .ok_or(ScriptError::FailedToConstruct(format!(
+                "Validator not listed in Blueprint: {:?}",
+                VALIDATOR_NAME
+            )))?;
+    let raw_script_validator = RawPlutusValidator::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
@@ -35,27 +42,30 @@ pub fn checking_account_validator() -> ScriptResult<RawPlutusValidator<CheckingA
 mod tests {
     use super::*;
     use hex;
-    use naumachia::address::Address;
-    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::ValidatorCode;
+    use naumachia::Address;
 
     #[test]
     fn succeeds_if_spending_token_in_inputs() {
-        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+        let signer = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
         let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
-        let ctx = ContextBuilder::new(signer.clone())
+        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        let ctx = ContextBuilder::new(signer_pkh)
             .build_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,
-                &signer.bytes().unwrap(),
+                &signer,
             )
             .with_value(&hex::encode(&policy), "", 1)
             .finish_input()
-            .build();
+            .build_spend(&vec![], 0);
 
-        let owner = Address::new("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs");
+        let owner =
+            Address::from_bech32("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs")
+                .unwrap();
         let datum = CheckingAccountDatums::CheckingAccount {
             owner,
             spend_token_policy: hex::encode(policy),
@@ -66,20 +76,23 @@ mod tests {
 
     #[test]
     fn fails_if_not_spending_token_in_inputs() {
-        let signer = Address::new("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr");
+        let signer = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
         let script = checking_account_validator().unwrap();
         let policy = vec![1, 2, 3, 4, 5];
-        let ctx = ContextBuilder::new(signer.clone())
+        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        let ctx = ContextBuilder::new(signer_pkh)
             .build_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,
-                &signer.bytes().unwrap(),
+                &signer,
             )
             .finish_input()
-            .build();
+            .build_spend(&vec![], 0);
 
-        let owner = Address::new("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs");
+        let owner =
+            Address::from_bech32("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs")
+                .unwrap();
         let datum = CheckingAccountDatums::CheckingAccount {
             owner,
             spend_token_policy: hex::encode(policy),

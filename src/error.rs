@@ -1,7 +1,8 @@
+use pallas_addresses::Address;
 use thiserror::Error;
 
 use crate::scripts::ScriptError;
-use crate::{address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError, Address};
+use crate::{address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

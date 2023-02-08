@@ -1,10 +1,10 @@
-use naumachia::scripts::raw_script::PlutusScriptFile;
+use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
 use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
-const SCRIPT_RAW: &str =
-    include_str!("../../time_locked/assets/time_lock/spend/payment_script.json");
+const BLUEPRINT: &str = include_str!("../../time_locked/plutus.json");
+const VALIDATOR_NAME: &str = "time_lock";
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Timestamp {
@@ -60,9 +60,16 @@ impl TryFrom<PlutusData> for Timestamp {
 }
 
 pub fn get_script() -> ScriptResult<RawPlutusValidator<i64, ()>> {
-    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+    let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
+    let validator_blueprint =
+        script_file
+            .get_validator(VALIDATOR_NAME)
+            .ok_or(ScriptError::FailedToConstruct(format!(
+                "Validator not listed in Blueprint: {:?}",
+                VALIDATOR_NAME
+            )))?;
+    let raw_script_validator = RawPlutusValidator::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
@@ -70,19 +77,20 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<i64, ()>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::address::Address;
-    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::ValidatorCode;
+    use naumachia::Address;
 
     #[test]
     fn test_in_range_succeeds() {
         let script = get_script().unwrap();
 
-        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
+        let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
 
-        let ctx = ContextBuilder::new(owner)
+        let owner_pkh = pub_key_hash_from_address_if_available(&owner).unwrap();
+        let ctx = ContextBuilder::new(owner_pkh)
             .with_range(Some((80, true)), None)
-            .build();
+            .build_spend(&vec![], 0);
 
         let datum = 69_i64;
         script.execute(datum, (), ctx).unwrap();
@@ -92,11 +100,12 @@ mod tests {
     fn test_out_of_range_fails() {
         let script = get_script().unwrap();
 
-        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
+        let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
 
-        let ctx = ContextBuilder::new(owner)
+        let owner_pkh = pub_key_hash_from_address_if_available(&owner).unwrap();
+        let ctx = ContextBuilder::new(owner_pkh)
             .with_range(Some((10, true)), None)
-            .build();
+            .build_spend(&vec![], 0);
 
         let datum = 69_i64;
         let error = script.execute(datum, (), ctx);

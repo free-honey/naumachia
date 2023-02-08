@@ -1,5 +1,6 @@
 use super::*;
 use crate::scripts::context::TxContext;
+use crate::scripts::ExecutionCost;
 use crate::{
     ledger_client::test_ledger_client::TestBackendsBuilder,
     scripts::{MintingPolicy, ScriptError, ScriptResult},
@@ -7,10 +8,12 @@ use crate::{
 
 struct AliceCanMintPolicy;
 
+const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
+
 impl<R> MintingPolicy<R> for AliceCanMintPolicy {
-    fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<()> {
-        if ctx.signer == Address::new("alice") {
-            Ok(())
+    fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost> {
+        if ctx.signer.bytes() == Address::from_bech32(ALICE).unwrap().to_vec() {
+            Ok(ExecutionCost::default())
         } else {
             Err(ScriptError::FailedToExecute(
                 "Signer must be `alice`".to_string(),
@@ -19,7 +22,7 @@ impl<R> MintingPolicy<R> for AliceCanMintPolicy {
     }
 
     fn id(&self) -> ScriptResult<String> {
-        Ok("OnlyAliceCanMint".to_string())
+        Ok(hex::encode(vec![1, 2, 3, 4, 5]))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -29,7 +32,7 @@ impl<R> MintingPolicy<R> for AliceCanMintPolicy {
 
 #[tokio::test]
 async fn mint__alice_can_mint() {
-    let signer = Address::new("alice");
+    let signer = Address::from_bech32(ALICE).unwrap();
     let backend = TestBackendsBuilder::<(), ()>::new(&signer).build_in_memory();
     let amount = 100;
 

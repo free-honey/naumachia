@@ -1,15 +1,15 @@
+use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::{
     output::Output as NauOutput,
     scripts::{
         raw_policy_script::OneParamRawPolicy,
-        raw_script::PlutusScriptFile,
         raw_validator_script::plutus_data::{Constr, PlutusData},
         ScriptError, ScriptResult,
     },
 };
 
-const SCRIPT_RAW: &str =
-    include_str!("../aiken/mint_nft/assets/one_shot_nft/mint/payment_script.json");
+const BLUEPRINT: &str = include_str!("../aiken/mint_nft/plutus.json");
+const VALIDATOR_NAME: &str = "one_shot_nft";
 
 // pub type OutputReference {
 //   transction_id: TransactionId,
@@ -56,9 +56,16 @@ impl From<OutputReference> for PlutusData {
 }
 
 pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputReference, ()>> {
-    let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
+    let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = OneParamRawPolicy::new_v2(script_file)
+    let validator_blueprint =
+        script_file
+            .get_validator(VALIDATOR_NAME)
+            .ok_or(ScriptError::FailedToConstruct(format!(
+                "Validator not listed in Blueprint: {:?}",
+                VALIDATOR_NAME
+            )))?;
+    let raw_script_validator = OneParamRawPolicy::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
@@ -67,48 +74,46 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::address::Address;
-    use naumachia::output::{Output, OutputId};
-    use naumachia::scripts::context::ContextBuilder;
+    use naumachia::output::Output;
+    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::MintingPolicy;
+    use naumachia::Address;
 
     #[test]
     fn execute__succeeds_when_output_included() {
-        let id = OutputId::new(vec![1, 2, 3, 4], 0);
-        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
-        let output = Output::<()>::Wallet {
-            id,
-            owner: owner.clone(),
-            values: Default::default(),
-        };
+        let tx_hash = vec![1, 2, 3, 4];
+        let index = 0;
+        let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
+        let output: Output<()> =
+            Output::new_wallet(tx_hash, index, owner.clone(), Default::default());
 
         let out_ref = OutputReference::from(&output);
 
         let param_script = get_parameterized_script().unwrap();
         let script = param_script.apply(out_ref).unwrap();
 
-        let ctx = ContextBuilder::new(owner)
+        let owner_pkh = pub_key_hash_from_address_if_available(&owner).unwrap();
+        let ctx = ContextBuilder::new(owner_pkh)
             .add_specific_input(&output)
-            .build();
+            .build_mint(&[]);
         let _eval = script.execute((), ctx).unwrap();
     }
 
     #[test]
     fn execute__fails_when_output_included() {
-        let id = OutputId::new(vec![1, 2, 3, 4], 0);
-        let owner = Address::new("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0");
-        let output = Output::<()>::Wallet {
-            id,
-            owner: owner.clone(),
-            values: Default::default(),
-        };
+        let tx_hash = vec![1, 2, 3, 4];
+        let index = 0;
+        let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
+        let output: Output<()> =
+            Output::new_wallet(tx_hash, index, owner.clone(), Default::default());
 
         let out_ref = OutputReference::from(&output);
 
         let param_script = get_parameterized_script().unwrap();
         let script = param_script.apply(out_ref).unwrap();
 
-        let ctx = ContextBuilder::new(owner).build();
+        let owner_pkh = pub_key_hash_from_address_if_available(&owner).unwrap();
+        let ctx = ContextBuilder::new(owner_pkh).build_mint(&[]);
         let _eval = script.execute((), ctx).unwrap_err();
     }
 }

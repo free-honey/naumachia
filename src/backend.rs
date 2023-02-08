@@ -1,7 +1,6 @@
 use crate::scripts::ValidatorCode;
-use crate::{
-    address::Address, error::Result, ledger_client::LedgerClient, output::Output, TxActions,
-};
+use crate::{error::Result, ledger_client::LedgerClient, output::Output, TxActions};
+use pallas_addresses::Address;
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
 pub mod selection;
@@ -54,7 +53,7 @@ where
     }
 
     pub async fn signer(&self) -> Result<Address> {
-        let addr = self.ledger_client.signer().await?;
+        let addr = self.ledger_client.signer_base_address().await?;
         Ok(addr)
     }
 }

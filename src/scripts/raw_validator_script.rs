@@ -1,7 +1,14 @@
 use crate::{
-    scripts::as_failed_to_execute,
-    scripts::{ScriptResult, ValidatorCode},
-    Address,
+    scripts::{
+        as_failed_to_execute,
+        context::TxContext,
+        raw_script::{
+            PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult, ValidatorBlueprint,
+        },
+        raw_validator_script::plutus_data::{BigInt, Constr, PlutusData},
+        ScriptError, ScriptResult, ValidatorCode,
+    },
+    transaction::TransactionVersion,
 };
 use cardano_multiplatform_lib::{
     address::{EnterpriseAddress, StakeCredential},
@@ -9,16 +16,14 @@ use cardano_multiplatform_lib::{
 };
 use minicbor::{Decoder, Encoder};
 
-use crate::scripts::context::TxContext;
-use crate::scripts::raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult};
-use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
-use crate::scripts::ScriptError;
-use crate::transaction::TransactionVersion;
+use crate::scripts::ExecutionCost;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
+use pallas_addresses::Address;
 use std::marker::PhantomData;
-use uplc::machine::cost_model::ExBudget;
+use std::rc::Rc;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
+    machine::cost_model::ExBudget,
     BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
 };
 
@@ -67,6 +72,18 @@ impl<D, R> RawPlutusValidator<D, R> {
         };
         Ok(v2_policy)
     }
+
+    pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(blueprint.compiled_code())
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = RawPlutusValidator {
+            version: TransactionVersion::V2,
+            cbor,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_policy)
+    }
 }
 
 pub struct OneParamRawValidator<One, Datum, Redeemer> {
@@ -95,13 +112,26 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
         Ok(v2_val)
     }
 
+    pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
+        let cbor = hex::decode(blueprint.compiled_code())
+            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_val = OneParamRawValidator {
+            version: TransactionVersion::V2,
+            cbor,
+            _one: Default::default(),
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_val)
+    }
+
     pub fn apply(&self, one: One) -> RawPlutusScriptResult<RawPlutusValidator<D, R>> {
         let program: Program<NamedDeBruijn> =
             Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
                 .unwrap()
                 .into();
         let one_data: PlutusData = one.into();
-        let one_term = Term::Constant(Constant::Data(one_data.into()));
+        let one_term = Term::Constant(Rc::new(Constant::Data(one_data.into())));
         let program = program.apply_term(&one_term);
         let fake: Program<FakeNamedDeBruijn> = program.into();
         let new_cbor = fake
@@ -168,31 +198,47 @@ where
     Datum: Into<PlutusData> + Send + Sync,
     Redeemer: Into<PlutusData> + Send + Sync,
 {
-    fn execute(&self, datum: Datum, redeemer: Redeemer, ctx: TxContext) -> ScriptResult<()> {
+    fn execute(
+        &self,
+        datum: Datum,
+        redeemer: Redeemer,
+        ctx: TxContext,
+    ) -> ScriptResult<ExecutionCost> {
         let program: Program<NamedDeBruijn> =
             Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
                 .map_err(as_failed_to_execute)?
                 .into();
         let datum_data: PlutusData = datum.into();
         let aiken_datum_data: uplc::PlutusData = datum_data.into();
-        let datum_term = Term::Constant(Constant::Data(aiken_datum_data));
+        let datum_term = Term::Constant(Rc::new(Constant::Data(aiken_datum_data)));
         let program = program.apply_term(&datum_term);
         let redeemer_data: PlutusData = redeemer.into();
-        let redeemer_term = Term::Constant(Constant::Data(redeemer_data.into()));
+        let redeemer_term = Term::Constant(Rc::new(Constant::Data(redeemer_data.into())));
         let program = program.apply_term(&redeemer_term);
         let ctx_data: PlutusData = ctx.into();
-        let ctx_term = Term::Constant(Constant::Data(ctx_data.into()));
+        let ctx_term = Term::Constant(Rc::new(Constant::Data(ctx_data.into())));
         let program = program.apply_term(&ctx_term);
-        let (term, _cost, logs) = match self.version {
+        let (term, remaining_budget, logs) = match self.version {
             TransactionVersion::V1 => program.eval_v1(),
             TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
         };
+        let cost = match self.version {
+            TransactionVersion::V1 => {
+                let original = ExBudget::v1();
+                original - remaining_budget
+            }
+            TransactionVersion::V2 => {
+                let original = ExBudget::default();
+                original - remaining_budget
+            }
+        }
+        .into();
         term.map_err(|e| RawPlutusScriptError::AikenEval {
-            error: format!("{:?}", e),
+            error: format!("{e:?}"),
             logs,
         })
         .map_err(as_failed_to_execute)?;
-        Ok(())
+        Ok(cost)
     }
 
     fn address(&self, network: u8) -> ScriptResult<Address> {
@@ -220,7 +266,8 @@ where
         let script_address_str = cml_script_address
             .to_bech32(None)
             .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?;
-        let address = Address::Script(script_address_str);
+        let address = Address::from_bech32(&script_address_str)
+            .map_err(|e| ScriptError::ScriptHexRetrieval(e.to_string()))?;
         Ok(address)
     }
 

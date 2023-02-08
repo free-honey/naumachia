@@ -1,4 +1,5 @@
-use crate::{error::Result, output::Output, Address, UnbuiltTransaction};
+use crate::{error::Result, output::Output, UnbuiltTransaction};
+use pallas_addresses::Address;
 use std::{fmt::Debug, hash::Hash};
 
 pub fn can_spend_inputs<

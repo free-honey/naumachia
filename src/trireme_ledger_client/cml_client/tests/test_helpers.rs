@@ -55,7 +55,7 @@ pub fn always_succeeds_script_cml_address(network: u8) -> CMLAddress {
 pub fn always_succeeds_script_address(network: u8) -> Address {
     let cml_script_address = always_succeeds_script_cml_address(network);
     let script_address_str = cml_script_address.to_bech32(None).unwrap();
-    Address::Script(script_address_str)
+    Address::from_bech32(&script_address_str).unwrap()
 }
 
 pub fn always_succeeds_hex() -> PlutusScriptFile {

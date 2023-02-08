@@ -1,20 +1,21 @@
-use crate::scripts::{
-    checking_account_validtor::checking_account_validator, spend_token_policy::spend_token_policy,
-    FakePullerValidator,
-};
+use crate::scripts::checking_account_validtor::checking_account_validator;
+use crate::scripts::spend_token_policy::spend_token_policy;
+use crate::scripts::FakePullerValidator;
 use async_trait::async_trait;
-use nau_scripts::{one_shot, one_shot::OutputReference};
+use nau_scripts::one_shot;
+use nau_scripts::one_shot::OutputReference;
+use naumachia::logic::SCLogicError::Endpoint;
+use naumachia::output::{Output, OutputId};
+use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
+use naumachia::scripts::{MintingPolicy, ScriptError};
 use naumachia::{
-    address::{Address, PolicyId},
+    address::PolicyId,
     ledger_client::LedgerClient,
     logic::{SCLogic, SCLogicError, SCLogicResult},
-    output::{Output, OutputId},
-    scripts::{
-        raw_validator_script::plutus_data::{Constr, PlutusData},
-        MintingPolicy, ScriptError, ValidatorCode,
-    },
+    scripts::ValidatorCode,
     transaction::TxActions,
     values::Values,
+    Address,
 };
 use thiserror::Error;
 
@@ -35,7 +36,7 @@ pub enum CheckingAccountEndpoints {
     /// starting on the next_pull time, in milliseconds POSIX
     AddPuller {
         checking_account_nft: String,
-        puller: Address,
+        puller: String,
         amount_lovelace: u64,
         period: i64,
         next_pull: i64,
@@ -84,7 +85,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 owner,
                 spend_token_policy,
             } => {
-                let owner_data = PlutusData::BoundedBytes(owner.bytes().unwrap()); // TODO
+                let owner_data = PlutusData::BoundedBytes(owner.to_vec()); // TODO
                 let policy_data =
                     PlutusData::BoundedBytes(hex::decode(spend_token_policy).unwrap()); // TODO
                 PlutusData::Constr(Constr {
@@ -143,7 +144,7 @@ impl SCLogic for CheckingAccountLogic {
                 add_puller(
                     ledger_client,
                     checking_account_nft,
-                    puller,
+                    &puller,
                     amount_lovelace,
                     period,
                     next_pull,
@@ -190,7 +191,7 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     starting_lovelace: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let owner = ledger_client
-        .signer()
+        .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let mut values = Values::default();
@@ -230,7 +231,7 @@ async fn select_any_above_min<LC: LedgerClient<CheckingAccountDatums, ()>>(
 ) -> SCLogicResult<Output<CheckingAccountDatums>> {
     const MIN_LOVELACE: u64 = 5_000_000;
     let me = ledger_client
-        .signer()
+        .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
@@ -264,16 +265,17 @@ pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
 async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     checking_account_nft_id: String,
-    _puller: Address,
-    _amount_lovelace: u64,
-    _period: i64,
+    puller: &str,
+    amount_lovelace: u64,
+    period: i64,
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let me = ledger_client
-        .signer()
+        .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
+    let puller_addr = Address::from_bech32(puller).map_err(|e| Endpoint(Box::new(e)))?;
     let datum = CheckingAccountDatums::AllowedPuller {
         // puller,
         // amount_lovelace,

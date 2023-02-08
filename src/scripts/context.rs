@@ -1,7 +1,8 @@
 use crate::output::Output;
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::values::Values;
-use crate::{Address, PolicyId};
+use crate::PolicyId;
+use pallas_addresses::Address;
 use std::collections::HashMap;
 
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
@@ -9,9 +10,61 @@ use std::collections::HashMap;
 //   expose all the primitives in case people want to use them for params, datums, etc...
 #[derive(Clone, Debug)]
 pub struct TxContext {
-    pub signer: Address,
+    pub purpose: CtxScriptPurpose,
+    pub signer: PubKeyHash,
     pub range: ValidRange,
     pub inputs: Vec<Input>,
+    pub outputs: Vec<CtxOutput>,
+    pub extra_signatories: Vec<PubKeyHash>,
+    pub datums: Vec<(Vec<u8>, PlutusData)>,
+}
+
+#[derive(Clone, Debug)]
+pub enum CtxScriptPurpose {
+    Mint(Vec<u8>),
+    Spend(CtxOutputReference),
+    WithdrawFrom,
+    Publish,
+}
+
+#[derive(Clone, Debug)]
+pub struct CtxOutputReference {
+    pub(crate) transaction_id: Vec<u8>,
+    pub(crate) output_index: u64,
+}
+
+impl CtxOutputReference {
+    pub fn new(transaction_id: Vec<u8>, output_index: u64) -> Self {
+        CtxOutputReference {
+            transaction_id,
+            output_index,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PubKeyHash(Vec<u8>);
+
+impl PubKeyHash {
+    pub fn new(inner: &[u8]) -> Self {
+        PubKeyHash(inner.to_vec())
+    }
+
+    pub fn bytes(&self) -> Vec<u8> {
+        self.0.to_owned()
+    }
+}
+
+/// Retrieves pubkey if Address is a Shelley
+pub fn pub_key_hash_from_address_if_available(address: &Address) -> Option<PubKeyHash> {
+    match address {
+        Address::Shelley(shelley_address) => {
+            let hash = shelley_address.payment().as_hash().to_vec();
+            let pkh = PubKeyHash::new(&hash);
+            Some(pkh)
+        }
+        _ => None,
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -24,7 +77,15 @@ pub struct ValidRange {
 pub struct Input {
     pub transaction_id: Vec<u8>,
     pub output_index: u64,
-    pub address: Vec<u8>,
+    pub address: Address,
+    pub value: CtxValue,
+    pub datum: CtxDatum,
+    pub reference_script: Option<Vec<u8>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CtxOutput {
+    pub address: Address,
     pub value: CtxValue,
     pub datum: CtxDatum,
     pub reference_script: Option<Vec<u8>>,
@@ -72,17 +133,23 @@ impl<D: Clone + Into<PlutusData>> From<Option<D>> for CtxDatum {
 }
 
 pub struct ContextBuilder {
-    signer: Address,
+    signer: PubKeyHash,
     range: Option<ValidRange>,
     inputs: Vec<Input>,
+    outputs: Vec<CtxOutput>,
+    extra_signatories: Vec<PubKeyHash>,
+    datums: Vec<(Vec<u8>, PlutusData)>,
 }
 
 impl ContextBuilder {
-    pub fn new(signer: Address) -> Self {
+    pub fn new(signer: PubKeyHash) -> Self {
         ContextBuilder {
             signer,
             range: None,
             inputs: vec![],
+            outputs: vec![],
+            extra_signatories: vec![],
+            datums: vec![],
         }
     }
 
@@ -96,12 +163,12 @@ impl ContextBuilder {
         self,
         transaction_id: &[u8],
         output_index: u64,
-        address: &[u8],
+        address: &Address,
     ) -> InputBuilder {
         InputBuilder {
             outer: self,
             transaction_id: transaction_id.to_vec(),
-            address: address.to_vec(),
+            address: address.clone(),
             value: Default::default(),
             datum: CtxDatum::NoDatum,
             reference_script: None,
@@ -118,7 +185,7 @@ impl ContextBuilder {
         let id = input.id();
         let transaction_id = id.tx_hash().to_vec();
         let output_index = id.index();
-        let address = input.owner().bytes().unwrap();
+        let address = input.owner();
         let value = CtxValue::from(input.values().to_owned());
         let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
         let datum = CtxDatum::from(maybe_datum);
@@ -134,7 +201,47 @@ impl ContextBuilder {
         self
     }
 
-    pub fn build(&self) -> TxContext {
+    pub fn build_output(self, address: &Address) -> CtxOutputBuilder {
+        CtxOutputBuilder {
+            outer: self,
+            address: address.clone(),
+            value: Default::default(),
+            datum: CtxDatum::NoDatum,
+            reference_script: None,
+        }
+    }
+
+    fn add_output(mut self, output: CtxOutput) -> ContextBuilder {
+        self.outputs.push(output);
+        self
+    }
+
+    pub fn add_specific_output<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
+        let address = input.owner();
+        let value = CtxValue::from(input.values().to_owned());
+        let maybe_datum: Option<D> = input.datum().map(|v| v.to_owned());
+        let datum = CtxDatum::from(maybe_datum);
+        let ctx_input = CtxOutput {
+            address,
+            value,
+            datum,
+            reference_script: None,
+        };
+        self.outputs.push(ctx_input);
+        self
+    }
+
+    pub fn add_signatory(mut self, signer: PubKeyHash) -> Self {
+        self.extra_signatories.push(signer);
+        self
+    }
+
+    pub fn add_datum<Datum: Into<PlutusData>>(mut self, datum_hash: &[u8], datum: Datum) -> Self {
+        self.datums.push((datum_hash.to_vec(), datum.into()));
+        self
+    }
+
+    pub fn build_spend(&self, tx_id: &[u8], index: u64) -> TxContext {
         let range = if let Some(range) = self.range.clone() {
             range
         } else {
@@ -144,9 +251,33 @@ impl ContextBuilder {
             }
         };
         TxContext {
+            purpose: CtxScriptPurpose::Spend(CtxOutputReference::new(tx_id.to_vec(), index)),
             signer: self.signer.clone(),
             range,
             inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            extra_signatories: self.extra_signatories.clone(),
+            datums: self.datums.clone(),
+        }
+    }
+
+    pub fn build_mint(&self, policy_id: &[u8]) -> TxContext {
+        let range = if let Some(range) = self.range.clone() {
+            range
+        } else {
+            ValidRange {
+                lower: None,
+                upper: None,
+            }
+        };
+        TxContext {
+            purpose: CtxScriptPurpose::Mint(policy_id.to_vec()),
+            signer: self.signer.clone(),
+            range,
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            extra_signatories: self.extra_signatories.clone(),
+            datums: self.datums.clone(),
         }
     }
 }
@@ -155,7 +286,7 @@ pub struct InputBuilder {
     outer: ContextBuilder,
     transaction_id: Vec<u8>,
     output_index: u64,
-    address: Vec<u8>,
+    address: Address,
     value: HashMap<String, HashMap<String, u64>>,
     datum: CtxDatum,
     reference_script: Option<Vec<u8>>,
@@ -188,6 +319,42 @@ impl InputBuilder {
             reference_script: self.reference_script,
         };
         self.outer.add_input(input)
+    }
+}
+
+pub struct CtxOutputBuilder {
+    outer: ContextBuilder,
+    address: Address,
+    value: HashMap<String, HashMap<String, u64>>,
+    datum: CtxDatum,
+    reference_script: Option<Vec<u8>>,
+}
+
+impl CtxOutputBuilder {
+    pub fn with_value(mut self, policy_id: &str, asset_name: &str, amt: u64) -> Self {
+        add_to_nested(&mut self.value, policy_id, asset_name, amt);
+        self
+    }
+
+    pub fn with_inline_datum(mut self, plutus_data: PlutusData) -> Self {
+        self.datum = CtxDatum::InlineDatum(plutus_data);
+        self
+    }
+
+    pub fn with_datum_hash(mut self, datum_hash: Vec<u8>) -> Self {
+        self.datum = CtxDatum::DatumHash(datum_hash);
+        self
+    }
+
+    pub fn finish_output(self) -> ContextBuilder {
+        let value = CtxValue { inner: self.value };
+        let output = CtxOutput {
+            address: self.address,
+            value,
+            datum: self.datum,
+            reference_script: self.reference_script,
+        };
+        self.outer.add_output(output)
     }
 }
 

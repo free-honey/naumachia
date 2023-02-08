@@ -1,6 +1,6 @@
 use super::*;
 use crate::scripts::FakePullerValidator;
-use naumachia::address::{Address, PolicyId};
+use naumachia::address::PolicyId;
 use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 
@@ -8,7 +8,7 @@ const NETWORK: u8 = 0;
 
 #[tokio::test]
 async fn init_creates_instance_with_correct_balance() {
-    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
+    let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
@@ -37,7 +37,7 @@ async fn init_creates_instance_with_correct_balance() {
 
 #[tokio::test]
 async fn add_puller_creates_new_datum_for_puller() {
-    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
+    let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let nft_id = vec![1, 2, 3, 4, 5];
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
@@ -46,10 +46,10 @@ async fn add_puller_creates_new_datum_for_puller() {
         .finish_output()
         .build_in_memory();
 
-    let puller = Address::new("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr");
+    let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
     let endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(&nft_id),
-        puller: puller.clone(),
+        puller: puller.to_bech32().unwrap(),
         amount_lovelace: 15_000_000,
         period: 1000,
         next_pull: 0,
@@ -84,7 +84,7 @@ async fn add_puller_creates_new_datum_for_puller() {
 
 #[tokio::test]
 async fn remove_puller__removes_the_allowed_puller() {
-    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
+    let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
     let nft_id = vec![1, 2, 3, 4, 5];
     let backend = TestBackendsBuilder::new(&me)
@@ -93,10 +93,10 @@ async fn remove_puller__removes_the_allowed_puller() {
         .finish_output()
         .build_in_memory();
 
-    let puller = Address::new("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr");
+    let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
     let add_endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(nft_id),
-        puller: puller.clone(),
+        puller: puller.to_bech32().unwrap(),
         amount_lovelace: 15_000_000,
         period: 1000,
         next_pull: 0,
@@ -128,7 +128,7 @@ async fn remove_puller__removes_the_allowed_puller() {
 
 #[tokio::test]
 async fn fund_account__replaces_existing_balance_with_updated_amount() {
-    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
+    let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
@@ -173,7 +173,7 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
 
 #[tokio::test]
 async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() {
-    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
+    let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
@@ -217,8 +217,8 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
 
 #[tokio::test]
 async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
-    let owner = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
-    let puller = Address::new("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr");
+    let owner = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
 
     let allow_puller_script = FakePullerValidator;
     let allow_puller_address = allow_puller_script.address(NETWORK).unwrap();

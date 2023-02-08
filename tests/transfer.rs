@@ -1,11 +1,14 @@
 use async_trait::async_trait;
-use naumachia::address::PolicyId;
-use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
-use naumachia::logic::SCLogicResult;
-use naumachia::smart_contract::{SmartContract, SmartContractTrait};
 use naumachia::{
-    address::Address, ledger_client::LedgerClient, logic::SCLogic, transaction::TxActions,
+    address::PolicyId,
+    ledger_client::test_ledger_client::TestBackendsBuilder,
+    ledger_client::LedgerClient,
+    logic::SCLogic,
+    logic::SCLogicResult,
+    smart_contract::{SmartContract, SmartContractTrait},
+    transaction::TxActions,
 };
+use pallas_addresses::Address;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct TransferADASmartContract;
@@ -44,8 +47,8 @@ impl SCLogic for TransferADASmartContract {
 
 #[tokio::test]
 async fn can_transfer_and_keep_remainder() {
-    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
-    let alice = Address::new("alice");
+    let me = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let alice = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
 
     let input_amount = 666;
     let extra_policy = PolicyId::native_token("arcade token", &None);

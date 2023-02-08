@@ -5,8 +5,8 @@ use naumachia::ledger_client::test_ledger_client::{
 };
 use naumachia::logic::SCLogicError;
 use naumachia::scripts::context::TxContext;
+use naumachia::scripts::ExecutionCost;
 use naumachia::{
-    address::Address,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::SCLogicResult,
@@ -15,16 +15,17 @@ use naumachia::{
     smart_contract::SmartContractTrait,
     transaction::TxActions,
 };
+use pallas_addresses::Address;
 
 struct AlwaysMintsPolicy;
 
 impl<R> MintingPolicy<R> for AlwaysMintsPolicy {
-    fn execute(&self, _redeemer: R, _ctx: TxContext) -> ScriptResult<()> {
-        Ok(())
+    fn execute(&self, _redeemer: R, _ctx: TxContext) -> ScriptResult<ExecutionCost> {
+        Ok(ExecutionCost::default())
     }
 
     fn id(&self) -> ScriptResult<String> {
-        Ok(MINT_POLICY_ID.to_string())
+        Ok(hex::encode(MINT_POLICY_ID))
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -39,7 +40,7 @@ enum Endpoint {
     Mint { amount: u64 },
 }
 
-const MINT_POLICY_ID: &str = "mint_policy";
+const MINT_POLICY_ID: &[u8] = &[6, 6, 6, 6, 6];
 
 #[async_trait]
 impl SCLogic for AlwaysMintsSmartContract {
@@ -56,7 +57,7 @@ impl SCLogic for AlwaysMintsSmartContract {
         match endpoint {
             Endpoint::Mint { amount } => {
                 let recipient = txo_record
-                    .signer()
+                    .signer_base_address()
                     .await
                     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
                 mint(amount, recipient)
@@ -80,8 +81,8 @@ fn mint(amount: u64, _recipient: Address) -> SCLogicResult<TxActions<(), ()>> {
 
 #[tokio::test]
 async fn can_mint_from_always_true_minting_policy() {
-    let me = Address::new("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm");
-    let policy = PolicyId::native_token(MINT_POLICY_ID, &None);
+    let me = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let policy = PolicyId::native_token(&hex::encode(MINT_POLICY_ID), &None);
     let backend = TestBackendsBuilder::new(&me).build_in_memory();
     // Call mint endpoint
     let amount = 69;

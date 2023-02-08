@@ -1,4 +1,5 @@
-use crate::{Address, PolicyId};
+use crate::PolicyId;
+use pallas_addresses::Address;
 use serde::{Deserialize, Serialize};
 
 use crate::values::Values;
@@ -6,11 +7,11 @@ use crate::values::Values;
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub enum UnbuiltOutput<Datum> {
     Wallet {
-        owner: Address,
+        owner: String,
         values: Values,
     },
     Validator {
-        script_address: Address,
+        script_address: String,
         values: Values,
         datum: Datum,
     },
@@ -18,21 +19,28 @@ pub enum UnbuiltOutput<Datum> {
 
 impl<Datum> UnbuiltOutput<Datum> {
     pub fn new_wallet(owner: Address, values: Values) -> Self {
-        UnbuiltOutput::Wallet { owner, values }
+        UnbuiltOutput::Wallet {
+            owner: owner.to_bech32().expect("already validated"),
+            values,
+        }
     }
 
     pub fn new_validator(script_address: Address, values: Values, datum: Datum) -> Self {
         UnbuiltOutput::Validator {
-            script_address,
+            script_address: script_address.to_bech32().expect("Already validated"),
             values,
             datum,
         }
     }
 
-    pub fn owner(&self) -> &Address {
+    pub fn owner(&self) -> Address {
         match self {
-            UnbuiltOutput::Wallet { owner, .. } => owner,
-            UnbuiltOutput::Validator { script_address, .. } => script_address,
+            UnbuiltOutput::Wallet { owner, .. } => {
+                Address::from_bech32(owner).expect("Already Validated")
+            }
+            UnbuiltOutput::Validator { script_address, .. } => {
+                Address::from_bech32(script_address).expect("Already Validated")
+            }
         }
     }
 
@@ -56,12 +64,12 @@ impl<Datum> UnbuiltOutput<Datum> {
 pub enum Output<Datum> {
     Wallet {
         id: OutputId,
-        owner: Address,
+        owner: String,
         values: Values,
     },
     Validator {
         id: OutputId,
-        owner: Address,
+        owner: String,
         values: Values,
         datum: Datum,
     },
@@ -92,7 +100,12 @@ pub type Value = (PolicyId, u64);
 impl<Datum> Output<Datum> {
     pub fn new_wallet(tx_hash: Vec<u8>, index: u64, owner: Address, values: Values) -> Self {
         let id = OutputId::new(tx_hash, index);
-        Output::Wallet { id, owner, values }
+        let addr = owner.to_bech32().expect("Already Validated");
+        Output::Wallet {
+            id,
+            owner: addr,
+            values,
+        }
     }
 
     pub fn new_validator(
@@ -103,9 +116,10 @@ impl<Datum> Output<Datum> {
         datum: Datum,
     ) -> Self {
         let id = OutputId::new(tx_hash, index);
+        let addr = owner.to_bech32().expect("Already Validated");
         Output::Validator {
             id,
-            owner,
+            owner: addr,
             values,
             datum,
         }
@@ -118,10 +132,12 @@ impl<Datum> Output<Datum> {
         }
     }
 
-    pub fn owner(&self) -> &Address {
+    pub fn owner(&self) -> Address {
         match self {
-            Output::Wallet { owner, .. } => owner,
-            Output::Validator { owner, .. } => owner,
+            Output::Wallet { owner, .. } => Address::from_bech32(owner).expect("Already Validated"),
+            Output::Validator { owner, .. } => {
+                Address::from_bech32(owner).expect("Already Validated")
+            }
         }
     }
 
