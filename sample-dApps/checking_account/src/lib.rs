@@ -4,7 +4,6 @@ use crate::scripts::FakePullerValidator;
 use async_trait::async_trait;
 use nau_scripts::one_shot;
 use nau_scripts::one_shot::OutputReference;
-use naumachia::logic::SCLogicError::Endpoint;
 use naumachia::output::{Output, OutputId};
 use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
 use naumachia::scripts::{MintingPolicy, ScriptError};
@@ -265,9 +264,9 @@ pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
 async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     checking_account_nft_id: String,
-    puller: &str,
-    amount_lovelace: u64,
-    period: i64,
+    _puller: &str,
+    _amount_lovelace: u64,
+    _period: i64,
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let me = ledger_client
@@ -275,7 +274,6 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
-    let puller_addr = Address::from_bech32(puller).map_err(|e| Endpoint(Box::new(e)))?;
     let datum = CheckingAccountDatums::AllowedPuller {
         // puller,
         // amount_lovelace,

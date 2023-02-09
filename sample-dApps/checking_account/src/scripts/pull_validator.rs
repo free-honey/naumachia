@@ -1,5 +1,5 @@
 use crate::CheckingAccountDatums;
-use naumachia::scripts::raw_script::{BlueprintFile, PlutusScriptFile};
+use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
@@ -26,7 +26,6 @@ pub fn spend_token_policy() -> ScriptResult<RawPlutusValidator<CheckingAccountDa
 mod tests {
     use super::*;
     use crate::{Address, CheckingAccountDatums};
-    use naumachia::address::PolicyId;
     use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::ValidatorCode;
 
@@ -39,7 +38,6 @@ mod tests {
             .with_range(Some((11, true)), None)
             .build_spend(&[8, 8, 8, 8], 0);
 
-        let spending_token_policy = vec![1, 2, 3, 4];
         let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
 
         let _eval = script.execute(datum, (), ctx).unwrap();
@@ -54,7 +52,6 @@ mod tests {
             .with_range(Some((8, true)), None)
             .build_spend(&[8, 8, 8, 8], 0);
 
-        let spending_token_policy = vec![1, 2, 3, 4];
         let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
 
         let _eval = script.execute(datum, (), ctx).unwrap_err();
@@ -69,7 +66,6 @@ mod tests {
             .with_range(Some((10, false)), None)
             .build_spend(&[8, 8, 8, 8], 0);
 
-        let spending_token_policy = vec![1, 2, 3, 4];
         let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
 
         let _eval = script.execute(datum, (), ctx).unwrap_err();
@@ -84,7 +80,6 @@ mod tests {
             .with_range(Some((10, true)), None)
             .build_spend(&[8, 8, 8, 8], 0);
 
-        let spending_token_policy = vec![1, 2, 3, 4];
         let datum = CheckingAccountDatums::AllowedPuller { next_pull: 10 };
 
         let _eval = script.execute(datum, (), ctx).unwrap();

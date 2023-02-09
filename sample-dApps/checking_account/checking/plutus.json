@@ -6,6 +6,39 @@
   },
   "validators": [
     {
+      "title": "pull_validator",
+      "purpose": "spend",
+      "datum": {
+        "title": "Datum",
+        "anyOf": [
+          {
+            "title": "Datum",
+            "dataType": "constructor",
+            "index": 0,
+            "fields": [
+              {
+                "title": "next_pull",
+                "dataType": "integer"
+              }
+            ]
+          }
+        ]
+      },
+      "redeemer": {
+        "title": "Unit",
+        "description": "The nullary constructor.",
+        "anyOf": [
+          {
+            "dataType": "constructor",
+            "index": 0,
+            "fields": []
+          }
+        ]
+      },
+      "compiledCode": "58ec0100003232222533357346464a666ae68c8cc00401801088c8c8c8c94ccd5cd19b87001480084c8c94ccd5cd002899b8900600113371000c0026eb4d5d080098040010a5035573a6ea8004cc014c018cc014c018cc014c018cc014c01800d200048039200048000cdc3a40046aae74dd51980218029980218029980218029980218028012400090072400090011bad330033004002480005288a5022323330010014800000c888cccd5cd19b870040025742466600800866e0000d20023574400200246aae78dd50008a4c2c6002002444a666aae7c008526133573660026ae84008ccc00c00cd5d10010009",
+      "hash": "f96e684dee99ab610946506b5aba06f5e094370a102914a806a0d27c"
+    },
+    {
       "title": "checking_account_validator",
       "purpose": "spend",
       "datum": {
@@ -41,39 +74,6 @@
       },
       "compiledCode": "59017201000032322225333573464646464a666ae68c8c8c8c8c8c8c8cc004030dd7198051805807240044464646600a6eb0cc034c038cc034c0380112000480000048c8cc03000400cc01cdd5998069807198069807000a40049001119b8f00100230010012223253335573e00229404c8c94ccd5cd18020010a511333006006001004357440046ae840040088c0080048c008004c00400488c94ccd55cf8008a5eb804c8c8c8c8cd5d01ba900133007007003375c6aae7400cdd59aab9e002357440046ae84004004528899198008031bae3300430050084800088c8cc010dd6198031803998031803801a40009008000919b8f00100230010012223253335573e00229404c8c94ccd5cd18020010a511333006006001004357440046eb8d5d08008011119199800800a40000064446666ae68cdc38020012ba123330040043370000690011aba2001001235573c6ea800452616300100122253335573e004293099ab9b3001357420046660060066ae88008005",
       "hash": "2766532b368aac8b4779c9a1f19f38a247a6a4b567720abd97f05612"
-    },
-    {
-      "title": "pull_validator",
-      "purpose": "spend",
-      "datum": {
-        "title": "Datum",
-        "anyOf": [
-          {
-            "title": "Datum",
-            "dataType": "constructor",
-            "index": 0,
-            "fields": [
-              {
-                "title": "next_pull",
-                "dataType": "integer"
-              }
-            ]
-          }
-        ]
-      },
-      "redeemer": {
-        "title": "Unit",
-        "description": "The nullary constructor.",
-        "anyOf": [
-          {
-            "dataType": "constructor",
-            "index": 0,
-            "fields": []
-          }
-        ]
-      },
-      "compiledCode": "58ec0100003232222533357346464a666ae68c8cc00401801088c8c8c8c94ccd5cd19b87001480084c8c94ccd5cd002899b8900600113371000c0026eb4d5d080098040010a5035573a6ea8004cc014c018cc014c018cc014c018cc014c01800d200048039200048000cdc3a40046aae74dd51980218029980218029980218029980218028012400090072400090011bad330033004002480005288a5022323330010014800000c888cccd5cd19b870040025742466600800866e0000d20023574400200246aae78dd50008a4c2c6002002444a666aae7c008526133573660026ae84008ccc00c00cd5d10010009",
-      "hash": "f96e684dee99ab610946506b5aba06f5e094370a102914a806a0d27c"
     },
     {
       "title": "spend_token_policy",
