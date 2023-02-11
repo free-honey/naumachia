@@ -4,7 +4,6 @@ use crate::scripts::FakePullerValidator;
 use async_trait::async_trait;
 use nau_scripts::one_shot;
 use nau_scripts::one_shot::OutputReference;
-use naumachia::logic::SCLogicError::Endpoint;
 use naumachia::output::{Output, OutputId};
 use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
 use naumachia::scripts::{MintingPolicy, ScriptError};
@@ -71,9 +70,9 @@ pub enum CheckingAccountDatums {
         spend_token_policy: String,
     },
     AllowedPuller {
-        puller: Address,
-        amount_lovelace: u64,
-        period: i64,
+        // puller: Address,
+        // amount_lovelace: u64,
+        // period: i64,
         next_pull: i64,
     },
 }
@@ -94,7 +93,14 @@ impl From<CheckingAccountDatums> for PlutusData {
                     fields: vec![owner_data, policy_data],
                 })
             }
-            CheckingAccountDatums::AllowedPuller { .. } => PlutusData::BoundedBytes(vec![]),
+            CheckingAccountDatums::AllowedPuller { next_pull } => {
+                let next_pull = PlutusData::BigInt(next_pull.into());
+                PlutusData::Constr(Constr {
+                    tag: 121,
+                    any_constructor: None,
+                    fields: vec![next_pull],
+                })
+            }
         }
     }
 }
@@ -250,7 +256,6 @@ async fn select_any_above_min<LC: LedgerClient<CheckingAccountDatums, ()>>(
             CheckingAccountError::InputNotFound,
         )))?
         .to_owned();
-    println!("input id: {:?}", selected.id());
     Ok(selected)
 }
 
@@ -259,9 +264,9 @@ pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
 async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     checking_account_nft_id: String,
-    puller: &str,
-    amount_lovelace: u64,
-    period: i64,
+    _puller: &str,
+    _amount_lovelace: u64,
+    _period: i64,
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let me = ledger_client
@@ -269,11 +274,10 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
-    let puller_addr = Address::from_bech32(puller).map_err(|e| Endpoint(Box::new(e)))?;
     let datum = CheckingAccountDatums::AllowedPuller {
-        puller: puller_addr,
-        amount_lovelace,
-        period,
+        // puller,
+        // amount_lovelace,
+        // period,
         next_pull,
     };
     let parameterized_spending_token_policy = spend_token_policy().unwrap();

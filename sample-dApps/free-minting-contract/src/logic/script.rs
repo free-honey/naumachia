@@ -17,7 +17,7 @@ pub fn get_policy<R>() -> ScriptResult<RawPolicy<R>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::scripts::context::{pub_key_has_from_address_if_available, ContextBuilder};
+    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::MintingPolicy;
     use naumachia::Address;
 
@@ -27,7 +27,7 @@ mod tests {
 
         let script = get_policy().unwrap();
 
-        let owner_pkh = pub_key_has_from_address_if_available(&owner).unwrap();
+        let owner_pkh = pub_key_hash_from_address_if_available(&owner).unwrap();
         let ctx = ContextBuilder::new(owner_pkh).build_mint(&[]);
 
         let _eval = script.execute((), ctx).unwrap();

@@ -56,7 +56,7 @@ impl PubKeyHash {
 }
 
 /// Retrieves pubkey if Address is a Shelley
-pub fn pub_key_has_from_address_if_available(address: &Address) -> Option<PubKeyHash> {
+pub fn pub_key_hash_from_address_if_available(address: &Address) -> Option<PubKeyHash> {
     match address {
         Address::Shelley(shelley_address) => {
             let hash = shelley_address.payment().as_hash().to_vec();

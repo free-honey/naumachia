@@ -1,5 +1,5 @@
 use super::*;
-use crate::scripts::context::pub_key_has_from_address_if_available;
+use crate::scripts::context::pub_key_hash_from_address_if_available;
 use sha2::{Digest, Sha256};
 
 struct HashedString {
@@ -54,7 +54,7 @@ fn execute_game_passes() {
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(word);
     let signer_address = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
-    let signer_pkh = pub_key_has_from_address_if_available(&signer_address).unwrap();
+    let signer_pkh = pub_key_hash_from_address_if_available(&signer_address).unwrap();
     let ctx = ContextBuilder::new(signer_pkh).build_spend(&[], 0);
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_ok());
@@ -74,7 +74,7 @@ fn execute_game_fails() {
     let datum = HashedString::new(word);
     let redeemer = ClearString::new(bad_guess);
     let signer = Address::from_bech32("addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua").unwrap();
-    let signer_pkh = pub_key_has_from_address_if_available(&signer).unwrap();
+    let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
     let ctx = ContextBuilder::new(signer_pkh).build_spend(&[], 0);
 
     assert!(dbg!(script.execute(datum, redeemer, ctx)).is_err()); // TODO: Make more specific

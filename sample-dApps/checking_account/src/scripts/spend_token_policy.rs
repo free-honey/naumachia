@@ -59,7 +59,7 @@ pub fn spend_token_policy() -> ScriptResult<TwoParamRawPolicy<CheckingAccountNFT
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::scripts::context::{pub_key_has_from_address_if_available, ContextBuilder};
+    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::MintingPolicy;
 
     #[test]
@@ -69,7 +69,7 @@ mod tests {
         let nft = CheckingAccountNFT {
             inner: vec![1, 2, 3],
         };
-        let signer_pkh = pub_key_has_from_address_if_available(&signer).unwrap();
+        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
         let owner = Owner {
             inner: signer_pkh.bytes(),
         };
@@ -88,13 +88,13 @@ mod tests {
         let nft = CheckingAccountNFT {
             inner: vec![1, 2, 3],
         };
-        let signer_pkh = pub_key_has_from_address_if_available(&correct_signer).unwrap();
+        let signer_pkh = pub_key_hash_from_address_if_available(&correct_signer).unwrap();
         let owner = Owner {
             inner: signer_pkh.bytes(),
         };
         let script = param_script.apply(nft).unwrap().apply(owner).unwrap();
         let incorrect_signer_pkh =
-            pub_key_has_from_address_if_available(&incorrect_signer).unwrap();
+            pub_key_hash_from_address_if_available(&incorrect_signer).unwrap();
         let ctx = ContextBuilder::new(incorrect_signer_pkh).build_mint(&[]);
 
         script.execute((), ctx).unwrap_err();

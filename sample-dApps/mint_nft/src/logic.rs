@@ -100,6 +100,5 @@ async fn select_any_above_min<LC: LedgerClient<(), ()>>(
             MintNFTError::InputNotFound,
         )))?
         .to_owned();
-    println!("input id: {:?}", selected.id());
     Ok(selected)
 }

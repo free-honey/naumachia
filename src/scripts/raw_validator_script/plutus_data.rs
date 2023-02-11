@@ -252,7 +252,7 @@ impl From<ValidRange> for PlutusData {
     fn from(value: ValidRange) -> Self {
         match (value.lower, value.upper) {
             (None, None) => no_time_bound(),
-            (Some((bound, _)), None) => lower_bound(bound),
+            (Some((bound, is_inclusive)), None) => lower_bound(bound, is_inclusive),
             (None, Some(_)) => todo!(),
             (Some(_), Some(_)) => todo!(),
         }
@@ -304,7 +304,22 @@ fn no_time_bound() -> PlutusData {
     })
 }
 
-fn lower_bound(bound: i64) -> PlutusData {
+fn lower_bound(bound: i64, is_inclusive: bool) -> PlutusData {
+    let closure = if is_inclusive {
+        // True
+        PlutusData::Constr(Constr {
+            tag: 122,
+            any_constructor: None,
+            fields: vec![],
+        })
+    } else {
+        // False
+        PlutusData::Constr(Constr {
+            tag: 121,
+            any_constructor: None,
+            fields: vec![],
+        })
+    };
     PlutusData::Constr(Constr {
         tag: 121,
         any_constructor: None,
@@ -320,11 +335,7 @@ fn lower_bound(bound: i64) -> PlutusData {
                         fields: vec![PlutusData::BigInt(bound.into())],
                     }),
                     // Closure
-                    PlutusData::Constr(Constr {
-                        tag: 122,
-                        any_constructor: None,
-                        fields: vec![],
-                    }),
+                    closure,
                 ],
             }),
             PlutusData::Constr(Constr {

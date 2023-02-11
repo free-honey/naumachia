@@ -77,7 +77,7 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<i64, ()>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::scripts::context::{pub_key_has_from_address_if_available, ContextBuilder};
+    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::ValidatorCode;
     use naumachia::Address;
 
@@ -87,7 +87,7 @@ mod tests {
 
         let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
 
-        let owner_pkh = pub_key_has_from_address_if_available(&owner).unwrap();
+        let owner_pkh = pub_key_hash_from_address_if_available(&owner).unwrap();
         let ctx = ContextBuilder::new(owner_pkh)
             .with_range(Some((80, true)), None)
             .build_spend(&vec![], 0);
@@ -102,7 +102,7 @@ mod tests {
 
         let owner = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
 
-        let owner_pkh = pub_key_has_from_address_if_available(&owner).unwrap();
+        let owner_pkh = pub_key_hash_from_address_if_available(&owner).unwrap();
         let ctx = ContextBuilder::new(owner_pkh)
             .with_range(Some((10, true)), None)
             .build_spend(&vec![], 0);
