@@ -1,7 +1,7 @@
-use crate::output::Output;
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
-use crate::values::Values;
-use crate::PolicyId;
+use crate::{
+    output::Output, scripts::raw_validator_script::plutus_data::PlutusData, values::Values,
+    PolicyId,
+};
 use pallas_addresses::Address;
 use std::collections::HashMap;
 
@@ -236,8 +236,9 @@ impl ContextBuilder {
         self
     }
 
-    pub fn add_datum<Datum: Into<PlutusData>>(mut self, datum_hash: &[u8], datum: Datum) -> Self {
-        self.datums.push((datum_hash.to_vec(), datum.into()));
+    pub fn add_datum<Datum: Into<PlutusData>>(mut self, datum: Datum) -> Self {
+        let data = datum.into();
+        self.datums.push((data.hash(), data));
         self
     }
 
@@ -298,13 +299,21 @@ impl InputBuilder {
         self
     }
 
-    pub fn with_inline_datum(mut self, plutus_data: PlutusData) -> InputBuilder {
-        self.datum = CtxDatum::InlineDatum(plutus_data);
+    pub fn with_inline_datum<Datum: Into<PlutusData>>(mut self, datum: Datum) -> InputBuilder {
+        self.datum = CtxDatum::InlineDatum(datum.into());
         self
     }
 
     pub fn with_datum_hash(mut self, datum_hash: Vec<u8>) -> InputBuilder {
         self.datum = CtxDatum::DatumHash(datum_hash);
+        self
+    }
+
+    pub fn with_datum_hash_from_datum<Datum: Into<PlutusData>>(
+        mut self,
+        datum: Datum,
+    ) -> InputBuilder {
+        self.datum = CtxDatum::DatumHash(datum.into().hash());
         self
     }
 
@@ -336,13 +345,18 @@ impl CtxOutputBuilder {
         self
     }
 
-    pub fn with_inline_datum(mut self, plutus_data: PlutusData) -> Self {
-        self.datum = CtxDatum::InlineDatum(plutus_data);
+    pub fn with_inline_datum<Datum: Into<PlutusData>>(mut self, datum: Datum) -> Self {
+        self.datum = CtxDatum::InlineDatum(datum.into());
         self
     }
 
     pub fn with_datum_hash(mut self, datum_hash: Vec<u8>) -> Self {
         self.datum = CtxDatum::DatumHash(datum_hash);
+        self
+    }
+
+    pub fn with_datum_hash_from_datum<Datum: Into<PlutusData>>(mut self, datum: Datum) -> Self {
+        self.datum = CtxDatum::DatumHash(datum.into().hash());
         self
     }
 
