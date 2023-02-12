@@ -27,6 +27,7 @@ fn ctx_contains_owner_signature(ctx: ScriptContext, owner: ByteArray) -> Bool {
 }
 
 pub fn spend(datum: CheckingAccountDatum, _redeemer: Void, ctx: ScriptContext) -> Bool {
+    //  TODO: Check only one spend token 
     ctx_contains_spend_token(ctx, datum.spend_token_policy)
     || ctx_contains_owner_signature(ctx, datum.owner)
 }
