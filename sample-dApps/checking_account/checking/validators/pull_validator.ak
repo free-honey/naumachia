@@ -1,8 +1,8 @@
-use aiken/transaction.{ScriptContext, OutputReference, Output, Input, Spend}
+use aiken/transaction.{ScriptContext, OutputReference, Output, Input, Spend, InlineDatum}
 use aiken/transaction/credential.{Address}
 use aiken/interval.{IntervalBoundType, Finite}
 use aiken/list.{find}
-use aiken/option.{map, is_some}
+use aiken/option.{map, is_some, and_then}
 
 pub type Datum {
     next_pull: Int,
@@ -19,20 +19,33 @@ fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
     }
 }
 
-fn only_one_spend_token(datum: Datum, ctx: ScriptContext) -> Bool {
-    True
-}
-
 fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
-    when ctx.purpose is {
-        Spend(out_ref) -> {
-            let inputs = ctx.transaction.inputs
-            find_input_address(out_ref, inputs)
-            |> is_some
+    let output_at_address = fn(address: Address) -> Option<Output> {
+        let address_matches = fn(output: Output) -> Bool {
+            output.address == address
+        }
+        ctx.transaction.outputs
+        |> find(address_matches)
+    }
+
+    let checks_on_output = fn(output: Output) -> Bool {
+            expect InlineDatum(datum) = output.datum
+            expect datum: Datum = datum
             //    a. Datum has updated date (old_date + period)
             //    b. Everything else matches
             //    c. Check that datum is at current address
             //    d. Check that UTxO includes spending token!
+            True
+    }
+
+    when ctx.purpose is {
+        Spend(out_ref) -> {
+            let inputs = ctx.transaction.inputs
+            when find_input_address(out_ref, inputs)
+            |> and_then(output_at_address) is {
+                Some(output) -> checks_on_output(output)
+                None -> False
+            }
         }
         _ -> False
     }

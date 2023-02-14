@@ -119,7 +119,6 @@ mod tests {
         let input_tx_index = 0;
         let script_address = script.address(NETWORK).unwrap();
         let input_datum = CheckingAccountDatums::AllowedPuller { next_pull: 0 };
-        let output_datum = CheckingAccountDatums::AllowedPuller { next_pull: 0 };
         let ctx = ContextBuilder::new(signer_pkh)
             .with_range(Some((11, true)), None)
             .with_input(&input_tx_id, input_tx_index, &script_address)
