@@ -1,11 +1,14 @@
 use aiken/transaction.{ScriptContext, OutputReference, Output, Input, Spend, InlineDatum}
 use aiken/transaction/credential.{Address}
+use aiken/transaction/value.{policies}
 use aiken/interval.{IntervalBoundType, Finite}
-use aiken/list.{find}
+use aiken/list.{find, any}
 use aiken/option.{map, is_some, and_then}
 
 pub type Datum {
     next_pull: Int,
+    period: Int,
+    spend_token: ByteArray
 }
 
 fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
@@ -19,6 +22,7 @@ fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
     }
 }
 
+// This just chooses the first output at that address, behavior undefined if there are multiple
 fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
     let output_at_address = fn(address: Address) -> Option<Output> {
         let address_matches = fn(output: Output) -> Bool {
@@ -28,13 +32,21 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
         |> find(address_matches)
     }
 
-    let checks_on_output = fn(output: Output) -> Bool {
-            expect InlineDatum(datum) = output.datum
-            expect datum: Datum = datum
-            //    a. Datum has updated date (old_date + period)
+    let checks_on_output = fn(output: Output, old_datum: Datum) -> Bool {
+            expect InlineDatum(untyped_datum) = output.datum
+            expect new_datum: Datum = untyped_datum
+            //    a. New datum has updated date 
+            new_datum.next_pull == old_datum.next_pull + old_datum.period &&
             //    b. Everything else matches
-            //    c. Check that datum is at current address
+            new_datum.period == old_datum.period &&
+            new_datum.spend_token == old_datum.spend_token &&
             //    d. Check that UTxO includes spending token!
+            { 
+                output.value
+                |> policies
+                |> any(fn(id) {id == old_datum.spend_token})
+
+            } &&
             True
     }
 
@@ -43,7 +55,7 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
             let inputs = ctx.transaction.inputs
             when find_input_address(out_ref, inputs)
             |> and_then(output_at_address) is {
-                Some(output) -> checks_on_output(output)
+                Some(output) -> checks_on_output(output, datum)
                 None -> False
             }
         }
