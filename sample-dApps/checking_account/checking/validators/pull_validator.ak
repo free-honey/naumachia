@@ -75,17 +75,17 @@ fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Opti
     |> map(address_from_output)
 }
 
-
-
-pub fn spend(datum: Datum, _redeemer: Void, ctx: ScriptContext) -> Bool {
-    // This Script
-    // 1. Check that it's past date
-    past_next_pull_date(datum, ctx) &&
-    // 2. Check taht new datum is made
-    new_datum_is_made(datum, ctx) &&
-    // That Script
-    // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
-    // 2. Check that CA datum on new Output && matches
-    // 3. Check that CA NFT on CA Output
-    True
+validator spend {
+    fn(datum: Datum, _redeemer: Void, ctx: ScriptContext) -> Bool {
+        // This Script
+        // 1. Check that it's past date
+        past_next_pull_date(datum, ctx) &&
+        // 2. Check taht new datum is made
+        new_datum_is_made(datum, ctx) &&
+        // That Script
+        // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
+        // 2. Check that CA datum on new Output && matches
+        // 3. Check that CA NFT on CA Output
+        True
+}
 }

@@ -4,7 +4,7 @@ use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const SCRIPT_RAW: &str = include_str!("../../checking/plutus.json");
-const VALIDATOR_NAME: &str = "pull_validator";
+const VALIDATOR_NAME: &str = "pull_validator.spend";
 
 pub fn spend_token_policy() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums, ()>> {
     let blueprint: BlueprintFile = serde_json::from_str(SCRIPT_RAW)

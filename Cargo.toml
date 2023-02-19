@@ -69,6 +69,7 @@ sha2 = "0.10.6"
 [patch.crates-io]
 uplc = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
 aiken = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+aiken-lang = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
 aiken-project = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
 
 #[patch."https://github.com/aiken-lang/aiken.git"]

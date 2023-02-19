@@ -45,7 +45,6 @@ pub struct Preamble {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ValidatorBlueprint {
     title: String,
-    purpose: String,
     datum: Option<serde_json::Value>, // TODO: what is this type actually?
     redeemer: serde_json::Value,      // TODO: what is this type actually?
     compiledCode: String,
