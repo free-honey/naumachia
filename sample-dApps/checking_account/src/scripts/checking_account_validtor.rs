@@ -5,7 +5,7 @@ use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
-const VALIDATOR_NAME: &str = "checking_account_validator";
+const VALIDATOR_NAME: &str = "checking_account_validator.spend";
 
 pub struct SpendingTokenPolicy {
     inner: Vec<u8>,

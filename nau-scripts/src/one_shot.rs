@@ -9,7 +9,7 @@ use naumachia::{
 };
 
 const BLUEPRINT: &str = include_str!("../aiken/mint_nft/plutus.json");
-const VALIDATOR_NAME: &str = "one_shot_nft";
+const VALIDATOR_NAME: &str = "one_shot_nft.mint";
 
 // pub type OutputReference {
 //   transction_id: TransactionId,

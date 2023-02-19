@@ -4,7 +4,7 @@ use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const BLUEPRINT: &str = include_str!("../../time_locked/plutus.json");
-const VALIDATOR_NAME: &str = "time_lock";
+const VALIDATOR_NAME: &str = "time_lock.spend";
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Timestamp {

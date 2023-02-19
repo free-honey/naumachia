@@ -5,7 +5,7 @@ use naumachia::scripts::{ScriptError, ScriptResult};
 use naumachia::Address;
 
 const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
-const VALIDATOR_NAME: &str = "spend_token_policy";
+const VALIDATOR_NAME: &str = "spend_token_policy.mint";
 
 pub struct CheckingAccountNFT {
     inner: Vec<u8>,
