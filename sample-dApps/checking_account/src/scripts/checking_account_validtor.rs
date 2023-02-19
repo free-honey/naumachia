@@ -5,7 +5,7 @@ use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
-const VALIDATOR_NAME: &str = "checking_account_validator";
+const VALIDATOR_NAME: &str = "checking_account_validator.spend";
 
 pub struct SpendingTokenPolicy {
     inner: Vec<u8>,
@@ -53,7 +53,7 @@ mod tests {
         let policy = vec![1, 2, 3, 4, 5];
         let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
         let ctx = ContextBuilder::new(signer_pkh)
-            .build_input(
+            .with_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,
@@ -81,7 +81,7 @@ mod tests {
         let policy = vec![1, 2, 3, 4, 5];
         let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
         let ctx = ContextBuilder::new(signer_pkh)
-            .build_input(
+            .with_input(
                 &hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
                     .unwrap(),
                 0,

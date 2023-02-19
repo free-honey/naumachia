@@ -3,7 +3,7 @@ use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const BLUEPRINT: &str = include_str!("../../always_succeeds/plutus.json");
-const VALIDATOR_NAME: &str = "always_true";
+const VALIDATOR_NAME: &str = "always_true.spend";
 
 pub fn get_script() -> ScriptResult<RawPlutusValidator<(), ()>> {
     let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)

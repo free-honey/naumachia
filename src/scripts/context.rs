@@ -159,7 +159,7 @@ impl ContextBuilder {
         self
     }
 
-    pub fn build_input(
+    pub fn with_input(
         self,
         transaction_id: &[u8],
         output_index: u64,
@@ -201,7 +201,7 @@ impl ContextBuilder {
         self
     }
 
-    pub fn build_output(self, address: &Address) -> CtxOutputBuilder {
+    pub fn with_output(self, address: &Address) -> CtxOutputBuilder {
         CtxOutputBuilder {
             outer: self,
             address: address.clone(),

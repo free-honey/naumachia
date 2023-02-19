@@ -423,7 +423,7 @@ impl From<CtxValue> for PlutusData {
                 let assets = a
                     .iter()
                     .map(|(an, amt)| {
-                        let asset_name = PlutusData::BoundedBytes(hex::decode(an).unwrap()); // TODO
+                        let asset_name = PlutusData::BoundedBytes(an.as_bytes().to_vec()); // TODO: Should this be bytes? or hex decoded?
                         let amount = PlutusData::BigInt((*amt as i64).into()); // TODO
                         (asset_name, amount)
                     })

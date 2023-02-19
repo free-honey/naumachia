@@ -1,8 +1,14 @@
-use aiken/transaction.{ScriptContext}
+use aiken/transaction.{ScriptContext, OutputReference, Output, Input, Spend, InlineDatum}
+use aiken/transaction/credential.{Address}
+use aiken/transaction/value.{policies}
 use aiken/interval.{IntervalBoundType, Finite}
+use aiken/list.{find, any}
+use aiken/option.{map, is_some, and_then}
 
 pub type Datum {
     next_pull: Int,
+    period: Int,
+    spend_token: ByteArray
 }
 
 fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
@@ -16,23 +22,70 @@ fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
     }
 }
 
-fn only_one_spend_token(datum: Datum, ctx: ScriptContext) -> Bool {
-    True
+// This just chooses the first output at that address, behavior undefined if there are multiple
+fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
+    let output_at_address = fn(address: Address) -> Option<Output> {
+        let address_matches = fn(output: Output) -> Bool {
+            output.address == address
+        }
+        ctx.transaction.outputs
+        |> find(address_matches)
+    }
+
+    let checks_on_output = fn(output: Output, old_datum: Datum) -> Bool {
+            expect InlineDatum(untyped_datum) = output.datum
+            expect new_datum: Datum = untyped_datum
+            //    a. New datum has updated date 
+            new_datum.next_pull == old_datum.next_pull + old_datum.period &&
+            //    b. Everything else matches
+            new_datum.period == old_datum.period &&
+            new_datum.spend_token == old_datum.spend_token &&
+            //    d. Check that UTxO includes spending token!
+            { 
+                output.value
+                |> policies
+                |> any(fn(id) {id == old_datum.spend_token})
+
+            }
+    }
+
+    when ctx.purpose is {
+        Spend(out_ref) -> {
+            let inputs = ctx.transaction.inputs
+            when find_input_address(out_ref, inputs)
+            |> and_then(output_at_address) is {
+                Some(output) -> checks_on_output(output, datum)
+                None -> False
+            }
+        }
+        _ -> False
+    }
+
 }
 
-pub fn spend(datum: Datum, _redeemer: Void, ctx: ScriptContext) -> Bool {
-    // This Script
-    // 1. Check that it's past date
-    past_next_pull_date(datum, ctx) &&
-    // 2. Check taht new datum is made
-    //    a. Datum has updated date (old_date + period)
-    //    b. Everything else matches
-    // 3. Check that datum is at current address
-    // 4. Check that UTxO includes spending token!
-    //  5. Only one spend token -- actually, should this be on the checking account I think
-    // That Script
-    // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
-    // 2. Check that CA datum on new Output && matches
-    // 3. Check that CA NFT on CA Output
-    True
+fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Option<Address> {
+    let output_ref_matches = fn(input: Input) -> Bool {
+        input.output_reference == output_ref
+    }
+    let address_from_output = fn(input: Input) -> Address {
+        input.output.address
+    }
+    outputs
+    |> find(output_ref_matches)
+    |> map(address_from_output)
+}
+
+validator spend {
+    fn(datum: Datum, _redeemer: Void, ctx: ScriptContext) -> Bool {
+        // This Script
+        // 1. Check that it's past date
+        past_next_pull_date(datum, ctx) &&
+        // 2. Check taht new datum is made
+        new_datum_is_made(datum, ctx) &&
+        // That Script
+        // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
+        // 2. Check that CA datum on new Output && matches
+        // 3. Check that CA NFT on CA Output
+        True
+}
 }

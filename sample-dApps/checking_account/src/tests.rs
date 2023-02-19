@@ -235,8 +235,9 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
     let allow_puller_datum = CheckingAccountDatums::AllowedPuller {
         // puller: puller.clone(),
         // amount_lovelace: pull_amount,
-        // period: 1000,
         next_pull: 0,
+        period: 0,
+        spending_token: spending_token_policy.clone(),
     };
     let backend = TestBackendsBuilder::new(&puller)
         .start_output(&account_address)
