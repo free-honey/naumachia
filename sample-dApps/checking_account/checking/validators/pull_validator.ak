@@ -46,8 +46,7 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
                 |> policies
                 |> any(fn(id) {id == old_datum.spend_token})
 
-            } &&
-            True
+            }
     }
 
     when ctx.purpose is {

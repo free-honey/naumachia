@@ -34,77 +34,141 @@ mod tests {
     #[test]
     fn execute__after_next_pull_date_succeeds() {
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let script = spend_token_policy().unwrap();
         let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((11, true)), None)
-            .build_spend(&[8, 8, 8, 8], 0);
+        let script = spend_token_policy().unwrap();
+        let input_tx_id = [8, 8, 8, 8];
+        let input_tx_index = 0;
+        let script_address = script.address(NETWORK).unwrap();
         let spending_token = vec![5, 5, 5, 5];
-
-        let datum = CheckingAccountDatums::AllowedPuller {
+        let input_datum = CheckingAccountDatums::AllowedPuller {
+            next_pull: 10,
+            period: 0,
+            spending_token: spending_token.clone(),
+        };
+        let policy_id = hex::encode(&spending_token);
+        let output_datum = CheckingAccountDatums::AllowedPuller {
             next_pull: 10,
             period: 0,
             spending_token,
         };
+        let ctx = ContextBuilder::new(signer_pkh)
+            .with_range(Some((11, true)), None)
+            .with_input(&input_tx_id, input_tx_index, &script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(input_datum.clone())
+            .finish_input()
+            .with_output(&script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(output_datum)
+            .finish_output()
+            .build_spend(&input_tx_id, input_tx_index);
 
-        let _eval = script.execute(datum, (), ctx).unwrap();
+        let _eval = script.execute(input_datum, (), ctx).unwrap();
     }
 
     #[test]
     fn execute__before_next_pull_date_fails() {
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let script = spend_token_policy().unwrap();
         let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((8, true)), None)
-            .build_spend(&[8, 8, 8, 8], 0);
-
+        let script = spend_token_policy().unwrap();
+        let input_tx_id = [8, 8, 8, 8];
+        let input_tx_index = 0;
+        let script_address = script.address(NETWORK).unwrap();
         let spending_token = vec![5, 5, 5, 5];
-        let datum = CheckingAccountDatums::AllowedPuller {
+        let input_datum = CheckingAccountDatums::AllowedPuller {
+            next_pull: 10,
+            period: 0,
+            spending_token: spending_token.clone(),
+        };
+        let policy_id = hex::encode(&spending_token);
+        let output_datum = CheckingAccountDatums::AllowedPuller {
             next_pull: 10,
             period: 0,
             spending_token,
         };
+        let ctx = ContextBuilder::new(signer_pkh)
+            .with_range(Some((8, true)), None)
+            .with_input(&input_tx_id, input_tx_index, &script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(input_datum.clone())
+            .finish_input()
+            .with_output(&script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(output_datum)
+            .finish_output()
+            .build_spend(&input_tx_id, input_tx_index);
 
-        let _eval = script.execute(datum, (), ctx).unwrap_err();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__same_date_not_inclusive_fails() {
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let script = spend_token_policy().unwrap();
         let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((10, false)), None)
-            .build_spend(&[8, 8, 8, 8], 0);
+        let script = spend_token_policy().unwrap();
+        let input_tx_id = [8, 8, 8, 8];
+        let input_tx_index = 0;
+        let script_address = script.address(NETWORK).unwrap();
         let spending_token = vec![5, 5, 5, 5];
-
-        let datum = CheckingAccountDatums::AllowedPuller {
+        let input_datum = CheckingAccountDatums::AllowedPuller {
+            next_pull: 10,
+            period: 0,
+            spending_token: spending_token.clone(),
+        };
+        let policy_id = hex::encode(&spending_token);
+        let output_datum = CheckingAccountDatums::AllowedPuller {
             next_pull: 10,
             period: 0,
             spending_token,
         };
+        let ctx = ContextBuilder::new(signer_pkh)
+            .with_range(Some((10, false)), None)
+            .with_input(&input_tx_id, input_tx_index, &script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(input_datum.clone())
+            .finish_input()
+            .with_output(&script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(output_datum)
+            .finish_output()
+            .build_spend(&input_tx_id, input_tx_index);
 
-        let _eval = script.execute(datum, (), ctx).unwrap_err();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__same_date_inclusive_succeeds() {
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let script = spend_token_policy().unwrap();
         let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((10, true)), None)
-            .build_spend(&[8, 8, 8, 8], 0);
+        let script = spend_token_policy().unwrap();
+        let input_tx_id = [8, 8, 8, 8];
+        let input_tx_index = 0;
+        let script_address = script.address(NETWORK).unwrap();
         let spending_token = vec![5, 5, 5, 5];
-
-        let datum = CheckingAccountDatums::AllowedPuller {
+        let input_datum = CheckingAccountDatums::AllowedPuller {
+            next_pull: 10,
+            period: 0,
+            spending_token: spending_token.clone(),
+        };
+        let policy_id = hex::encode(&spending_token);
+        let output_datum = CheckingAccountDatums::AllowedPuller {
             next_pull: 10,
             period: 0,
             spending_token,
         };
+        let ctx = ContextBuilder::new(signer_pkh)
+            .with_range(Some((10, true)), None)
+            .with_input(&input_tx_id, input_tx_index, &script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(input_datum.clone())
+            .finish_input()
+            .with_output(&script_address)
+            .with_value(&policy_id, "something", 1)
+            .with_inline_datum(output_datum)
+            .finish_output()
+            .build_spend(&input_tx_id, input_tx_index);
 
-        let _eval = script.execute(datum, (), ctx).unwrap();
+        let _eval = script.execute(input_datum, (), ctx).unwrap();
     }
 
     #[test]
