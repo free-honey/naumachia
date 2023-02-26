@@ -6,7 +6,7 @@ use naumachia::scripts::{ScriptError, ScriptResult};
 const SCRIPT_RAW: &str = include_str!("../../checking/plutus.json");
 const VALIDATOR_NAME: &str = "pull_validator.spend";
 
-pub fn spend_token_policy() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums, ()>> {
+pub fn pull_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums, ()>> {
     let blueprint: BlueprintFile = serde_json::from_str(SCRIPT_RAW)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     let validator_blueprint =
@@ -53,8 +53,13 @@ mod tests {
     impl TestContext {
         pub fn happy_path() -> Self {
             let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+            let checking_account_address = Address::from_bech32(
+                "addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl",
+            )
+            .unwrap();
+            let checking_account_nft_id = [7, 7, 7, 7, 7];
             let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
-            let script = spend_token_policy().unwrap();
+            let script = pull_validator().unwrap();
             let input_tx_id = [8, 8, 8, 8];
             let input_tx_index = 0;
             let script_address = script.address(NETWORK).unwrap();
@@ -63,12 +68,16 @@ mod tests {
                 next_pull: 10,
                 period: 10,
                 spending_token: spending_token.clone(),
+                checking_account_address: checking_account_address.clone(),
+                checking_account_nft: checking_account_nft_id.to_vec(),
             };
             let policy_id = hex::encode(&spending_token);
             let output_datum = CheckingAccountDatums::AllowedPuller {
                 next_pull: 20,
                 period: 10,
                 spending_token,
+                checking_account_address: checking_account_address,
+                checking_account_nft: checking_account_nft_id.to_vec(),
             };
             TestContext {
                 signer_pkh,
@@ -110,7 +119,7 @@ mod tests {
     fn execute__happy_path() {
         let ctx_builder = TestContext::happy_path();
         let input_datum = ctx_builder.input_datum.clone().unwrap();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
         let ctx = ctx_builder.build();
 
         let _eval = script.execute(input_datum, (), ctx).unwrap();
@@ -120,7 +129,7 @@ mod tests {
     fn execute__before_next_pull_date_fails() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
 
         // when
         ctx_builder.range_lower = Some((8, true));
@@ -135,7 +144,7 @@ mod tests {
     fn execute__same_date_not_inclusive_fails() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
 
         // when
         ctx_builder.range_lower = Some((10, false));
@@ -150,7 +159,7 @@ mod tests {
     fn execute__same_date_inclusive_succeeds() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
 
         // when
         ctx_builder.range_lower = Some((10, true));
@@ -165,7 +174,7 @@ mod tests {
     fn execute__no_new_pull_datum_fails() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
 
         // when
         ctx_builder.output_datum = None;
@@ -181,7 +190,7 @@ mod tests {
     fn execute__new_pull_datum_fails_if_next_pull_wrong() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
@@ -189,10 +198,14 @@ mod tests {
                 next_pull,
                 period,
                 spending_token,
+                checking_account_address,
+                checking_account_nft,
             } => CheckingAccountDatums::AllowedPuller {
                 next_pull: next_pull - 1,
                 period,
                 spending_token,
+                checking_account_address,
+                checking_account_nft,
             },
             _ => panic!("wrong variant"),
         };
@@ -209,7 +222,7 @@ mod tests {
     fn execute__new_pull_datum_fails_if_period_changes() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
@@ -217,10 +230,14 @@ mod tests {
                 next_pull,
                 period,
                 spending_token,
+                checking_account_address,
+                checking_account_nft,
             } => CheckingAccountDatums::AllowedPuller {
                 next_pull,
                 period: period + 1,
                 spending_token,
+                checking_account_address,
+                checking_account_nft,
             },
             _ => panic!("wrong variant"),
         };
@@ -237,7 +254,7 @@ mod tests {
     fn execute__new_pull_datum_fails_if_spending_token_changes() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
         let bad_spending_token = vec![6, 6, 6, 6];
 
         // when
@@ -246,10 +263,14 @@ mod tests {
                 next_pull,
                 period,
                 spending_token: _,
+                checking_account_address,
+                checking_account_nft,
             } => CheckingAccountDatums::AllowedPuller {
                 next_pull,
                 period,
                 spending_token: bad_spending_token,
+                checking_account_address,
+                checking_account_nft,
             },
             _ => panic!("wrong variant"),
         };
@@ -266,7 +287,7 @@ mod tests {
     fn execute__fails_if_output_does_not_include_spending_token() {
         // given
         let mut ctx_builder = TestContext::happy_path();
-        let script = spend_token_policy().unwrap();
+        let script = pull_validator().unwrap();
 
         // when
         ctx_builder.output_token_policy_id = "".to_string(); // Replace spending token with lovelace

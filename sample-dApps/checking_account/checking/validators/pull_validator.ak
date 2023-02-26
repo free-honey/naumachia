@@ -8,7 +8,9 @@ use aiken/option.{map, is_some, and_then}
 pub type Datum {
     next_pull: Int,
     period: Int,
-    spend_token: ByteArray
+    spend_token: ByteArray,
+    checking_account_address: Address,
+    checking_account_nft: ByteArray,
 }
 
 fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
@@ -75,6 +77,10 @@ fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Opti
     |> map(address_from_output)
 }
 
+fn checking_account_checks(datum: Datum, ctx: ScriptContext) -> Bool {
+    True
+}
+
 validator spend {
     fn(datum: Datum, _redeemer: Void, ctx: ScriptContext) -> Bool {
         // This Script
@@ -86,6 +92,6 @@ validator spend {
         // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
         // 2. Check that CA datum on new Output && matches
         // 3. Check that CA NFT on CA Output
-        True
+        checking_account_checks(datum, ctx)
 }
 }
