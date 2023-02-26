@@ -15,9 +15,9 @@ name = "always-cli"
 path = "src/main.rs"
 
 [build-dependencies]
-aiken = "0.0.28"
-aiken-project = "0.0.28"
-aiken-lang = "0.0.28"
+aiken = "0.0.29"
+aiken-project = "0.0.29"
+aiken-lang = "0.0.29"
 
 miette = { version = "5.3.0", features = ["fancy"] }
 owo-colors = "3.5.0"

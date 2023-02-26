@@ -10,7 +10,7 @@ fn main() {
     let build_result = project.build(false, Tracing::KeepTraces);
 
     if let Err(err) = build_result {
-        err.report();
+        err.iter().for_each(|e| e.report());
         panic!("🍂 Failed to build Aiken code 🍂");
     }
 }

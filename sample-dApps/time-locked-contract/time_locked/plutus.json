@@ -2,7 +2,8 @@
   "preamble": {
     "title": "sample-dApps/time_locked",
     "description": "Aiken contracts",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "plutusVersion": "v2"
   },
   "validators": [
     {
