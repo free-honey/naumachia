@@ -60,13 +60,13 @@ mod tests {
             let script_address = script.address(NETWORK).unwrap();
             let spending_token = vec![5, 5, 5, 5];
             let input_datum = CheckingAccountDatums::AllowedPuller {
-                next_pull: 0,
+                next_pull: 10,
                 period: 10,
                 spending_token: spending_token.clone(),
             };
             let policy_id = hex::encode(&spending_token);
             let output_datum = CheckingAccountDatums::AllowedPuller {
-                next_pull: 10,
+                next_pull: 20,
                 period: 10,
                 spending_token,
             };
@@ -107,320 +107,173 @@ mod tests {
     }
 
     #[test]
-    fn execute__after_next_pull_date_succeeds() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+    fn execute__happy_path() {
+        let ctx_builder = TestContext::happy_path();
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token: spending_token.clone(),
-        };
-        let policy_id = hex::encode(&spending_token);
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((11, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
+        let ctx = ctx_builder.build();
 
         let _eval = script.execute(input_datum, (), ctx).unwrap();
     }
 
     #[test]
     fn execute__before_next_pull_date_fails() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token: spending_token.clone(),
-        };
-        let policy_id = hex::encode(&spending_token);
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((8, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
 
+        // when
+        ctx_builder.range_lower = Some((8, true));
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__same_date_not_inclusive_fails() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token: spending_token.clone(),
-        };
-        let policy_id = hex::encode(&spending_token);
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((10, false)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
 
+        // when
+        ctx_builder.range_lower = Some((10, false));
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__same_date_inclusive_succeeds() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token: spending_token.clone(),
-        };
-        let policy_id = hex::encode(&spending_token);
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((10, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
 
-        let _eval = script.execute(input_datum, (), ctx).unwrap();
-    }
+        // when
+        ctx_builder.range_lower = Some((10, true));
 
-    #[test]
-    fn execute__happy_path() {
-        let ctx_builder = TestContext::happy_path();
+        //then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
-        let script = spend_token_policy().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap();
     }
 
     #[test]
     fn execute__no_new_pull_datum_fails() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let policy_id = hex::encode(&spending_token);
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 0,
-            period: 0,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((11, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
+
+        // when
+        ctx_builder.output_datum = None;
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
 
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__new_pull_datum_fails_if_next_pull_wrong() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let policy_id = hex::encode(&spending_token);
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 0,
-            period: 10,
-            spending_token: spending_token.clone(),
+
+        // when
+        let new_datum = match ctx_builder.output_datum.unwrap() {
+            CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token,
+            } => CheckingAccountDatums::AllowedPuller {
+                next_pull: next_pull - 1,
+                period,
+                spending_token,
+            },
+            _ => panic!("wrong variant"),
         };
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 0,
-            period: 10,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((11, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
+        ctx_builder.output_datum = Some(new_datum);
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
 
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__new_pull_datum_fails_if_period_changes() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let policy_id = hex::encode(&spending_token);
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 0,
-            period: 10,
-            spending_token: spending_token.clone(),
+
+        // when
+        let new_datum = match ctx_builder.output_datum.unwrap() {
+            CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token,
+            } => CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period: period + 1,
+                spending_token,
+            },
+            _ => panic!("wrong variant"),
         };
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 0,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((11, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
+        ctx_builder.output_datum = Some(new_datum);
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
 
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__new_pull_datum_fails_if_spending_token_changes() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let policy_id = hex::encode(&spending_token);
         let bad_spending_token = vec![6, 6, 6, 6];
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 0,
-            period: 10,
-            spending_token,
+
+        // when
+        let new_datum = match ctx_builder.output_datum.unwrap() {
+            CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token: _,
+            } => CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token: bad_spending_token,
+            },
+            _ => panic!("wrong variant"),
         };
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 10,
-            spending_token: bad_spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((11, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
+        ctx_builder.output_datum = Some(new_datum);
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
 
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
     fn execute__fails_if_output_does_not_include_spending_token() {
-        let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+        // given
+        let mut ctx_builder = TestContext::happy_path();
         let script = spend_token_policy().unwrap();
-        let input_tx_id = [8, 8, 8, 8];
-        let input_tx_index = 0;
-        let script_address = script.address(NETWORK).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let input_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 0,
-            period: 10,
-            spending_token: spending_token.clone(),
-        };
-        let policy_id = hex::encode(&spending_token);
-        let output_datum = CheckingAccountDatums::AllowedPuller {
-            next_pull: 10,
-            period: 10,
-            spending_token,
-        };
-        let ctx = ContextBuilder::new(signer_pkh)
-            .with_range(Some((11, true)), None)
-            .with_input(&input_tx_id, input_tx_index, &script_address)
-            .with_value(&policy_id, "something", 1)
-            .with_inline_datum(input_datum.clone())
-            .finish_input()
-            .with_output(&script_address)
-            .with_inline_datum(output_datum)
-            .finish_output()
-            .build_spend(&input_tx_id, input_tx_index);
 
+        // when
+        ctx_builder.output_token_policy_id = "".to_string(); // Replace spending token with lovelace
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 }
