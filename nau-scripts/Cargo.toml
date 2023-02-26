@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [build-dependencies]
-aiken = "0.0.28"
-aiken-lang = "0.0.28"
-aiken-project = "0.0.28"
+aiken = "0.0.29"
+aiken-lang = "0.0.29"
+aiken-project = "0.0.29"
 
 [dependencies]
 hex = "0.4.3"

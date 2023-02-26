@@ -36,7 +36,7 @@ futures = "0.3.23"
 async-trait = "0.1.57"
 hex = "0.4.3"
 dirs = "4.0.0"
-uplc = "0.0.28"
+uplc = "0.0.29"
 tempfile = "3.3.0"
 minicbor = "0.18.0"
 rand = "0.8.5"
@@ -67,15 +67,15 @@ rand = "0.8.5"
 sha2 = "0.10.6"
 
 [patch.crates-io]
-uplc = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
-aiken = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
-aiken-lang = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
-aiken-project = { version = "0.0.28", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+uplc = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+aiken = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+aiken-lang = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+aiken-project = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
 
 #[patch."https://github.com/aiken-lang/aiken.git"]
-#aiken = { version = "0.0.28", path = "../aiken-lang/aiken/crates/aiken"}
-#aiken-project = { version = "0.0.28", path = "../aiken-lang/aiken/crates/aiken-project" }
-#uplc = { version = "0.0.28", path = "../aiken-lang/aiken/crates/uplc" }
+#aiken = { version = "0.0.29", path = "../aiken-lang/aiken/crates/aiken"}
+#aiken-project = { version = "0.0.29", path = "../aiken-lang/aiken/crates/aiken-project" }
+#uplc = { version = "0.0.29", path = "../aiken-lang/aiken/crates/uplc" }
 
 #[patch."https://github.com/MitchTurner/blockfrost-http-client.git"]
 #blockfrost-http-client = { version = "0.0.11", path = "../blockfrost-http-client"}
