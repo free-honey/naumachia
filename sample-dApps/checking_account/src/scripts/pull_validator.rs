@@ -284,6 +284,74 @@ mod tests {
     }
 
     #[test]
+    fn execute__new_pull_datum_fails_if_account_address_changes() {
+        // given
+        let mut ctx_builder = TestContext::happy_path();
+        let script = pull_validator().unwrap();
+
+        // when
+        let bad_address =
+            Address::from_bech32("addr_test1vzpwq95z3xyum8vqndgdd9mdnmafh3djcxnc6jemlgdmswcve6tkw")
+                .unwrap();
+        let new_datum = match ctx_builder.output_datum.unwrap() {
+            CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token,
+                checking_account_address: _,
+                checking_account_nft,
+            } => CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token,
+                checking_account_address: bad_address,
+                checking_account_nft,
+            },
+            _ => panic!("wrong variant"),
+        };
+        ctx_builder.output_datum = Some(new_datum);
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
+    fn execute__new_pull_datum_fails_if_account_nft_changes() {
+        // given
+        let mut ctx_builder = TestContext::happy_path();
+        let script = pull_validator().unwrap();
+        let bad_nft_id = vec![5, 4, 3, 4, 1, 6, 2];
+
+        // when
+        let new_datum = match ctx_builder.output_datum.unwrap() {
+            CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token,
+                checking_account_address,
+                checking_account_nft: _,
+            } => CheckingAccountDatums::AllowedPuller {
+                next_pull,
+                period,
+                spending_token,
+                checking_account_address,
+                checking_account_nft: bad_nft_id,
+            },
+            _ => panic!("wrong variant"),
+        };
+        ctx_builder.output_datum = Some(new_datum);
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
     fn execute__fails_if_output_does_not_include_spending_token() {
         // given
         let mut ctx_builder = TestContext::happy_path();

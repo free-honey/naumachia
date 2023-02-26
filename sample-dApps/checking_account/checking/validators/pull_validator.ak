@@ -42,6 +42,8 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
             //    b. Everything else matches
             new_datum.period == old_datum.period &&
             new_datum.spend_token == old_datum.spend_token &&
+            new_datum.checking_account_address == old_datum.checking_account_address &&
+            new_datum.checking_account_nft == old_datum.checking_account_nft &&
             //    d. Check that UTxO includes spending token!
             { 
                 output.value
