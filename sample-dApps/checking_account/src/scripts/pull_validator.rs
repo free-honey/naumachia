@@ -584,4 +584,59 @@ mod tests {
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
+
+    #[test]
+    fn execute__fails_if_account_datum_owner_changes() {
+        // given
+        let mut ctx_builder = TestContext::happy_path();
+        let script = pull_validator().unwrap();
+        let wrong_owner =
+            Address::from_bech32("addr_test1wr34avr87aq3aj0xlgj78jqjwjfppcj2ctsz8rppr2w8upc4jayvq")
+                .unwrap();
+        let wrong_owner_pubkey_hash = pub_key_hash_from_address_if_available(&wrong_owner).unwrap();
+
+        // when
+        let new_datum = match ctx_builder.account_output_datum.unwrap() {
+            CheckingAccountDatums::CheckingAccount {
+                owner: _,
+                spend_token_policy,
+            } => CheckingAccountDatums::CheckingAccount {
+                owner: wrong_owner_pubkey_hash,
+                spend_token_policy,
+            },
+            _ => panic!("wrong variant"),
+        };
+        ctx_builder.account_output_datum = Some(new_datum);
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
+    fn execute__fails_if_account_datum_spend_token_changes() {
+        // given
+        let mut ctx_builder = TestContext::happy_path();
+        let script = pull_validator().unwrap();
+        let bad_token_id = vec![2, 3, 4, 5, 2, 6, 25, 2, 4];
+
+        // when
+        let new_datum = match ctx_builder.account_output_datum.unwrap() {
+            CheckingAccountDatums::CheckingAccount {
+                owner,
+                spend_token_policy: _,
+            } => CheckingAccountDatums::CheckingAccount {
+                owner,
+                spend_token_policy: bad_token_id,
+            },
+            _ => panic!("wrong variant"),
+        };
+        ctx_builder.account_output_datum = Some(new_datum);
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
 }
