@@ -53,12 +53,12 @@ mod tests {
         pub account_input_index: u64,
         pub account_input_nft_id: String,
         pub account_input_token_amt: u64,
-        pub _account_input_ada: u64,
+        pub account_input_ada: u64,
 
         pub account_output_address: Address,
         pub account_output_nft_id: String,
         pub account_output_token_amt: u64,
-        pub _account_output_ada: u64,
+        pub account_output_ada: u64,
     }
 
     impl TestContext {
@@ -78,9 +78,11 @@ mod tests {
             let account_input_tx_index = 0;
             let script_address = script.address(NETWORK).unwrap();
             let spending_token = vec![5, 5, 5, 5];
+            let original_balance = 10_000;
+            let pull_amount = 10;
             let input_datum = CheckingAccountDatums::AllowedPuller {
                 puller: signer_pubkey_hash.clone(),
-                amount_lovelace: 0,
+                amount_lovelace: pull_amount,
                 next_pull: 10,
                 period: 10,
                 spending_token: spending_token.clone(),
@@ -91,7 +93,7 @@ mod tests {
             let nft_id = hex::encode(&checking_account_nft_id);
             let output_datum = CheckingAccountDatums::AllowedPuller {
                 puller: signer_pubkey_hash,
-                amount_lovelace: 0,
+                amount_lovelace: pull_amount,
                 next_pull: 20,
                 period: 10,
                 spending_token,
@@ -115,11 +117,11 @@ mod tests {
                 account_input_index: account_input_tx_index,
                 account_input_nft_id: nft_id.clone(),
                 account_input_token_amt: 1,
-                account_input_ada: 0,
+                account_input_ada: original_balance,
                 account_output_address: checking_account_address,
                 account_output_nft_id: nft_id.clone(),
                 account_output_token_amt: 1,
-                account_output_ada: 0,
+                account_output_ada: original_balance - pull_amount,
             }
         }
 
@@ -150,6 +152,7 @@ mod tests {
                     "nft",
                     self.account_input_token_amt,
                 )
+                .with_value("", "", self.account_input_ada)
                 .finish_input()
                 .with_output(&self.account_output_address)
                 .with_value(
@@ -157,6 +160,7 @@ mod tests {
                     "nft",
                     self.account_output_token_amt,
                 )
+                .with_value("", "", self.account_output_ada)
                 .finish_output()
                 .build_spend(&self.input_tx_id, self.input_index)
         }
@@ -528,17 +532,18 @@ mod tests {
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
-    // #[test]
-    // fn execute__fails_if_too_much_is_pulled() {
-    //     // given
-    //     let mut ctx_builder = TestContext::happy_path();
-    //     let script = pull_validator().unwrap();
-    //
-    //     // when
-    //
-    //     //then
-    //     let input_datum = ctx_builder.input_datum.clone().unwrap();
-    //     let ctx = ctx_builder.build();
-    //     let _eval = script.execute(input_datum, (), ctx).unwrap_err();
-    // }
+    #[test]
+    fn execute__fails_if_too_much_is_pulled() {
+        // given
+        let mut ctx_builder = TestContext::happy_path();
+        let script = pull_validator().unwrap();
+
+        // when
+        ctx_builder.account_output_ada = ctx_builder.account_output_ada - 100; // pull too much
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
 }

@@ -86,8 +86,14 @@ fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Opti
 fn checking_account_checks(datum: PullDatum, ctx: ScriptContext) -> Bool {
     assert Some(input) = find_account_input(datum, ctx)
     assert Some(output) = find_account_output(datum, ctx)
-    
-    True
+
+    let input_lovelace = input.output.value
+    |> value.lovelace_of
+
+    let output_lovelace = output.value
+    |> value.lovelace_of
+
+    output_lovelace == input_lovelace - datum.amount_lovelace
 }
 
 fn find_account_input(datum: PullDatum, ctx: ScriptContext) -> Option<Input> {
