@@ -39,7 +39,6 @@ mod tests {
         pub range_upper: Option<(i64, bool)>,
 
         pub input_address: Address,
-
         pub input_tx_id: Vec<u8>,
         pub input_index: u64,
         pub input_token_policy_id: String,
@@ -48,6 +47,16 @@ mod tests {
         pub output_address: Address,
         pub output_token_policy_id: String,
         pub output_datum: Option<CheckingAccountDatums>,
+
+        pub account_input_address: Address,
+        pub account_input_tx_id: Vec<u8>,
+        pub account_input_index: u64,
+        pub account_input_nft_id: String,
+        pub account_input_token_amt: u64,
+
+        pub account_output_address: Address,
+        pub account_output_nft_id: String,
+        pub account_output_token_amt: u64,
     }
 
     impl TestContext {
@@ -61,7 +70,9 @@ mod tests {
             let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
             let script = pull_validator().unwrap();
             let input_tx_id = [8, 8, 8, 8];
+            let account_input_tx_id = [9, 8, 7, 6];
             let input_tx_index = 0;
+            let account_input_tx_index = 0;
             let script_address = script.address(NETWORK).unwrap();
             let spending_token = vec![5, 5, 5, 5];
             let input_datum = CheckingAccountDatums::AllowedPuller {
@@ -72,11 +83,12 @@ mod tests {
                 checking_account_nft: checking_account_nft_id.to_vec(),
             };
             let policy_id = hex::encode(&spending_token);
+            let nft_id = hex::encode(&checking_account_nft_id);
             let output_datum = CheckingAccountDatums::AllowedPuller {
                 next_pull: 20,
                 period: 10,
                 spending_token,
-                checking_account_address: checking_account_address,
+                checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
             };
             TestContext {
@@ -91,6 +103,14 @@ mod tests {
                 output_address: script_address,
                 output_token_policy_id: policy_id.clone(),
                 output_datum: Some(output_datum),
+                account_input_address: checking_account_address.clone(),
+                account_input_tx_id: account_input_tx_id.to_vec(),
+                account_input_index: account_input_tx_index,
+                account_input_nft_id: nft_id.clone(),
+                account_input_token_amt: 1,
+                account_output_address: checking_account_address,
+                account_output_nft_id: nft_id.clone(),
+                account_output_token_amt: 1,
             }
         }
 
@@ -110,6 +130,24 @@ mod tests {
                 output_builder = output_builder.with_inline_datum(output_datum.clone())
             }
             output_builder
+                .finish_output()
+                .with_input(
+                    &self.account_input_tx_id,
+                    self.account_input_index,
+                    &self.account_input_address,
+                )
+                .with_value(
+                    &self.account_input_nft_id,
+                    "nft",
+                    self.account_input_token_amt,
+                )
+                .finish_input()
+                .with_output(&self.account_output_address)
+                .with_value(
+                    &self.account_output_nft_id,
+                    "nft",
+                    self.account_output_token_amt,
+                )
                 .finish_output()
                 .build_spend(&self.input_tx_id, self.input_index)
         }

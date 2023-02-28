@@ -1,9 +1,9 @@
 use aiken/transaction.{ScriptContext, OutputReference, Output, Input, Spend, InlineDatum}
 use aiken/transaction/credential.{Address}
-use aiken/transaction/value.{policies}
+use aiken/transaction/value
 use aiken/interval.{IntervalBoundType, Finite}
-use aiken/list.{find, any}
-use aiken/option.{map, is_some, and_then}
+use aiken/list
+use aiken/option
 
 pub type Datum {
     next_pull: Int,
@@ -31,7 +31,7 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
             output.address == address
         }
         ctx.transaction.outputs
-        |> find(address_matches)
+        |> list.find(address_matches)
     }
 
     let checks_on_output = fn(output: Output, old_datum: Datum) -> Bool {
@@ -47,8 +47,8 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
             //    d. Check that UTxO includes spending token!
             { 
                 output.value
-                |> policies
-                |> any(fn(id) {id == old_datum.spend_token})
+                |> value.policies
+                |> list.any(fn(id) {id == old_datum.spend_token})
 
             }
     }
@@ -57,7 +57,7 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
         Spend(out_ref) -> {
             let inputs = ctx.transaction.inputs
             when find_input_address(out_ref, inputs)
-            |> and_then(output_at_address) is {
+            |> option.and_then(output_at_address) is {
                 Some(output) -> checks_on_output(output, datum)
                 None -> False
             }
@@ -75,12 +75,54 @@ fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Opti
         input.output.address
     }
     outputs
-    |> find(output_ref_matches)
-    |> map(address_from_output)
+    |> list.find(output_ref_matches)
+    |> option.map(address_from_output)
 }
 
 fn checking_account_checks(datum: Datum, ctx: ScriptContext) -> Bool {
-    True
+    let maybe_account_input = find_account_input(datum, ctx)
+    let maybe_account_output = find_account_output(datum, ctx)
+    
+    option.is_some(maybe_account_input) && 
+    option.is_some(maybe_account_output)
+}
+
+fn find_account_input(datum: Datum, ctx: ScriptContext) -> Option<Input> {
+    ctx.transaction.inputs
+    |> list.filter(fn(input) -> Bool {
+        input.output.address == datum.checking_account_address
+    })
+    |> list.find(fn(input) -> Bool {
+        let list_length = input.output.value
+        |> value.flatten()
+        |> list.filter(fn(asset) -> Bool {
+            let (policy_id, _, amt) = asset
+            policy_id == datum.checking_account_nft &&
+            amt == 1
+        })
+        |> list.length()
+
+        list_length == 1
+    })
+}
+
+fn find_account_output(datum: Datum, ctx: ScriptContext) -> Option<Output> {
+    ctx.transaction.outputs
+    |> list.filter(fn(output) -> Bool {
+        output.address == datum.checking_account_address
+    })
+    |> list.find(fn(output) -> Bool {
+        let list_length = output.value
+        |> value.flatten()
+        |> list.filter(fn(asset) -> Bool {
+            let (policy_id, _, amt) = asset
+            policy_id == datum.checking_account_nft &&
+            amt == 1
+        })
+        |> list.length()
+
+        list_length == 1
+    })
 }
 
 validator spend {
