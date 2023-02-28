@@ -50,10 +50,11 @@ async fn add_puller_creates_new_datum_for_puller() {
     let checking_account_address =
         Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
             .unwrap();
+    let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(&nft_id),
         checking_account_address,
-        puller: puller.to_bech32().unwrap(),
+        puller: puller_pubkey_hash,
         amount_lovelace: 15_000_000,
         period: 1000,
         next_pull: 0,
@@ -70,10 +71,11 @@ async fn add_puller_creates_new_datum_for_puller() {
     let script_output = outputs_at_address.pop().unwrap();
 
     let parameterized_spending_token_policy = spend_token_policy().unwrap();
+    let my_pubkey_hash = pub_key_hash_from_address_if_available(&me).unwrap();
     let policy = parameterized_spending_token_policy
         .apply(nft_id.into())
         .unwrap()
-        .apply(me.into())
+        .apply(my_pubkey_hash.into())
         .unwrap();
     let id = policy.id().unwrap();
     let value = script_output
@@ -101,10 +103,11 @@ async fn remove_puller__removes_the_allowed_puller() {
     let checking_account_address =
         Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
             .unwrap();
+    let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let add_endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(nft_id),
         checking_account_address,
-        puller: puller.to_bech32().unwrap(),
+        puller: puller_pubkey_hash,
         amount_lovelace: 15_000_000,
         period: 1000,
         next_pull: 0,
@@ -236,14 +239,16 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
 
     let account_amount = 100_000_000;
     let pull_amount = 15_000_000;
+    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
     let account_datum = CheckingAccountDatums::CheckingAccount {
-        owner,
+        owner: owner_pubkey_hash,
         spend_token_policy: "".to_string(),
     };
     let checking_account_nft_id = vec![1, 2, 3, 4, 5];
+    let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let allow_puller_datum = CheckingAccountDatums::AllowedPuller {
-        // puller: puller.clone(),
-        // amount_lovelace: pull_amount,
+        puller: puller_pubkey_hash,
+        amount_lovelace: pull_amount,
         next_pull: 0,
         period: 0,
         spending_token: spending_token_policy.clone(),

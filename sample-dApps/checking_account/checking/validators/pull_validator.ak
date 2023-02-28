@@ -5,7 +5,9 @@ use aiken/interval.{IntervalBoundType, Finite}
 use aiken/list
 use aiken/option
 
-pub type Datum {
+pub type PullDatum {
+    puller: ByteArray,
+    amount_lovelace: Int,
     next_pull: Int,
     period: Int,
     spend_token: ByteArray,
@@ -13,7 +15,7 @@ pub type Datum {
     checking_account_nft: ByteArray,
 }
 
-fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
+fn past_next_pull_date(datum: PullDatum, ctx: ScriptContext) -> Bool {
     let next_pull = datum.next_pull
     let is_inclusive = ctx.transaction.validity_range.lower_bound.is_inclusive
     when ctx.transaction.validity_range.lower_bound.bound_type is {
@@ -25,7 +27,7 @@ fn past_next_pull_date(datum: Datum, ctx: ScriptContext) -> Bool {
 }
 
 // This just chooses the first output at that address, behavior undefined if there are multiple
-fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
+fn new_datum_is_made(datum: PullDatum, ctx: ScriptContext) -> Bool {
     let output_at_address = fn(address: Address) -> Option<Output> {
         let address_matches = fn(output: Output) -> Bool {
             output.address == address
@@ -34,12 +36,14 @@ fn new_datum_is_made(datum: Datum, ctx: ScriptContext) -> Bool {
         |> list.find(address_matches)
     }
 
-    let checks_on_output = fn(output: Output, old_datum: Datum) -> Bool {
+    let checks_on_output = fn(output: Output, old_datum: PullDatum) -> Bool {
             expect InlineDatum(untyped_datum) = output.datum
-            expect new_datum: Datum = untyped_datum
+            expect new_datum: PullDatum = untyped_datum
             //    a. New datum has updated date 
             new_datum.next_pull == old_datum.next_pull + old_datum.period &&
-            //    b. Everything else matches
+            //    b. Everything else matches 
+            new_datum.puller == old_datum.puller &&
+            new_datum.amount_lovelace == old_datum.amount_lovelace &&
             new_datum.period == old_datum.period &&
             new_datum.spend_token == old_datum.spend_token &&
             new_datum.checking_account_address == old_datum.checking_account_address &&
@@ -79,15 +83,14 @@ fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Opti
     |> option.map(address_from_output)
 }
 
-fn checking_account_checks(datum: Datum, ctx: ScriptContext) -> Bool {
-    let maybe_account_input = find_account_input(datum, ctx)
-    let maybe_account_output = find_account_output(datum, ctx)
+fn checking_account_checks(datum: PullDatum, ctx: ScriptContext) -> Bool {
+    assert Some(input) = find_account_input(datum, ctx)
+    assert Some(output) = find_account_output(datum, ctx)
     
-    option.is_some(maybe_account_input) && 
-    option.is_some(maybe_account_output)
+    True
 }
 
-fn find_account_input(datum: Datum, ctx: ScriptContext) -> Option<Input> {
+fn find_account_input(datum: PullDatum, ctx: ScriptContext) -> Option<Input> {
     ctx.transaction.inputs
     |> list.filter(fn(input) -> Bool {
         input.output.address == datum.checking_account_address
@@ -106,7 +109,7 @@ fn find_account_input(datum: Datum, ctx: ScriptContext) -> Option<Input> {
     })
 }
 
-fn find_account_output(datum: Datum, ctx: ScriptContext) -> Option<Output> {
+fn find_account_output(datum: PullDatum, ctx: ScriptContext) -> Option<Output> {
     ctx.transaction.outputs
     |> list.filter(fn(output) -> Bool {
         output.address == datum.checking_account_address
@@ -126,7 +129,7 @@ fn find_account_output(datum: Datum, ctx: ScriptContext) -> Option<Output> {
 }
 
 validator spend {
-    fn(datum: Datum, _redeemer: Void, ctx: ScriptContext) -> Bool {
+    fn(datum: PullDatum, _redeemer: Void, ctx: ScriptContext) -> Bool {
         // This Script
         // 1. Check that it's past date
         past_next_pull_date(datum, ctx) &&

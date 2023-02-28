@@ -1,3 +1,4 @@
+use naumachia::scripts::context::PubKeyHash;
 use naumachia::scripts::raw_policy_script::TwoParamRawPolicy;
 use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
@@ -27,9 +28,9 @@ pub struct Owner {
     inner: Vec<u8>,
 }
 
-impl From<Address> for Owner {
-    fn from(value: Address) -> Self {
-        let inner = value.to_vec();
+impl From<PubKeyHash> for Owner {
+    fn from(value: PubKeyHash) -> Self {
+        let inner = value.bytes();
         Owner { inner }
     }
 }

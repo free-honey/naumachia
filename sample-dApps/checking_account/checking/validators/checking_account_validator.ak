@@ -1,11 +1,7 @@
 use aiken/list.{any}
 use aiken/transaction.{Input, ScriptContext}
 use aiken/transaction/value.{PolicyId, Value, policies}
-
-pub type CheckingAccountDatum {
-  owner: ByteArray,
-  spend_token_policy: PolicyId,
-}
+use checking/datum.{CheckingAccountDatum}
 
 fn ctx_contains_spend_token(
   ctx: ScriptContext,
