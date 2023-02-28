@@ -4,6 +4,7 @@ use aiken/transaction/value
 use aiken/interval.{IntervalBoundType, Finite}
 use aiken/list
 use aiken/option
+use checking/datum.{CheckingAccountDatum}
 
 pub type PullDatum {
     puller: ByteArray,
@@ -84,8 +85,12 @@ fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Opti
 }
 
 fn checking_account_checks(datum: PullDatum, ctx: ScriptContext) -> Bool {
-    assert Some(input) = find_account_input(datum, ctx)
-    assert Some(output) = find_account_output(datum, ctx)
+    expect Some(input) = find_account_input(datum, ctx)
+    expect Some(output) = find_account_output(datum, ctx)
+    expect InlineDatum(input_datum) = input.output.datum
+    expect input_account_datum: CheckingAccountDatum = input_datum
+    expect InlineDatum(output_datum) = output.datum
+    expect output_account_datum: CheckingAccountDatum = output_datum
 
     let input_lovelace = input.output.value
     |> value.lovelace_of
@@ -93,7 +98,9 @@ fn checking_account_checks(datum: PullDatum, ctx: ScriptContext) -> Bool {
     let output_lovelace = output.value
     |> value.lovelace_of
 
-    output_lovelace == input_lovelace - datum.amount_lovelace
+    output_lovelace == input_lovelace - datum.amount_lovelace 
+    && 
+    input_account_datum == output_account_datum
 }
 
 fn find_account_input(datum: PullDatum, ctx: ScriptContext) -> Option<Input> {

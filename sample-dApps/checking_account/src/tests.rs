@@ -242,7 +242,7 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
     let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
     let account_datum = CheckingAccountDatums::CheckingAccount {
         owner: owner_pubkey_hash,
-        spend_token_policy: "".to_string(),
+        spend_token_policy: spending_token_policy.clone(),
     };
     let checking_account_nft_id = vec![1, 2, 3, 4, 5];
     let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();

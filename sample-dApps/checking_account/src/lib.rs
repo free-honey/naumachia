@@ -69,7 +69,7 @@ pub struct CheckingAccountLogic;
 pub enum CheckingAccountDatums {
     CheckingAccount {
         owner: PubKeyHash,
-        spend_token_policy: String,
+        spend_token_policy: Vec<u8>,
     },
     AllowedPuller {
         puller: PubKeyHash,
@@ -90,8 +90,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 spend_token_policy,
             } => {
                 let owner_data = owner.into();
-                let policy_data =
-                    PlutusData::BoundedBytes(hex::decode(spend_token_policy).unwrap()); // TODO
+                let policy_data = PlutusData::BoundedBytes(spend_token_policy);
                 PlutusData::Constr(Constr {
                     tag: 121,
                     any_constructor: None,
@@ -246,9 +245,10 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .address(0)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
+    let spend_token_id = hex::decode(&spend_token_policy).unwrap();
     let datum = CheckingAccountDatums::CheckingAccount {
         owner: owner_pubkey,
-        spend_token_policy,
+        spend_token_policy: spend_token_id,
     };
     let actions = TxActions::v2().with_script_init(datum, values, address);
     Ok(actions)

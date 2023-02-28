@@ -54,23 +54,29 @@ mod tests {
         pub account_input_nft_id: String,
         pub account_input_token_amt: u64,
         pub account_input_ada: u64,
+        pub account_input_datum: Option<CheckingAccountDatums>,
 
         pub account_output_address: Address,
         pub account_output_nft_id: String,
         pub account_output_token_amt: u64,
         pub account_output_ada: u64,
+        pub account_output_datum: Option<CheckingAccountDatums>,
     }
 
     impl TestContext {
         pub fn happy_path() -> Self {
-            let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-            let signer_pubkey_hash = pub_key_hash_from_address_if_available(&signer).unwrap();
+            let account_owner = Address::from_bech32(
+                "addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt",
+            )
+            .unwrap();
+            let puller = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+            let signer_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
             let checking_account_address = Address::from_bech32(
                 "addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl",
             )
             .unwrap();
             let checking_account_nft_id = [7, 7, 7, 7, 7];
-            let signer_pkh = pub_key_hash_from_address_if_available(&signer).unwrap();
+            let signer_pkh = pub_key_hash_from_address_if_available(&puller).unwrap();
             let script = pull_validator().unwrap();
             let input_tx_id = [8, 8, 8, 8];
             let account_input_tx_id = [9, 8, 7, 6];
@@ -96,9 +102,16 @@ mod tests {
                 amount_lovelace: pull_amount,
                 next_pull: 20,
                 period: 10,
-                spending_token,
+                spending_token: spending_token.clone(),
                 checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
+            };
+
+            let account_owner_pubkey_hash =
+                pub_key_hash_from_address_if_available(&account_owner).unwrap();
+            let account_datum = CheckingAccountDatums::CheckingAccount {
+                owner: account_owner_pubkey_hash,
+                spend_token_policy: spending_token,
             };
             TestContext {
                 signer_pkh,
@@ -118,10 +131,12 @@ mod tests {
                 account_input_nft_id: nft_id.clone(),
                 account_input_token_amt: 1,
                 account_input_ada: original_balance,
+                account_input_datum: Some(account_datum.clone()),
                 account_output_address: checking_account_address,
                 account_output_nft_id: nft_id.clone(),
                 account_output_token_amt: 1,
                 account_output_ada: original_balance - pull_amount,
+                account_output_datum: Some(account_datum),
             }
         }
 
@@ -140,7 +155,7 @@ mod tests {
             if let Some(output_datum) = &self.output_datum {
                 output_builder = output_builder.with_inline_datum(output_datum.clone())
             }
-            output_builder
+            let mut input_builder = output_builder
                 .finish_output()
                 .with_input(
                     &self.account_input_tx_id,
@@ -152,7 +167,11 @@ mod tests {
                     "nft",
                     self.account_input_token_amt,
                 )
-                .with_value("", "", self.account_input_ada)
+                .with_value("", "", self.account_input_ada);
+            if let Some(input_datum) = &self.account_input_datum {
+                input_builder = input_builder.with_inline_datum(input_datum.to_owned())
+            }
+            let mut output_builder = input_builder
                 .finish_input()
                 .with_output(&self.account_output_address)
                 .with_value(
@@ -160,7 +179,11 @@ mod tests {
                     "nft",
                     self.account_output_token_amt,
                 )
-                .with_value("", "", self.account_output_ada)
+                .with_value("", "", self.account_output_ada);
+            if let Some(output_datum) = &self.account_output_datum {
+                output_builder = output_builder.with_inline_datum(output_datum.to_owned())
+            }
+            output_builder
                 .finish_output()
                 .build_spend(&self.input_tx_id, self.input_index)
         }
@@ -540,6 +563,21 @@ mod tests {
 
         // when
         ctx_builder.account_output_ada = ctx_builder.account_output_ada - 100; // pull too much
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
+    fn execute__fails_if_account_datum_not_replaced() {
+        // given
+        let mut ctx_builder = TestContext::happy_path();
+        let script = pull_validator().unwrap();
+
+        // when
+        ctx_builder.account_output_datum = None;
 
         //then
         let input_datum = ctx_builder.input_datum.clone().unwrap();

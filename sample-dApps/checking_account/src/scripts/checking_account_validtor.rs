@@ -69,7 +69,7 @@ mod tests {
         let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
         let datum = CheckingAccountDatums::CheckingAccount {
             owner: owner_pubkey_hash,
-            spend_token_policy: hex::encode(policy),
+            spend_token_policy: policy,
         };
 
         let _eval = script.execute(datum, (), ctx).unwrap();
@@ -97,7 +97,7 @@ mod tests {
         let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
         let datum = CheckingAccountDatums::CheckingAccount {
             owner: owner_pubkey_hash,
-            spend_token_policy: hex::encode(policy),
+            spend_token_policy: policy,
         };
 
         let _eval = script.execute(datum, (), ctx).unwrap_err();
