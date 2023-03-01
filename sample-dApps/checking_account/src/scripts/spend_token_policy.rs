@@ -3,7 +3,6 @@ use naumachia::scripts::raw_policy_script::TwoParamRawPolicy;
 use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::scripts::{ScriptError, ScriptResult};
-use naumachia::Address;
 
 const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
 const VALIDATOR_NAME: &str = "spend_token_policy.mint";
@@ -62,6 +61,7 @@ mod tests {
     use super::*;
     use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::MintingPolicy;
+    use naumachia::Address;
 
     #[test]
     fn execute__correct_signer_can_mint() {

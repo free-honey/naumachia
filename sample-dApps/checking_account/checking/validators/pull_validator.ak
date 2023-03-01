@@ -12,6 +12,7 @@ pub type PullDatum {
     next_pull: Int,
     period: Int,
     spend_token: ByteArray,
+    // probably don't really need this
     checking_account_address: Address,
     checking_account_nft: ByteArray,
 }
