@@ -47,9 +47,14 @@ async fn add_puller_creates_new_datum_for_puller() {
         .build_in_memory();
 
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
+    let checking_account_address =
+        Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
+            .unwrap();
+    let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(&nft_id),
-        puller: puller.to_bech32().unwrap(),
+        checking_account_address,
+        puller: puller_pubkey_hash,
         amount_lovelace: 15_000_000,
         period: 1000,
         next_pull: 0,
@@ -66,10 +71,11 @@ async fn add_puller_creates_new_datum_for_puller() {
     let script_output = outputs_at_address.pop().unwrap();
 
     let parameterized_spending_token_policy = spend_token_policy().unwrap();
+    let my_pubkey_hash = pub_key_hash_from_address_if_available(&me).unwrap();
     let policy = parameterized_spending_token_policy
         .apply(nft_id.into())
         .unwrap()
-        .apply(me.into())
+        .apply(my_pubkey_hash.into())
         .unwrap();
     let id = policy.id().unwrap();
     let value = script_output
@@ -94,9 +100,14 @@ async fn remove_puller__removes_the_allowed_puller() {
         .build_in_memory();
 
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
+    let checking_account_address =
+        Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
+            .unwrap();
+    let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let add_endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(nft_id),
-        puller: puller.to_bech32().unwrap(),
+        checking_account_address,
+        puller: puller_pubkey_hash,
         amount_lovelace: 15_000_000,
         period: 1000,
         next_pull: 0,
@@ -228,21 +239,30 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
 
     let account_amount = 100_000_000;
     let pull_amount = 15_000_000;
+    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
     let account_datum = CheckingAccountDatums::CheckingAccount {
-        owner,
-        spend_token_policy: "".to_string(),
+        owner: owner_pubkey_hash,
+        spend_token_policy: spending_token_policy.clone(),
     };
+    let checking_account_nft_id = vec![1, 2, 3, 4, 5];
+    let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let allow_puller_datum = CheckingAccountDatums::AllowedPuller {
-        // puller: puller.clone(),
-        // amount_lovelace: pull_amount,
+        puller: puller_pubkey_hash,
+        amount_lovelace: pull_amount,
         next_pull: 0,
         period: 0,
         spending_token: spending_token_policy.clone(),
+        checking_account_address: account_address.clone(),
+        checking_account_nft: checking_account_nft_id.clone(),
     };
     let backend = TestBackendsBuilder::new(&puller)
         .start_output(&account_address)
         .with_datum(account_datum)
         .with_value(PolicyId::ADA, account_amount)
+        .with_value(
+            PolicyId::NativeToken(hex::encode(&checking_account_nft_id), None),
+            account_amount,
+        )
         .finish_output()
         .start_output(&allow_puller_address)
         .with_datum(allow_puller_datum)

@@ -66,9 +66,10 @@ mod tests {
         let owner =
             Address::from_bech32("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs")
                 .unwrap();
+        let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
         let datum = CheckingAccountDatums::CheckingAccount {
-            owner,
-            spend_token_policy: hex::encode(policy),
+            owner: owner_pubkey_hash,
+            spend_token_policy: policy,
         };
 
         let _eval = script.execute(datum, (), ctx).unwrap();
@@ -93,9 +94,10 @@ mod tests {
         let owner =
             Address::from_bech32("addr_test1vqm77xl444msdszx9s982zu95hh03ztw4rsp8xcs2ty3xucr40ujs")
                 .unwrap();
+        let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
         let datum = CheckingAccountDatums::CheckingAccount {
-            owner,
-            spend_token_policy: hex::encode(policy),
+            owner: owner_pubkey_hash,
+            spend_token_policy: policy,
         };
 
         let _eval = script.execute(datum, (), ctx).unwrap_err();

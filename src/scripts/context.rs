@@ -42,7 +42,7 @@ impl CtxOutputReference {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PubKeyHash(Vec<u8>);
 
 impl PubKeyHash {

@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use nau_scripts::one_shot;
 use nau_scripts::one_shot::OutputReference;
 use naumachia::output::{Output, OutputId};
+use naumachia::scripts::context::{pub_key_hash_from_address_if_available, PubKeyHash};
 use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
 use naumachia::scripts::{MintingPolicy, ScriptError};
 use naumachia::{
@@ -35,7 +36,8 @@ pub enum CheckingAccountEndpoints {
     /// starting on the next_pull time, in milliseconds POSIX
     AddPuller {
         checking_account_nft: String,
-        puller: String,
+        checking_account_address: Address,
+        puller: PubKeyHash,
         amount_lovelace: u64,
         period: i64,
         next_pull: i64,
@@ -66,15 +68,17 @@ pub struct CheckingAccountLogic;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CheckingAccountDatums {
     CheckingAccount {
-        owner: Address,
-        spend_token_policy: String,
+        owner: PubKeyHash,
+        spend_token_policy: Vec<u8>,
     },
     AllowedPuller {
-        // puller: Address,
-        // amount_lovelace: u64,
+        puller: PubKeyHash,
+        amount_lovelace: u64,
         next_pull: i64,
         period: i64,
         spending_token: Vec<u8>,
+        checking_account_address: Address,
+        checking_account_nft: Vec<u8>,
     },
 }
 
@@ -85,9 +89,8 @@ impl From<CheckingAccountDatums> for PlutusData {
                 owner,
                 spend_token_policy,
             } => {
-                let owner_data = PlutusData::BoundedBytes(owner.to_vec());
-                let policy_data =
-                    PlutusData::BoundedBytes(hex::decode(spend_token_policy).unwrap()); // TODO
+                let owner_data = owner.into();
+                let policy_data = PlutusData::BoundedBytes(spend_token_policy);
                 PlutusData::Constr(Constr {
                     tag: 121,
                     any_constructor: None,
@@ -95,17 +98,32 @@ impl From<CheckingAccountDatums> for PlutusData {
                 })
             }
             CheckingAccountDatums::AllowedPuller {
+                puller,
+                amount_lovelace,
                 next_pull,
                 period,
                 spending_token,
+                checking_account_address,
+                checking_account_nft,
             } => {
+                let puller = puller.into();
+                let amount_lovelace = PlutusData::BigInt((amount_lovelace as i64).into());
                 let next_pull = PlutusData::BigInt(next_pull.into());
                 let period = PlutusData::BigInt(period.into());
                 let spending_token = PlutusData::BoundedBytes(spending_token);
+                let checking_account_nft = PlutusData::BoundedBytes(checking_account_nft);
                 PlutusData::Constr(Constr {
                     tag: 121,
                     any_constructor: None,
-                    fields: vec![next_pull, period, spending_token],
+                    fields: vec![
+                        puller,
+                        amount_lovelace,
+                        next_pull,
+                        period,
+                        spending_token,
+                        checking_account_address.into(),
+                        checking_account_nft,
+                    ],
                 })
             }
         }
@@ -142,6 +160,7 @@ impl SCLogic for CheckingAccountLogic {
             }
             CheckingAccountEndpoints::AddPuller {
                 checking_account_nft,
+                checking_account_address,
                 puller,
                 amount_lovelace,
                 period,
@@ -150,7 +169,8 @@ impl SCLogic for CheckingAccountLogic {
                 add_puller(
                     ledger_client,
                     checking_account_nft,
-                    &puller,
+                    checking_account_address,
+                    puller,
                     amount_lovelace,
                     period,
                     next_pull,
@@ -212,10 +232,11 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         spend_token_policy().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let script_id = nft_policy.id().unwrap();
     let script_id_bytes = hex::decode(script_id).unwrap();
+    let owner_pubkey = pub_key_hash_from_address_if_available(&owner).unwrap();
     let spending_token_policy = spending_token_policy_parameterized
         .apply(script_id_bytes.into())
         .unwrap()
-        .apply(owner.clone().into())
+        .apply(owner_pubkey.clone().into())
         .unwrap();
     let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
@@ -224,9 +245,10 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .address(0)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
+    let spend_token_id = hex::decode(&spend_token_policy).unwrap();
     let datum = CheckingAccountDatums::CheckingAccount {
-        owner,
-        spend_token_policy,
+        owner: owner_pubkey,
+        spend_token_policy: spend_token_id,
     };
     let actions = TxActions::v2().with_script_init(datum, values, address);
     Ok(actions)
@@ -271,8 +293,9 @@ pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
 async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     checking_account_nft_id: String,
-    _puller: &str,
-    _amount_lovelace: u64,
+    checking_account_address: Address,
+    puller: PubKeyHash,
+    amount_lovelace: u64,
     period: i64,
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
@@ -283,10 +306,11 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
 
     let parameterized_spending_token_policy = spend_token_policy().unwrap();
     let nft_id_bytes = hex::decode(checking_account_nft_id).unwrap();
+    let my_pubkey = pub_key_hash_from_address_if_available(&me).unwrap();
     let policy = parameterized_spending_token_policy
-        .apply(nft_id_bytes.into())
+        .apply(nft_id_bytes.clone().into())
         .unwrap()
-        .apply(me.into())
+        .apply(my_pubkey.into())
         .unwrap();
 
     let id = policy.id().unwrap();
@@ -302,11 +326,13 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         1,
     );
     let datum = CheckingAccountDatums::AllowedPuller {
-        // puller,
-        // amount_lovelace,
+        puller,
+        amount_lovelace,
         next_pull,
         period,
         spending_token: hex::decode(&id).unwrap(), // TODO
+        checking_account_address: checking_account_address.clone(),
+        checking_account_nft: nft_id_bytes,
     };
     let actions = TxActions::v2()
         .with_mint(
