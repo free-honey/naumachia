@@ -1,5 +1,5 @@
 use super::*;
-use crate::scripts::context::TxContext;
+use crate::scripts::context::{pub_key_hash_from_address_if_available, TxContext};
 use crate::scripts::ExecutionCost;
 use crate::{
     ledger_client::test_ledger_client::TestBackendsBuilder,
@@ -12,7 +12,9 @@ const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870
 
 impl<R> MintingPolicy<R> for AliceCanMintPolicy {
     fn execute(&self, _redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost> {
-        if ctx.signer.bytes() == Address::from_bech32(ALICE).unwrap().to_vec() {
+        let alice_address = Address::from_bech32(ALICE).unwrap();
+        let alice_pubkey_hash = pub_key_hash_from_address_if_available(&alice_address).unwrap();
+        if ctx.signer == alice_pubkey_hash {
             Ok(ExecutionCost::default())
         } else {
             Err(ScriptError::FailedToExecute(

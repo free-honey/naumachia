@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::scripts::context::CtxOutputReference;
+use crate::scripts::context::{pub_key_hash_from_address_if_available, CtxOutputReference};
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -15,7 +15,7 @@ use crate::{
     output::Output,
     output::UnbuiltOutput,
     scripts::{
-        context::{CtxScriptPurpose, CtxValue, Input, PubKeyHash, TxContext, ValidRange},
+        context::{CtxScriptPurpose, CtxValue, Input, TxContext, ValidRange},
         raw_validator_script::plutus_data::PlutusData,
     },
     transaction::TxId,
@@ -141,6 +141,8 @@ enum TestLCError {
     TxTooEarly,
     #[error("Tx too late")]
     TxTooLate,
+    #[error("Not a valid signer address")]
+    InvalidAddress,
 }
 
 #[async_trait::async_trait]
@@ -467,8 +469,9 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         inputs.push(input);
     }
 
-    let signer_bytes = signer_address.to_vec();
-    let signer = PubKeyHash::new(&signer_bytes);
+    let signer = pub_key_hash_from_address_if_available(signer_address).ok_or(
+        LedgerClientError::FailedToIssueTx(Box::new(TestLCError::InvalidAddress)),
+    )?;
     let range = ValidRange { lower, upper };
 
     // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
