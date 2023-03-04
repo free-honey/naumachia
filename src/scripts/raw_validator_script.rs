@@ -23,7 +23,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
-    machine::cost_model::ExBudget,
+    machine::{cost_model::ExBudget, runtime::convert_constr_to_tag},
     BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
 };
 
@@ -168,9 +168,13 @@ impl From<PlutusData> for AikenPlutusData {
 
 impl From<Constr<PlutusData>> for AikenConstr<AikenPlutusData> {
     fn from(constr: Constr<PlutusData>) -> Self {
+        let tag = convert_constr_to_tag(constr.constr);
         AikenConstr {
-            tag: constr.tag,
-            any_constructor: constr.any_constructor,
+            tag: tag.or(Some(102)).unwrap(),
+            any_constructor: match tag {
+                Some(_) => None,
+                None => Some(constr.constr)
+            },
             fields: constr.fields.into_iter().map(Into::into).collect(),
         }
     }
