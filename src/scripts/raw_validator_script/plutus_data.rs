@@ -118,12 +118,12 @@ impl From<TxContext> for PlutusData {
                 .collect(),
         );
         let id = PlutusData::Constr(Constr {
-            tag: 121,
+            tag: 0,
             any_constructor: None,
             fields: vec![PlutusData::BoundedBytes(Vec::new())],
         });
         let tx_info = PlutusData::Constr(Constr {
-            tag: 121,
+            tag: 0,
             any_constructor: None,
             fields: vec![
                 inputs,
@@ -156,7 +156,7 @@ impl From<TxContext> for PlutusData {
         };
 
         PlutusData::Constr(Constr {
-            tag: 121,
+            tag: 0,
             any_constructor: None,
             fields: vec![tx_info, purpose],
         })
@@ -245,7 +245,7 @@ fn empty_constr(index: u64) -> PlutusData {
 
 /// Translate constructor index to cbor tag.
 fn constr_index(index: u64) -> u64 {
-    121 + index
+    0 + index
 }
 
 impl From<ValidRange> for PlutusData {
@@ -261,40 +261,40 @@ impl From<ValidRange> for PlutusData {
 
 fn no_time_bound() -> PlutusData {
     PlutusData::Constr(Constr {
-        tag: 121,
+        tag: 0,
         any_constructor: None,
         fields: vec![
             PlutusData::Constr(Constr {
-                tag: 121,
+                tag: 0,
                 any_constructor: None,
                 fields: vec![
                     // NegInf
                     PlutusData::Constr(Constr {
-                        tag: 121,
+                        tag: 0,
                         any_constructor: None,
                         fields: vec![],
                     }),
                     // Closure
                     PlutusData::Constr(Constr {
-                        tag: 122,
+                        tag: 1,
                         any_constructor: None,
                         fields: vec![],
                     }),
                 ],
             }),
             PlutusData::Constr(Constr {
-                tag: 121,
+                tag: 0,
                 any_constructor: None,
                 fields: vec![
                     // PosInf
                     PlutusData::Constr(Constr {
-                        tag: 123,
+                        tag: 2,
                         any_constructor: None,
                         fields: vec![],
                     }),
                     // Closure
                     PlutusData::Constr(Constr {
-                        tag: 122,
+                        tag: 1,
                         any_constructor: None,
                         fields: vec![],
                     }),
@@ -308,29 +308,29 @@ fn lower_bound(bound: i64, is_inclusive: bool) -> PlutusData {
     let closure = if is_inclusive {
         // True
         PlutusData::Constr(Constr {
-            tag: 122,
+            tag: 1,
             any_constructor: None,
             fields: vec![],
         })
     } else {
         // False
         PlutusData::Constr(Constr {
-            tag: 121,
+            tag: 0,
             any_constructor: None,
             fields: vec![],
         })
     };
     PlutusData::Constr(Constr {
-        tag: 121,
+        tag: 0,
         any_constructor: None,
         fields: vec![
             PlutusData::Constr(Constr {
-                tag: 121,
+                tag: 0,
                 any_constructor: None,
                 fields: vec![
                     // Finite
                     PlutusData::Constr(Constr {
-                        tag: 122,
+                        tag: 1,
                         any_constructor: None,
                         fields: vec![PlutusData::BigInt(bound.into())],
                     }),
@@ -339,18 +339,18 @@ fn lower_bound(bound: i64, is_inclusive: bool) -> PlutusData {
                 ],
             }),
             PlutusData::Constr(Constr {
-                tag: 121,
+                tag: 0,
                 any_constructor: None,
                 fields: vec![
                     // PosInf
                     PlutusData::Constr(Constr {
-                        tag: 123,
+                        tag: 2,
                         any_constructor: None,
                         fields: vec![],
                     }),
                     // Closure
                     PlutusData::Constr(Constr {
-                        tag: 122,
+                        tag: 1,
                         any_constructor: None,
                         fields: vec![],
                     }),
@@ -375,7 +375,7 @@ impl From<Input> for PlutusData {
         }
         .into();
         PlutusData::Constr(Constr {
-            tag: 121,
+            tag: 0,
             any_constructor: None,
             fields: vec![output_reference, output],
         })
@@ -388,7 +388,7 @@ impl From<CtxOutputReference> for PlutusData {
         let transaction_id = PlutusData::BoundedBytes(tx_id_bytes);
         let output_index = PlutusData::BigInt((out_ref.output_index as i64).into()); // TODO: panic
         PlutusData::Constr(Constr {
-            tag: 121,
+            tag: 0,
             any_constructor: None,
             fields: vec![transaction_id, output_index],
         })
@@ -402,7 +402,7 @@ impl From<CtxOutput> for PlutusData {
         let datum = output.datum.into();
         let reference_script = output.reference_script.into();
         PlutusData::Constr(Constr {
-            tag: 121,
+            tag: 0,
             any_constructor: None,
             fields: vec![address, value, datum, reference_script],
         })
@@ -435,17 +435,17 @@ impl From<CtxDatum> for PlutusData {
     fn from(value: CtxDatum) -> Self {
         match value {
             CtxDatum::NoDatum => PlutusData::Constr(Constr {
-                tag: 121,
+                tag: 0,
                 any_constructor: None,
                 fields: vec![],
             }),
             CtxDatum::DatumHash(hash) => PlutusData::Constr(Constr {
-                tag: 122,
+                tag: 1,
                 any_constructor: None,
                 fields: vec![PlutusData::BoundedBytes(hash)],
             }),
             CtxDatum::InlineDatum(data) => PlutusData::Constr(Constr {
-                tag: 123,
+                tag: 2,
                 any_constructor: None,
                 fields: vec![data],
             }),
@@ -457,12 +457,12 @@ impl<T: Into<PlutusData>> From<Option<T>> for PlutusData {
     fn from(value: Option<T>) -> Self {
         match value {
             None => PlutusData::Constr(Constr {
-                tag: 121,
+                tag: 0,
                 any_constructor: None,
                 fields: vec![],
             }),
             Some(inner) => PlutusData::Constr(Constr {
-                tag: 122,
+                tag: 1,
                 any_constructor: None,
                 fields: vec![inner.into()],
             }),
