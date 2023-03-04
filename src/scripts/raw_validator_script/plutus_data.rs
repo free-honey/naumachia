@@ -382,7 +382,7 @@ impl From<Input> for PlutusData {
 impl From<CtxOutputReference> for PlutusData {
     fn from(out_ref: CtxOutputReference) -> Self {
         let tx_id_bytes = out_ref.transaction_id;
-        let transaction_id = PlutusData::BoundedBytes(tx_id_bytes);
+        let transaction_id = wrap_with_constr(0, PlutusData::BoundedBytes(tx_id_bytes));
         let output_index = PlutusData::BigInt((out_ref.output_index as i64).into()); // TODO: panic
         PlutusData::Constr(Constr {
             tag: 0,
