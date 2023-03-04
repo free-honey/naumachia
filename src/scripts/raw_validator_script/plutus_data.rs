@@ -450,16 +450,18 @@ impl From<CtxDatum> for PlutusData {
     }
 }
 
+// ref
+// https://github.com/aiken-lang/aiken/blob/9f587e802c74531471cfbb3fd0d3baea1a8a62b3/crates/uplc/src/tx/to_plutus_data.rs#L157
 impl<T: Into<PlutusData>> From<Option<T>> for PlutusData {
     fn from(value: Option<T>) -> Self {
         match value {
             None => PlutusData::Constr(Constr {
-                tag: 0,
+                tag: 1,
                 any_constructor: None,
                 fields: vec![],
             }),
             Some(inner) => PlutusData::Constr(Constr {
-                tag: 1,
+                tag: 0,
                 any_constructor: None,
                 fields: vec![inner.into()],
             }),
