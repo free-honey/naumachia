@@ -118,7 +118,7 @@ impl From<TxContext> for PlutusData {
                 .collect(),
         );
         // TODO this id should be computed!
-        let id = PlutusData::BoundedBytes(Vec::new());
+        let id = wrap_with_constr(0, PlutusData::BoundedBytes(Vec::new()));
         let tx_info = PlutusData::Constr(Constr {
             tag: 0,
             any_constructor: None,
