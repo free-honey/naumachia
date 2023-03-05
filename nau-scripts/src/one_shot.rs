@@ -42,14 +42,12 @@ impl From<OutputReference> for PlutusData {
     fn from(out_ref: OutputReference) -> Self {
         let tx_id_bytes = out_ref.transaction_id;
         let transaction_id = PlutusData::Constr(Constr {
-            tag: 121,
-            any_constructor: None,
+            constr: 0,
             fields: vec![PlutusData::BoundedBytes(tx_id_bytes)],
         });
         let output_index = PlutusData::BigInt((out_ref.output_index as i64).into()); // TODO: panic
         PlutusData::Constr(Constr {
-            tag: 121,
-            any_constructor: None,
+            constr: 0,
             fields: vec![transaction_id, output_index],
         })
     }

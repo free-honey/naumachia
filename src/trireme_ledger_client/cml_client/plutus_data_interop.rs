@@ -66,7 +66,7 @@ impl From<Constr<PlutusData>> for CMLConstrPlutusData {
     fn from(constr: Constr<PlutusData>) -> Self {
         let mut data = CMLPlutusList::new();
         constr.fields.into_iter().for_each(|d| data.add(&d.into()));
-        CMLConstrPlutusData::new(&constr.tag.into(), &data)
+        CMLConstrPlutusData::new(&constr.constr.into(), &data)
     }
 }
 
@@ -80,8 +80,7 @@ impl From<CMLConstrPlutusData> for Constr<PlutusData> {
             fields.push(data.get(i).into());
         }
         Constr {
-            tag,
-            any_constructor: None,
+            constr: tag,
             fields,
         }
     }
