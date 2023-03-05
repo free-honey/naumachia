@@ -236,7 +236,7 @@ fn empty_constr(index: u64) -> PlutusData {
 
 /// Translate constructor index to cbor tag.
 fn constr_index(index: u64) -> u64 {
-    0 + index
+    index
 }
 
 impl From<ValidRange> for PlutusData {

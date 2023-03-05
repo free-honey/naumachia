@@ -170,10 +170,10 @@ impl From<Constr<PlutusData>> for AikenConstr<AikenPlutusData> {
     fn from(constr: Constr<PlutusData>) -> Self {
         let tag = convert_constr_to_tag(constr.constr);
         AikenConstr {
-            tag: tag.or(Some(102)).unwrap(),
+            tag: tag.unwrap_or(102),
             any_constructor: match tag {
                 Some(_) => None,
-                None => Some(constr.constr)
+                None => Some(constr.constr),
             },
             fields: constr.fields.into_iter().map(Into::into).collect(),
         }

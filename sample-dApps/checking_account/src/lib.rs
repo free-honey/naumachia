@@ -92,8 +92,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 let owner_data = owner.into();
                 let policy_data = PlutusData::BoundedBytes(spend_token_policy);
                 PlutusData::Constr(Constr {
-                    tag: 121,
-                    any_constructor: None,
+                    constr: 0,
                     fields: vec![owner_data, policy_data],
                 })
             }
@@ -113,8 +112,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 let spending_token = PlutusData::BoundedBytes(spending_token);
                 let checking_account_nft = PlutusData::BoundedBytes(checking_account_nft);
                 PlutusData::Constr(Constr {
-                    tag: 121,
-                    any_constructor: None,
+                    constr: 0,
                     fields: vec![
                         puller,
                         amount_lovelace,

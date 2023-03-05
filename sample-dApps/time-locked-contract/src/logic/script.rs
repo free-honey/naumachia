@@ -24,8 +24,7 @@ impl From<Timestamp> for PlutusData {
         let val = num.unsigned_abs();
         let milliseconds = PlutusData::BigInt(BigInt::Int { neg, val });
         let constr = Constr {
-            tag: 121,
-            any_constructor: None,
+            constr: 0,
             fields: vec![milliseconds],
         };
         PlutusData::Constr(constr)
