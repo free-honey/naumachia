@@ -519,11 +519,9 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let allow_pull_script = Box::new(allow_pull_validator);
     let allow_pull_value = allow_pull_output.values().clone();
 
+    #[allow(unused_assignments)]
     let mut next_pull_date = None;
     let new_allow_pull_datum = match old_allow_pull_datum {
-        CheckingAccountDatums::CheckingAccount { .. } => {
-            todo!()
-        }
         CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
             let AllowedPuller {
                 next_pull, period, ..
@@ -535,6 +533,9 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
                 ..old_allowed_puller
             }
             .into()
+        }
+        _ => {
+            unimplemented!()
         }
     };
 

@@ -589,7 +589,6 @@ mod tests {
     #[test]
     fn execute__remove_happy_path() {
         let ctx_builder = PullTestContext::pull_happy_path();
-        let input_datum = ctx_builder.input_datum.clone().unwrap();
         let account_address =
             Address::from_bech32("addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt")
                 .unwrap();
