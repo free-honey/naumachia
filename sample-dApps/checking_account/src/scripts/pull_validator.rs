@@ -206,39 +206,20 @@ mod tests {
     }
 
     #[test]
-    fn execute__remove_happy_path() {
-        let ctx_builder = PullTestContext::pull_happy_path();
-        let input_datum = ctx_builder.input_datum.clone().unwrap();
-        let account_address =
-            Address::from_bech32("addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt")
-                .unwrap();
-        let puller_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-        let owner = pub_key_hash_from_address_if_available(&account_address).unwrap();
-        let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
-        let spending_token = vec![5, 5, 5, 5];
-        let checking_account_address =
-            Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
-                .unwrap();
-        let checking_account_nft = vec![7, 7, 7, 7, 7];
-
-        let datum = AllowedPuller {
-            owner: owner.clone(),
-            puller,
-            amount_lovelace: 100,
-            next_pull: 9999999,
-            period: 234,
-            spending_token,
-            checking_account_address,
-            checking_account_nft,
-        }
-        .into();
-        let tx_id = [9, 8, 7, 6];
-        let tx_index = 0;
-
+    fn execute__wrong_puller_fails() {
+        // given
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
-        let ctx = ContextBuilder::new(owner).build_spend(&tx_id, tx_index);
+        let not_puller = Address::from_bech32("addr_test1qqjc95k0kd3apsk0akfc8dvpr72hsv6sc9vnyl5kxs9rsl3kfufq25ftkfjfceqnq4lezek9fth36mwt9m934h95j6ysepjhrc").unwrap();
+        let not_puller_pkh = pub_key_hash_from_address_if_available(&not_puller).unwrap();
 
-        let _eval = script.execute(datum, (), ctx).unwrap();
+        // when
+        ctx_builder.signer_pkh = not_puller_pkh;
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
     }
 
     #[test]
@@ -603,5 +584,41 @@ mod tests {
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
+    fn execute__remove_happy_path() {
+        let ctx_builder = PullTestContext::pull_happy_path();
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let account_address =
+            Address::from_bech32("addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt")
+                .unwrap();
+        let puller_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+        let owner = pub_key_hash_from_address_if_available(&account_address).unwrap();
+        let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
+        let spending_token = vec![5, 5, 5, 5];
+        let checking_account_address =
+            Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
+                .unwrap();
+        let checking_account_nft = vec![7, 7, 7, 7, 7];
+
+        let datum = AllowedPuller {
+            owner: owner.clone(),
+            puller,
+            amount_lovelace: 100,
+            next_pull: 9999999,
+            period: 234,
+            spending_token,
+            checking_account_address,
+            checking_account_nft,
+        }
+        .into();
+        let tx_id = [9, 8, 7, 6];
+        let tx_index = 0;
+
+        let script = pull_validator().unwrap();
+        let ctx = ContextBuilder::new(owner).build_spend(&tx_id, tx_index);
+
+        let _eval = script.execute(datum, (), ctx).unwrap();
     }
 }

@@ -144,17 +144,24 @@ validator spend {
         |> list.any(fn(signature) {
             signature == datum.owner
         }) 
+
+        let signed_by_puller = ctx.transaction.extra_signatories
+        |> list.any(fn(signature) {
+            signature == datum.puller
+        }) 
         
         signed_by_owner || {
         // This Script
-        // 1. Check that it's past date
+        // 1. Signed by puller
+        signed_by_puller &&
+        // 2. Check that it's past date
         past_next_pull_date(datum, ctx) &&
-        // 2. Check taht new datum is made
+        // 3. Check taht new datum is made
         new_datum_is_made(datum, ctx) &&
         // That Script
-        // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
-        // 2. Check that CA datum on new Output && matches
-        // 3. Check that CA NFT on CA Output
+        // 4. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
+        // 5. Check that CA datum on new Output && matches
+        // 6. Check that CA NFT on CA Output
         checking_account_checks(datum, ctx)
         }
 }
