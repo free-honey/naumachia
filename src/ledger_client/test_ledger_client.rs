@@ -5,7 +5,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::scripts::context::{pub_key_hash_from_address_if_available, CtxOutputReference};
+use crate::scripts::context::{
+    pub_key_hash_from_address_if_available, CtxDatum, CtxOutput, CtxOutputReference,
+};
 use crate::{
     backend::Backend,
     ledger_client::{
@@ -452,6 +454,7 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     let upper = tx.valid_range.1.map(|n| (n, false));
 
     let mut inputs = Vec::new();
+    let mut outputs = Vec::new();
     for (utxo, _, _) in tx.script_inputs.iter() {
         let id = utxo.id();
         let value = CtxValue::from(utxo.values().to_owned());
@@ -469,18 +472,51 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
         inputs.push(input);
     }
 
+    for output in tx.unbuilt_outputs.iter() {
+        let new_output = match output {
+            UnbuiltOutput::Wallet { owner, values } => {
+                let address = Address::from_bech32(owner)
+                    .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+                let value = CtxValue::from(values.to_owned());
+                CtxOutput {
+                    address,
+                    value,
+                    datum: CtxDatum::NoDatum,
+                    reference_script: None,
+                }
+            }
+            UnbuiltOutput::Validator {
+                script_address,
+                values,
+                datum,
+            } => {
+                let address = Address::from_bech32(script_address)
+                    .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+                let value = CtxValue::from(values.to_owned());
+                let datum = CtxDatum::InlineDatum(datum.to_owned().into());
+                CtxOutput {
+                    address,
+                    value,
+                    datum,
+                    reference_script: None,
+                }
+            }
+        };
+        outputs.push(new_output)
+    }
+
     let signer = pub_key_hash_from_address_if_available(signer_address).ok_or(
         LedgerClientError::FailedToIssueTx(Box::new(TestLCError::InvalidAddress)),
     )?;
     let range = ValidRange { lower, upper };
 
-    // TODO: Outputs, Extra Signatories, and Datums (they are already included in CTX Builder)
+    // TODO: Extra Signatories, and Datums (they are already included in CTX Builder)
     let ctx = TxContext {
         purpose,
         signer,
         range,
         inputs,
-        outputs: vec![],
+        outputs,
         extra_signatories: vec![],
         datums: vec![],
     };

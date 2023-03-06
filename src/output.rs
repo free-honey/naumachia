@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::values::Values;
 
+// TODO: Does this need to be separated?
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub enum UnbuiltOutput<Datum> {
     Wallet {

@@ -44,31 +44,28 @@ fn new_datum_is_made(datum: PullDatum, ctx: ScriptContext) -> Bool {
             //    a. New datum has updated date 
             new_datum.next_pull == old_datum.next_pull + old_datum.period &&
             //    b. Everything else matches 
-            new_datum.puller == old_datum.puller &&
-            new_datum.amount_lovelace == old_datum.amount_lovelace &&
-            new_datum.period == old_datum.period &&
-            new_datum.spend_token == old_datum.spend_token &&
-            new_datum.checking_account_address == old_datum.checking_account_address &&
-            new_datum.checking_account_nft == old_datum.checking_account_nft &&
+            // new_datum.puller == old_datum.puller &&
+            // new_datum.amount_lovelace == old_datum.amount_lovelace &&
+            // new_datum.period == old_datum.period &&
+            // new_datum.spend_token == old_datum.spend_token &&
+            // new_datum.checking_account_address == old_datum.checking_account_address &&
+            // new_datum.checking_account_nft == old_datum.checking_account_nft &&
             //    d. Check that UTxO includes spending token!
-            { 
-                output.value
-                |> value.policies
-                |> list.any(fn(id) {id == old_datum.spend_token})
+            // { 
+            //     output.value
+            //     |> value.policies
+            //     |> list.any(fn(id) {id == old_datum.spend_token})
 
-            }
+            // }
+            True
     }
 
-    when ctx.purpose is {
-        Spend(out_ref) -> {
-            let inputs = ctx.transaction.inputs
-            when find_input_address(out_ref, inputs)
-            |> option.and_then(output_at_address) is {
-                Some(output) -> checks_on_output(output, datum)
-                None -> False
-            }
-        }
-        _ -> False
+    expect Spend(out_ref) = ctx.purpose
+    let inputs = ctx.transaction.inputs
+    when find_input_address(out_ref, inputs)
+    |> option.and_then(output_at_address) is {
+        Some(output) -> checks_on_output(output, datum)
+        None -> False
     }
 
 }
@@ -148,7 +145,7 @@ validator spend {
         // 1. Check that it's past date
         past_next_pull_date(datum, ctx) &&
         // 2. Check taht new datum is made
-        // new_datum_is_made(datum, ctx) &&
+        new_datum_is_made(datum, ctx) &&
         // That Script
         // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
         // 2. Check that CA datum on new Output && matches
