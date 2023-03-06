@@ -228,7 +228,8 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
 
 #[tokio::test]
 async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
-    let owner = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let owner_address = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner_address).unwrap();
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
 
     let allow_puller_script = pull_validator().unwrap();
@@ -239,15 +240,15 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
 
     let account_amount = 100_000_000;
     let pull_amount = 15_000_000;
-    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
     let account_datum = CheckingAccount {
-        owner: owner_pubkey_hash,
+        owner: owner_pubkey_hash.clone(),
         spend_token_policy: spending_token_policy.clone(),
     }
     .into();
     let checking_account_nft_id = vec![1, 2, 3, 4, 5];
     let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let allow_puller_datum = AllowedPuller {
+        owner: owner_pubkey_hash,
         puller: puller_pubkey_hash,
         amount_lovelace: pull_amount,
         next_pull: 0,

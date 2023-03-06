@@ -7,6 +7,7 @@ use aiken/option
 use checking/datum.{CheckingAccountDatum}
 
 pub type PullDatum {
+    owner: ByteArray,
     puller: ByteArray,
     amount_lovelace: Int,
     next_pull: Int,
@@ -139,6 +140,12 @@ fn find_account_output(datum: PullDatum, ctx: ScriptContext) -> Option<Output> {
 
 validator spend {
     fn(datum: PullDatum, _redeemer: Void, ctx: ScriptContext) -> Bool {
+        let signed_by_owner = ctx.transaction.extra_signatories
+        |> list.any(fn(signature) {
+            signature == datum.owner
+        }) 
+        
+        signed_by_owner || {
         // This Script
         // 1. Check that it's past date
         past_next_pull_date(datum, ctx) &&
@@ -149,5 +156,6 @@ validator spend {
         // 2. Check that CA datum on new Output && matches
         // 3. Check that CA NFT on CA Output
         checking_account_checks(datum, ctx)
+        }
 }
 }

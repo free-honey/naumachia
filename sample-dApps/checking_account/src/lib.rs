@@ -85,6 +85,7 @@ impl From<CheckingAccount> for CheckingAccountDatums {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AllowedPuller {
+    owner: PubKeyHash,
     puller: PubKeyHash,
     amount_lovelace: u64,
     next_pull: i64,
@@ -115,6 +116,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 })
             }
             CheckingAccountDatums::AllowedPuller(AllowedPuller {
+                owner,
                 puller,
                 amount_lovelace,
                 next_pull,
@@ -123,6 +125,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 checking_account_address,
                 checking_account_nft,
             }) => {
+                let owner = owner.into();
                 let puller = puller.into();
                 let amount_lovelace = PlutusData::BigInt((amount_lovelace as i64).into());
                 let next_pull = PlutusData::BigInt(next_pull.into());
@@ -132,6 +135,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 PlutusData::Constr(Constr {
                     constr: 0,
                     fields: vec![
+                        owner,
                         puller,
                         amount_lovelace,
                         next_pull,
@@ -156,6 +160,8 @@ pub enum CheckingAccountError {
     DatumNotFoundForOutput(OutputId),
     #[error("You are trying to withdraw more than is in account")]
     CannotWithdrawSpecifiedAmount,
+    #[error("Address isn't valid: {0:?}")]
+    InvalidAddress(Address),
 }
 
 #[async_trait]
@@ -320,6 +326,9 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let owner = pub_key_hash_from_address_if_available(&me).ok_or(SCLogicError::Endpoint(
+        Box::new(CheckingAccountError::InvalidAddress(me.clone())),
+    ))?;
 
     let parameterized_spending_token_policy = spend_token_policy().unwrap();
     let nft_id_bytes = hex::decode(checking_account_nft_id).unwrap();
@@ -344,6 +353,7 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         1,
     );
     let datum = AllowedPuller {
+        owner,
         puller,
         amount_lovelace,
         next_pull,
