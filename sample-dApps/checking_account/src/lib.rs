@@ -507,7 +507,7 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .clone();
     let allow_pull_redeemer = ();
     let allow_pull_script = Box::new(allow_pull_validator);
-    let allow_pull_value = Values::default();
+    let allow_pull_value = allow_pull_output.values().clone();
 
     let mut next_pull_date = None;
     let new_allow_pull_datum = match old_allow_pull_datum {
