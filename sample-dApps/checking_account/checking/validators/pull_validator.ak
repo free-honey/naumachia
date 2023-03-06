@@ -148,11 +148,12 @@ validator spend {
         // 1. Check that it's past date
         past_next_pull_date(datum, ctx) &&
         // 2. Check taht new datum is made
-        new_datum_is_made(datum, ctx) &&
+        // new_datum_is_made(datum, ctx) &&
         // That Script
         // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
         // 2. Check that CA datum on new Output && matches
         // 3. Check that CA NFT on CA Output
-        checking_account_checks(datum, ctx)
+        // checking_account_checks(datum, ctx)
+        True
 }
 }

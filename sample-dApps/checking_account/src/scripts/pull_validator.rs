@@ -25,7 +25,7 @@ pub fn pull_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Address, CheckingAccountDatums};
+    use crate::{Address, AllowedPuller, CheckingAccount, CheckingAccountDatums};
     use naumachia::scripts::context::{
         pub_key_hash_from_address_if_available, ContextBuilder, PubKeyHash, TxContext,
     };
@@ -86,7 +86,7 @@ mod tests {
             let spending_token = vec![5, 5, 5, 5];
             let original_balance = 10_000;
             let pull_amount = 10;
-            let input_datum = CheckingAccountDatums::AllowedPuller {
+            let input_datum = AllowedPuller {
                 puller: signer_pubkey_hash.clone(),
                 amount_lovelace: pull_amount,
                 next_pull: 10,
@@ -94,10 +94,11 @@ mod tests {
                 spending_token: spending_token.clone(),
                 checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
-            };
+            }
+            .into();
             let policy_id = hex::encode(&spending_token);
             let nft_id = hex::encode(&checking_account_nft_id);
-            let output_datum = CheckingAccountDatums::AllowedPuller {
+            let output_datum = AllowedPuller {
                 puller: signer_pubkey_hash,
                 amount_lovelace: pull_amount,
                 next_pull: 20,
@@ -105,14 +106,16 @@ mod tests {
                 spending_token: spending_token.clone(),
                 checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
-            };
+            }
+            .into();
 
             let account_owner_pubkey_hash =
                 pub_key_hash_from_address_if_available(&account_owner).unwrap();
-            let account_datum = CheckingAccountDatums::CheckingAccount {
+            let account_datum: CheckingAccountDatums = CheckingAccount {
                 owner: account_owner_pubkey_hash,
                 spend_token_policy: spending_token,
-            };
+            }
+            .into();
             TestContext {
                 signer_pkh,
                 range_lower: Some((11, true)),
@@ -268,23 +271,14 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull: next_pull - 1,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
+                let AllowedPuller { next_pull, .. } = old_allowed_puller;
+                AllowedPuller {
+                    next_pull: next_pull - 1,
+                    ..old_allowed_puller
+                }
+                .into()
+            }
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -304,23 +298,14 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period: period + 1,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
+                let AllowedPuller { period, .. } = old_allowed_puller;
+                AllowedPuller {
+                    period: period + 1,
+                    ..old_allowed_puller
+                }
+                .into()
+            }
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -341,23 +326,11 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token: _,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 spending_token: bad_spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -380,23 +353,11 @@ mod tests {
             Address::from_bech32("addr_test1vzpwq95z3xyum8vqndgdd9mdnmafh3djcxnc6jemlgdmswcve6tkw")
                 .unwrap();
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address: _,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 checking_account_address: bad_address,
-                checking_account_nft,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -413,27 +374,15 @@ mod tests {
         // given
         let mut ctx_builder = TestContext::happy_path();
         let script = pull_validator().unwrap();
-        let bad_nft_id = vec![5, 4, 3, 4, 1, 6, 2];
 
         // when
+        let bad_nft_id = vec![5, 4, 3, 4, 1, 6, 2];
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft: _,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 checking_account_nft: bad_nft_id,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -453,23 +402,16 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace: amount_lovelace + 1, // Change pull amount
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
+                let AllowedPuller {
+                    amount_lovelace, ..
+                } = old_allowed_puller;
+                AllowedPuller {
+                    amount_lovelace: amount_lovelace + 1, // Change pull amount
+                    ..old_allowed_puller
+                }
+                .into()
+            }
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -494,23 +436,11 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller: _,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 puller: wrong_puller_pubkey_hash,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -597,13 +527,11 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.account_output_datum.unwrap() {
-            CheckingAccountDatums::CheckingAccount {
-                owner: _,
-                spend_token_policy,
-            } => CheckingAccountDatums::CheckingAccount {
+            CheckingAccountDatums::CheckingAccount(old_checking_account) => CheckingAccount {
                 owner: wrong_owner_pubkey_hash,
-                spend_token_policy,
-            },
+                ..old_checking_account
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.account_output_datum = Some(new_datum);
@@ -623,13 +551,11 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.account_output_datum.unwrap() {
-            CheckingAccountDatums::CheckingAccount {
-                owner,
-                spend_token_policy: _,
-            } => CheckingAccountDatums::CheckingAccount {
-                owner,
+            CheckingAccountDatums::CheckingAccount(old_checking_account) => CheckingAccount {
                 spend_token_policy: bad_token_id,
-            },
+                ..old_checking_account
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.account_output_datum = Some(new_datum);
