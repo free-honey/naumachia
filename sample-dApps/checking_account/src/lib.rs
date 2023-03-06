@@ -1,7 +1,6 @@
 use crate::scripts::checking_account_validtor::checking_account_validator;
 use crate::scripts::pull_validator::pull_validator;
 use crate::scripts::spend_token_policy::spend_token_policy;
-use crate::scripts::FakePullerValidator;
 use async_trait::async_trait;
 use nau_scripts::one_shot;
 use nau_scripts::one_shot::OutputReference;
@@ -334,7 +333,8 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let id = policy.id().unwrap();
     let boxed_policy = Box::new(policy);
 
-    let address = FakePullerValidator
+    let address = pull_validator()
+        .map_err(SCLogicError::ValidatorScript)?
         .address(0)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
@@ -368,7 +368,7 @@ async fn remove_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     output_id: OutputId,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let validator = FakePullerValidator;
+    let validator = pull_validator().map_err(SCLogicError::ValidatorScript)?;
     let address = validator
         .address(0)
         .map_err(SCLogicError::ValidatorScript)?;

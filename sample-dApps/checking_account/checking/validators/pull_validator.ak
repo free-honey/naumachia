@@ -148,7 +148,6 @@ validator spend {
         // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
         // 2. Check that CA datum on new Output && matches
         // 3. Check that CA NFT on CA Output
-        // checking_account_checks(datum, ctx)
-        True
+        checking_account_checks(datum, ctx)
 }
 }

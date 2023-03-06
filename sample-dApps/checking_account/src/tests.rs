@@ -61,7 +61,7 @@ async fn add_puller_creates_new_datum_for_puller() {
     };
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
-    let script = FakePullerValidator;
+    let script = pull_validator().unwrap();
     let script_address = script.address(NETWORK).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
@@ -115,7 +115,7 @@ async fn remove_puller__removes_the_allowed_puller() {
 
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(add_endpoint).await.unwrap();
-    let script = FakePullerValidator;
+    let script = pull_validator().unwrap();
     let address = script.address(NETWORK).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
