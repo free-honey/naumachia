@@ -25,7 +25,7 @@ pub fn pull_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Address, CheckingAccountDatums};
+    use crate::{Address, AllowedPuller, CheckingAccount, CheckingAccountDatums};
     use naumachia::scripts::context::{
         pub_key_hash_from_address_if_available, ContextBuilder, PubKeyHash, TxContext,
     };
@@ -33,7 +33,7 @@ mod tests {
 
     const NETWORK: u8 = 0;
 
-    struct TestContext {
+    struct PullTestContext {
         pub signer_pkh: PubKeyHash,
         pub range_lower: Option<(i64, bool)>,
         pub range_upper: Option<(i64, bool)>,
@@ -63,12 +63,15 @@ mod tests {
         pub account_output_datum: Option<CheckingAccountDatums>,
     }
 
-    impl TestContext {
-        pub fn happy_path() -> Self {
+    impl PullTestContext {
+        pub fn pull_happy_path() -> Self {
             let account_owner = Address::from_bech32(
                 "addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt",
             )
             .unwrap();
+            let account_owner_pubkey_hash =
+                pub_key_hash_from_address_if_available(&account_owner).unwrap();
+
             let puller = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
             let signer_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
             let checking_account_address = Address::from_bech32(
@@ -86,7 +89,8 @@ mod tests {
             let spending_token = vec![5, 5, 5, 5];
             let original_balance = 10_000;
             let pull_amount = 10;
-            let input_datum = CheckingAccountDatums::AllowedPuller {
+            let input_datum = AllowedPuller {
+                owner: account_owner_pubkey_hash.clone(),
                 puller: signer_pubkey_hash.clone(),
                 amount_lovelace: pull_amount,
                 next_pull: 10,
@@ -94,10 +98,12 @@ mod tests {
                 spending_token: spending_token.clone(),
                 checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
-            };
+            }
+            .into();
             let policy_id = hex::encode(&spending_token);
             let nft_id = hex::encode(&checking_account_nft_id);
-            let output_datum = CheckingAccountDatums::AllowedPuller {
+            let output_datum = AllowedPuller {
+                owner: account_owner_pubkey_hash.clone(),
                 puller: signer_pubkey_hash,
                 amount_lovelace: pull_amount,
                 next_pull: 20,
@@ -105,15 +111,15 @@ mod tests {
                 spending_token: spending_token.clone(),
                 checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
-            };
+            }
+            .into();
 
-            let account_owner_pubkey_hash =
-                pub_key_hash_from_address_if_available(&account_owner).unwrap();
-            let account_datum = CheckingAccountDatums::CheckingAccount {
+            let account_datum: CheckingAccountDatums = CheckingAccount {
                 owner: account_owner_pubkey_hash,
                 spend_token_policy: spending_token,
-            };
-            TestContext {
+            }
+            .into();
+            PullTestContext {
                 signer_pkh,
                 range_lower: Some((11, true)),
                 range_upper: None,
@@ -190,8 +196,8 @@ mod tests {
     }
 
     #[test]
-    fn execute__happy_path() {
-        let ctx_builder = TestContext::happy_path();
+    fn execute__pull_happy_path() {
+        let ctx_builder = PullTestContext::pull_happy_path();
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let script = pull_validator().unwrap();
         let ctx = ctx_builder.build();
@@ -200,9 +206,26 @@ mod tests {
     }
 
     #[test]
+    fn execute__wrong_puller_fails() {
+        // given
+        let mut ctx_builder = PullTestContext::pull_happy_path();
+        let script = pull_validator().unwrap();
+        let not_puller = Address::from_bech32("addr_test1qqjc95k0kd3apsk0akfc8dvpr72hsv6sc9vnyl5kxs9rsl3kfufq25ftkfjfceqnq4lezek9fth36mwt9m934h95j6ysepjhrc").unwrap();
+        let not_puller_pkh = pub_key_hash_from_address_if_available(&not_puller).unwrap();
+
+        // when
+        ctx_builder.signer_pkh = not_puller_pkh;
+
+        //then
+        let input_datum = ctx_builder.input_datum.clone().unwrap();
+        let ctx = ctx_builder.build();
+        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
     fn execute__before_next_pull_date_fails() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -217,7 +240,7 @@ mod tests {
     #[test]
     fn execute__same_date_not_inclusive_fails() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -232,7 +255,7 @@ mod tests {
     #[test]
     fn execute__same_date_inclusive_succeeds() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -247,7 +270,7 @@ mod tests {
     #[test]
     fn execute__no_new_pull_datum_fails() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -263,28 +286,19 @@ mod tests {
     #[test]
     fn execute__new_pull_datum_fails_if_next_pull_wrong() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull: next_pull - 1,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
+                let AllowedPuller { next_pull, .. } = old_allowed_puller;
+                AllowedPuller {
+                    next_pull: next_pull - 1,
+                    ..old_allowed_puller
+                }
+                .into()
+            }
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -299,28 +313,19 @@ mod tests {
     #[test]
     fn execute__new_pull_datum_fails_if_period_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period: period + 1,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
+                let AllowedPuller { period, .. } = old_allowed_puller;
+                AllowedPuller {
+                    period: period + 1,
+                    ..old_allowed_puller
+                }
+                .into()
+            }
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -335,29 +340,17 @@ mod tests {
     #[test]
     fn execute__new_pull_datum_fails_if_spending_token_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
         let bad_spending_token = vec![6, 6, 6, 6];
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token: _,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 spending_token: bad_spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -372,7 +365,7 @@ mod tests {
     #[test]
     fn execute__new_pull_datum_fails_if_account_address_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -380,23 +373,11 @@ mod tests {
             Address::from_bech32("addr_test1vzpwq95z3xyum8vqndgdd9mdnmafh3djcxnc6jemlgdmswcve6tkw")
                 .unwrap();
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address: _,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 checking_account_address: bad_address,
-                checking_account_nft,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -411,29 +392,17 @@ mod tests {
     #[test]
     fn execute__new_pull_datum_fails_if_account_nft_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
-        let bad_nft_id = vec![5, 4, 3, 4, 1, 6, 2];
 
         // when
+        let bad_nft_id = vec![5, 4, 3, 4, 1, 6, 2];
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft: _,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 checking_account_nft: bad_nft_id,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -448,28 +417,21 @@ mod tests {
     #[test]
     fn execute__new_pull_datum_fails_if_pull_amount_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
-                puller,
-                amount_lovelace: amount_lovelace + 1, // Change pull amount
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
+                let AllowedPuller {
+                    amount_lovelace, ..
+                } = old_allowed_puller;
+                AllowedPuller {
+                    amount_lovelace: amount_lovelace + 1, // Change pull amount
+                    ..old_allowed_puller
+                }
+                .into()
+            }
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -484,7 +446,7 @@ mod tests {
     #[test]
     fn execute__new_pull_datum_fails_if_puller_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
         let wrong_puller =
             Address::from_bech32("addr_test1vzpwq95z3xyum8vqndgdd9mdnmafh3djcxnc6jemlgdmswcve6tkw")
@@ -494,23 +456,11 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller {
-                puller: _,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            } => CheckingAccountDatums::AllowedPuller {
+            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
                 puller: wrong_puller_pubkey_hash,
-                amount_lovelace,
-                next_pull,
-                period,
-                spending_token,
-                checking_account_address,
-                checking_account_nft,
-            },
+                ..old_allowed_puller
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.output_datum = Some(new_datum);
@@ -525,7 +475,7 @@ mod tests {
     #[test]
     fn execute__fails_if_output_does_not_include_spending_token() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -540,7 +490,7 @@ mod tests {
     #[test]
     fn execute__fails_if_account_nft_not_replaced() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -558,7 +508,7 @@ mod tests {
     #[test]
     fn execute__fails_if_too_much_is_pulled() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -573,7 +523,7 @@ mod tests {
     #[test]
     fn execute__fails_if_account_datum_not_replaced() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
 
         // when
@@ -588,7 +538,7 @@ mod tests {
     #[test]
     fn execute__fails_if_account_datum_owner_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
         let wrong_owner =
             Address::from_bech32("addr_test1wr34avr87aq3aj0xlgj78jqjwjfppcj2ctsz8rppr2w8upc4jayvq")
@@ -597,13 +547,11 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.account_output_datum.unwrap() {
-            CheckingAccountDatums::CheckingAccount {
-                owner: _,
-                spend_token_policy,
-            } => CheckingAccountDatums::CheckingAccount {
+            CheckingAccountDatums::CheckingAccount(old_checking_account) => CheckingAccount {
                 owner: wrong_owner_pubkey_hash,
-                spend_token_policy,
-            },
+                ..old_checking_account
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.account_output_datum = Some(new_datum);
@@ -617,19 +565,17 @@ mod tests {
     #[test]
     fn execute__fails_if_account_datum_spend_token_changes() {
         // given
-        let mut ctx_builder = TestContext::happy_path();
+        let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
         let bad_token_id = vec![2, 3, 4, 5, 2, 6, 25, 2, 4];
 
         // when
         let new_datum = match ctx_builder.account_output_datum.unwrap() {
-            CheckingAccountDatums::CheckingAccount {
-                owner,
-                spend_token_policy: _,
-            } => CheckingAccountDatums::CheckingAccount {
-                owner,
+            CheckingAccountDatums::CheckingAccount(old_checking_account) => CheckingAccount {
                 spend_token_policy: bad_token_id,
-            },
+                ..old_checking_account
+            }
+            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.account_output_datum = Some(new_datum);
@@ -638,5 +584,40 @@ mod tests {
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
+    }
+
+    #[test]
+    fn execute__remove_happy_path() {
+        let ctx_builder = PullTestContext::pull_happy_path();
+        let account_address =
+            Address::from_bech32("addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt")
+                .unwrap();
+        let puller_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+        let owner = pub_key_hash_from_address_if_available(&account_address).unwrap();
+        let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
+        let spending_token = vec![5, 5, 5, 5];
+        let checking_account_address =
+            Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
+                .unwrap();
+        let checking_account_nft = vec![7, 7, 7, 7, 7];
+
+        let datum = AllowedPuller {
+            owner: owner.clone(),
+            puller,
+            amount_lovelace: 100,
+            next_pull: 9999999,
+            period: 234,
+            spending_token,
+            checking_account_address,
+            checking_account_nft,
+        }
+        .into();
+        let tx_id = [9, 8, 7, 6];
+        let tx_index = 0;
+
+        let script = pull_validator().unwrap();
+        let ctx = ContextBuilder::new(owner).build_spend(&tx_id, tx_index);
+
+        let _eval = script.execute(datum, (), ctx).unwrap();
     }
 }

@@ -11,52 +11,48 @@
       "redeemer": {
         "title": "Unit",
         "description": "The nullary constructor.",
-        "schema": {
-          "anyOf": [
-            {
-              "dataType": "constructor",
-              "index": 0,
-              "fields": []
-            }
-          ]
-        }
+        "anyOf": [
+          {
+            "dataType": "constructor",
+            "index": 0,
+            "fields": []
+          }
+        ]
       },
       "parameters": [
         {
           "title": "OutputReference",
           "description": "An `OutputReference` is a unique reference to an output on-chain. The `output_index`\n corresponds to the position in the output list of the transaction (identified by its id)\n that produced that output",
-          "schema": {
-            "anyOf": [
-              {
-                "title": "OutputReference",
-                "dataType": "constructor",
-                "index": 0,
-                "fields": [
-                  {
-                    "title": "transaction_id",
-                    "description": "A unique transaction identifier, as the hash of a transaction body. Note that the transaction id\n isn't a direct hash of the `Transaction` as visible on-chain. Rather, they correspond to hash\n digests of transaction body as they are serialized on the network.",
-                    "anyOf": [
-                      {
-                        "title": "TransactionId",
-                        "dataType": "constructor",
-                        "index": 0,
-                        "fields": [
-                          {
-                            "title": "hash",
-                            "dataType": "bytes"
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "title": "output_index",
-                    "dataType": "integer"
-                  }
-                ]
-              }
-            ]
-          }
+          "anyOf": [
+            {
+              "title": "OutputReference",
+              "dataType": "constructor",
+              "index": 0,
+              "fields": [
+                {
+                  "title": "transaction_id",
+                  "description": "A unique transaction identifier, as the hash of a transaction body. Note that the transaction id\n isn't a direct hash of the `Transaction` as visible on-chain. Rather, they correspond to hash\n digests of transaction body as they are serialized on the network.",
+                  "anyOf": [
+                    {
+                      "title": "TransactionId",
+                      "dataType": "constructor",
+                      "index": 0,
+                      "fields": [
+                        {
+                          "title": "hash",
+                          "dataType": "bytes"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "title": "output_index",
+                  "dataType": "integer"
+                }
+              ]
+            }
+          ]
         }
       ],
       "compiledCode": "58b60100003232323232323232222533300632323232323300100323375e6600a600c0029000004980080091129998078010a5013232533300e300300214a2266600a00a002006602400660200046eb0cc004c008cc004c00800d20004800088c8ccc0040052000003222333300c3370e008004020466600800866e0000d200230120010012300937540022930b180080091129998038010a4c26600a600260100046660060066012004002ae695cdaab9e5573eae855d11",

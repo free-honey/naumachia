@@ -1,5 +1,5 @@
 use super::*;
-use crate::scripts::FakePullerValidator;
+use crate::scripts::pull_validator::pull_validator;
 use naumachia::address::PolicyId;
 use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
 use naumachia::smart_contract::{SmartContract, SmartContractTrait};
@@ -61,7 +61,7 @@ async fn add_puller_creates_new_datum_for_puller() {
     };
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
-    let script = FakePullerValidator;
+    let script = pull_validator().unwrap();
     let script_address = script.address(NETWORK).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
@@ -115,7 +115,7 @@ async fn remove_puller__removes_the_allowed_puller() {
 
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(add_endpoint).await.unwrap();
-    let script = FakePullerValidator;
+    let script = pull_validator().unwrap();
     let address = script.address(NETWORK).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
@@ -228,10 +228,11 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
 
 #[tokio::test]
 async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
-    let owner = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let owner_address = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner_address).unwrap();
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
 
-    let allow_puller_script = FakePullerValidator;
+    let allow_puller_script = pull_validator().unwrap();
     let allow_puller_address = allow_puller_script.address(NETWORK).unwrap();
     let account_script = checking_account_validator().unwrap();
     let spending_token_policy = vec![5, 5, 5, 5, 5];
@@ -239,14 +240,15 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
 
     let account_amount = 100_000_000;
     let pull_amount = 15_000_000;
-    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner).unwrap();
-    let account_datum = CheckingAccountDatums::CheckingAccount {
-        owner: owner_pubkey_hash,
+    let account_datum = CheckingAccount {
+        owner: owner_pubkey_hash.clone(),
         spend_token_policy: spending_token_policy.clone(),
-    };
+    }
+    .into();
     let checking_account_nft_id = vec![1, 2, 3, 4, 5];
     let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
-    let allow_puller_datum = CheckingAccountDatums::AllowedPuller {
+    let allow_puller_datum = AllowedPuller {
+        owner: owner_pubkey_hash,
         puller: puller_pubkey_hash,
         amount_lovelace: pull_amount,
         next_pull: 0,
@@ -254,21 +256,22 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
         spending_token: spending_token_policy.clone(),
         checking_account_address: account_address.clone(),
         checking_account_nft: checking_account_nft_id.clone(),
-    };
+    }
+    .into();
     let backend = TestBackendsBuilder::new(&puller)
         .start_output(&account_address)
         .with_datum(account_datum)
         .with_value(PolicyId::ADA, account_amount)
         .with_value(
             PolicyId::NativeToken(hex::encode(&checking_account_nft_id), None),
-            account_amount,
+            1,
         )
         .finish_output()
         .start_output(&allow_puller_address)
         .with_datum(allow_puller_datum)
         .with_value(
             PolicyId::NativeToken(hex::encode(spending_token_policy), None),
-            0,
+            1,
         )
         .finish_output()
         .build_in_memory();

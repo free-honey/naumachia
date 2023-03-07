@@ -7,6 +7,7 @@ use aiken/option
 use checking/datum.{CheckingAccountDatum}
 
 pub type PullDatum {
+    owner: ByteArray,
     puller: ByteArray,
     amount_lovelace: Int,
     next_pull: Int,
@@ -55,20 +56,15 @@ fn new_datum_is_made(datum: PullDatum, ctx: ScriptContext) -> Bool {
                 output.value
                 |> value.policies
                 |> list.any(fn(id) {id == old_datum.spend_token})
-
             }
     }
 
-    when ctx.purpose is {
-        Spend(out_ref) -> {
-            let inputs = ctx.transaction.inputs
-            when find_input_address(out_ref, inputs)
-            |> option.and_then(output_at_address) is {
-                Some(output) -> checks_on_output(output, datum)
-                None -> False
-            }
-        }
-        _ -> False
+    expect Spend(out_ref) = ctx.purpose
+    let inputs = ctx.transaction.inputs
+    when find_input_address(out_ref, inputs)
+    |> option.and_then(output_at_address) is {
+        Some(output) -> checks_on_output(output, datum)
+        None -> False
     }
 
 }
@@ -144,15 +140,29 @@ fn find_account_output(datum: PullDatum, ctx: ScriptContext) -> Option<Output> {
 
 validator spend {
     fn(datum: PullDatum, _redeemer: Void, ctx: ScriptContext) -> Bool {
+        let signed_by_owner = ctx.transaction.extra_signatories
+        |> list.any(fn(signature) {
+            signature == datum.owner
+        }) 
+
+        let signed_by_puller = ctx.transaction.extra_signatories
+        |> list.any(fn(signature) {
+            signature == datum.puller
+        }) 
+        
+        signed_by_owner || {
         // This Script
-        // 1. Check that it's past date
+        // 1. Signed by puller
+        signed_by_puller &&
+        // 2. Check that it's past date
         past_next_pull_date(datum, ctx) &&
-        // 2. Check taht new datum is made
+        // 3. Check taht new datum is made
         new_datum_is_made(datum, ctx) &&
         // That Script
-        // 1. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
-        // 2. Check that CA datum on new Output && matches
-        // 3. Check that CA NFT on CA Output
+        // 4. Check that Checking Account UTxO is replaced with Current Balance - Pull Amount
+        // 5. Check that CA datum on new Output && matches
+        // 6. Check that CA NFT on CA Output
         checking_account_checks(datum, ctx)
+        }
 }
 }

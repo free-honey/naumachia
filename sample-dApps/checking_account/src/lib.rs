@@ -1,6 +1,6 @@
 use crate::scripts::checking_account_validtor::checking_account_validator;
+use crate::scripts::pull_validator::pull_validator;
 use crate::scripts::spend_token_policy::spend_token_policy;
-use crate::scripts::FakePullerValidator;
 use async_trait::async_trait;
 use nau_scripts::one_shot;
 use nau_scripts::one_shot::OutputReference;
@@ -67,28 +67,47 @@ pub struct CheckingAccountLogic;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CheckingAccountDatums {
-    CheckingAccount {
-        owner: PubKeyHash,
-        spend_token_policy: Vec<u8>,
-    },
-    AllowedPuller {
-        puller: PubKeyHash,
-        amount_lovelace: u64,
-        next_pull: i64,
-        period: i64,
-        spending_token: Vec<u8>,
-        checking_account_address: Address,
-        checking_account_nft: Vec<u8>,
-    },
+    CheckingAccount(CheckingAccount),
+    AllowedPuller(AllowedPuller),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct CheckingAccount {
+    owner: PubKeyHash,
+    spend_token_policy: Vec<u8>,
+}
+
+impl From<CheckingAccount> for CheckingAccountDatums {
+    fn from(value: CheckingAccount) -> Self {
+        CheckingAccountDatums::CheckingAccount(value)
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct AllowedPuller {
+    owner: PubKeyHash,
+    puller: PubKeyHash,
+    amount_lovelace: u64,
+    next_pull: i64,
+    period: i64,
+    spending_token: Vec<u8>,
+    checking_account_address: Address,
+    checking_account_nft: Vec<u8>,
+}
+
+impl From<AllowedPuller> for CheckingAccountDatums {
+    fn from(value: AllowedPuller) -> Self {
+        CheckingAccountDatums::AllowedPuller(value)
+    }
 }
 
 impl From<CheckingAccountDatums> for PlutusData {
     fn from(value: CheckingAccountDatums) -> Self {
         match value {
-            CheckingAccountDatums::CheckingAccount {
+            CheckingAccountDatums::CheckingAccount(CheckingAccount {
                 owner,
                 spend_token_policy,
-            } => {
+            }) => {
                 let owner_data = owner.into();
                 let policy_data = PlutusData::BoundedBytes(spend_token_policy);
                 PlutusData::Constr(Constr {
@@ -96,7 +115,8 @@ impl From<CheckingAccountDatums> for PlutusData {
                     fields: vec![owner_data, policy_data],
                 })
             }
-            CheckingAccountDatums::AllowedPuller {
+            CheckingAccountDatums::AllowedPuller(AllowedPuller {
+                owner,
                 puller,
                 amount_lovelace,
                 next_pull,
@@ -104,7 +124,8 @@ impl From<CheckingAccountDatums> for PlutusData {
                 spending_token,
                 checking_account_address,
                 checking_account_nft,
-            } => {
+            }) => {
+                let owner = owner.into();
                 let puller = puller.into();
                 let amount_lovelace = PlutusData::BigInt((amount_lovelace as i64).into());
                 let next_pull = PlutusData::BigInt(next_pull.into());
@@ -114,6 +135,7 @@ impl From<CheckingAccountDatums> for PlutusData {
                 PlutusData::Constr(Constr {
                     constr: 0,
                     fields: vec![
+                        owner,
                         puller,
                         amount_lovelace,
                         next_pull,
@@ -138,6 +160,8 @@ pub enum CheckingAccountError {
     DatumNotFoundForOutput(OutputId),
     #[error("You are trying to withdraw more than is in account")]
     CannotWithdrawSpecifiedAmount,
+    #[error("Address isn't valid: {0:?}")]
+    InvalidAddress(Address),
 }
 
 #[async_trait]
@@ -244,10 +268,11 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let spend_token_id = hex::decode(&spend_token_policy).unwrap();
-    let datum = CheckingAccountDatums::CheckingAccount {
+    let datum = CheckingAccount {
         owner: owner_pubkey,
         spend_token_policy: spend_token_id,
-    };
+    }
+    .into();
     let actions = TxActions::v2().with_script_init(datum, values, address);
     Ok(actions)
 }
@@ -301,6 +326,9 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let owner = pub_key_hash_from_address_if_available(&me).ok_or(SCLogicError::Endpoint(
+        Box::new(CheckingAccountError::InvalidAddress(me.clone())),
+    ))?;
 
     let parameterized_spending_token_policy = spend_token_policy().unwrap();
     let nft_id_bytes = hex::decode(checking_account_nft_id).unwrap();
@@ -314,7 +342,8 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let id = policy.id().unwrap();
     let boxed_policy = Box::new(policy);
 
-    let address = FakePullerValidator
+    let address = pull_validator()
+        .map_err(SCLogicError::ValidatorScript)?
         .address(0)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
@@ -323,7 +352,8 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         &PolicyId::NativeToken(id.clone(), Some(SPEND_TOKEN_ASSET_NAME.to_string())),
         1,
     );
-    let datum = CheckingAccountDatums::AllowedPuller {
+    let datum = AllowedPuller {
+        owner,
         puller,
         amount_lovelace,
         next_pull,
@@ -331,7 +361,8 @@ async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         spending_token: hex::decode(&id).unwrap(), // TODO
         checking_account_address: checking_account_address.clone(),
         checking_account_nft: nft_id_bytes,
-    };
+    }
+    .into();
     let actions = TxActions::v2()
         .with_mint(
             1,
@@ -347,7 +378,7 @@ async fn remove_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     output_id: OutputId,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let validator = FakePullerValidator;
+    let validator = pull_validator().map_err(SCLogicError::ValidatorScript)?;
     let address = validator
         .address(0)
         .map_err(SCLogicError::ValidatorScript)?;
@@ -446,7 +477,7 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     checking_account_output_id: OutputId,
     amount: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let allow_pull_validator = FakePullerValidator;
+    let allow_pull_validator = pull_validator().map_err(SCLogicError::ValidatorScript)?;
     let allow_pull_address = allow_pull_validator
         .address(0)
         .map_err(SCLogicError::ValidatorScript)?;
@@ -477,7 +508,7 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         ))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
-    let new_allow_pull_datum = allow_pull_output
+    let old_allow_pull_datum = allow_pull_output
         .datum()
         .ok_or(CheckingAccountError::OutputNotFound(
             allow_pull_output_id.clone(),
@@ -486,7 +517,27 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .clone();
     let allow_pull_redeemer = ();
     let allow_pull_script = Box::new(allow_pull_validator);
-    let allow_pull_value = Values::default();
+    let allow_pull_value = allow_pull_output.values().clone();
+
+    #[allow(unused_assignments)]
+    let mut next_pull_date = None;
+    let new_allow_pull_datum = match old_allow_pull_datum {
+        CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
+            let AllowedPuller {
+                next_pull, period, ..
+            } = old_allowed_puller;
+            let next_pull = next_pull + period;
+            next_pull_date = Some(next_pull);
+            AllowedPuller {
+                next_pull,
+                ..old_allowed_puller
+            }
+            .into()
+        }
+        _ => {
+            unimplemented!()
+        }
+    };
 
     let new_checking_account_datum = checking_account_output
         .datum()
@@ -521,6 +572,7 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
             new_checking_account_datum,
             new_account_value,
             checking_account_address,
-        );
+        )
+        .with_valid_range(next_pull_date, None);
     Ok(actions)
 }
