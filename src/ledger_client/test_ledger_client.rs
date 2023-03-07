@@ -293,6 +293,7 @@ where
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             let policy_id = PolicyId::native_token(&id, asset_name);
             let ctx = mint_tx_context(&tx, &signer, &id)?;
+            dbg!(&ctx);
             policy
                 .execute(redeemer.to_owned(), ctx)
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
@@ -470,6 +471,24 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
             reference_script: None,
         };
         inputs.push(input);
+    }
+
+    for input in &tx.specific_wallet_inputs {
+        let id = input.id();
+        let transaction_id = id.tx_hash().to_vec();
+        let output_index = id.index();
+        let address = input.owner();
+        let value = CtxValue::from(input.values().to_owned());
+
+        let new_input = Input {
+            transaction_id,
+            output_index,
+            address,
+            value,
+            datum: CtxDatum::NoDatum,
+            reference_script: None,
+        };
+        inputs.push(new_input)
     }
 
     for output in tx.unbuilt_outputs.iter() {

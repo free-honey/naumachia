@@ -101,7 +101,7 @@ impl From<Values> for CtxValue {
         let mut inner = HashMap::new();
         for (policy, amt) in values.as_iter() {
             let (policy_id, asset_name) = match policy {
-                PolicyId::ADA => ("", ""),
+                PolicyId::Lovelace => ("", ""),
                 PolicyId::NativeToken(policy_id, a) => {
                     if let Some(asset_name) = a {
                         (policy_id.as_str(), asset_name.as_str())

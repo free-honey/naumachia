@@ -84,7 +84,7 @@ async fn select_any_above_min<LC: LedgerClient<(), ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
         .iter()
         .filter_map(|input| {
-            if let Some(ada_value) = input.values().get(&PolicyId::ADA) {
+            if let Some(ada_value) = input.values().get(&PolicyId::Lovelace) {
                 if ada_value > MIN_LOVELACE {
                     Some(input)
                 } else {

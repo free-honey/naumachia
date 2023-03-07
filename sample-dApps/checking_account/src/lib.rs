@@ -234,6 +234,8 @@ impl SCLogic for CheckingAccountLogic {
     }
 }
 
+pub const CHECKING_ACCOUNT_NFT_ASSET_NAME: &str = "CHECKING ACCOUNT";
+
 async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     starting_lovelace: u64,
@@ -242,9 +244,9 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, starting_lovelace);
+
     let my_input = select_any_above_min(ledger_client).await?;
+    dbg!(&my_input);
     let nft = one_shot::get_parameterized_script().map_err(SCLogicError::PolicyScript)?;
     let nft_policy = nft
         .apply(OutputReference::from(&my_input))
@@ -252,11 +254,11 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(SCLogicError::PolicyScript)?;
     let spending_token_policy_parameterized =
         spend_token_policy().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let script_id = nft_policy.id().unwrap();
-    let script_id_bytes = hex::decode(script_id).unwrap();
+    let nft_script_id = nft_policy.id().unwrap();
+    let nft_script_id_bytes = hex::decode(nft_script_id.clone()).unwrap();
     let owner_pubkey = pub_key_hash_from_address_if_available(&owner).unwrap();
     let spending_token_policy = spending_token_policy_parameterized
-        .apply(script_id_bytes.into())
+        .apply(nft_script_id_bytes.into())
         .unwrap()
         .apply(owner_pubkey.clone().into())
         .unwrap();
@@ -273,7 +275,25 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         spend_token_policy: spend_token_id,
     }
     .into();
-    let actions = TxActions::v2().with_script_init(datum, values, address);
+    let boxed_nft_policy = Box::new(nft_policy);
+    let mut values = Values::default();
+    values.add_one_value(&PolicyId::Lovelace, starting_lovelace);
+    values.add_one_value(
+        &PolicyId::NativeToken(
+            nft_script_id,
+            Some(CHECKING_ACCOUNT_NFT_ASSET_NAME.to_string()),
+        ),
+        1,
+    );
+    let actions = TxActions::v2()
+        .with_script_init(datum, values, address)
+        .with_specific_input(my_input)
+        .with_mint(
+            1,
+            Some(CHECKING_ACCOUNT_NFT_ASSET_NAME.to_string()),
+            (),
+            boxed_nft_policy,
+        );
     Ok(actions)
 }
 
@@ -292,7 +312,7 @@ async fn select_any_above_min<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
         .iter()
         .filter_map(|input| {
-            if let Some(ada_value) = input.values().get(&PolicyId::ADA) {
+            if let Some(ada_value) = input.values().get(&PolicyId::Lovelace) {
                 if ada_value > MIN_LOVELACE {
                     Some(input)
                 } else {
@@ -423,7 +443,7 @@ async fn fund_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let redeemer = ();
     let script = Box::new(validator);
     let mut values = output.values().to_owned();
-    values.add_one_value(&PolicyId::ADA, amount);
+    values.add_one_value(&PolicyId::Lovelace, amount);
     let actions = TxActions::v2()
         .with_script_redeem(output, redeemer, script)
         .with_script_init(new_datum, values, address);
@@ -459,7 +479,7 @@ async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let script = Box::new(validator);
     let old_values = output.values().to_owned();
     let mut sub_values = Values::default();
-    sub_values.add_one_value(&PolicyId::ADA, amount);
+    sub_values.add_one_value(&PolicyId::Lovelace, amount);
     let new_value = old_values
         .try_subtract(&sub_values)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
@@ -551,7 +571,7 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
 
     let old_values = checking_account_output.values().to_owned();
     let mut sub_values = Values::default();
-    sub_values.add_one_value(&PolicyId::ADA, amount);
+    sub_values.add_one_value(&PolicyId::Lovelace, amount);
     let new_account_value = old_values
         .try_subtract(&sub_values)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?

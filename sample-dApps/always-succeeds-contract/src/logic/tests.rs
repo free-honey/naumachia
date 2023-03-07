@@ -9,7 +9,7 @@ async fn lock_and_claim() {
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(PolicyId::ADA, start_amount)
+        .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
         .build_in_memory();
 
@@ -22,7 +22,7 @@ async fn lock_and_claim() {
         let expected = amount;
         let actual = backend
             .ledger_client
-            .balance_at_address(&script.address(0).unwrap(), &PolicyId::ADA)
+            .balance_at_address(&script.address(0).unwrap(), &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(expected, actual);
@@ -32,7 +32,7 @@ async fn lock_and_claim() {
         let expected = start_amount - amount;
         let actual = backend
             .ledger_client
-            .balance_at_address(&me, &PolicyId::ADA)
+            .balance_at_address(&me, &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(expected, actual);
@@ -52,7 +52,7 @@ async fn lock_and_claim() {
     {
         let actual = backend
             .ledger_client
-            .balance_at_address(&me, &PolicyId::ADA)
+            .balance_at_address(&me, &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(actual, start_amount);
@@ -60,7 +60,7 @@ async fn lock_and_claim() {
     {
         let script_balance = backend
             .ledger_client
-            .balance_at_address(&script.address(0).unwrap(), &PolicyId::ADA)
+            .balance_at_address(&script.address(0).unwrap(), &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(script_balance, 0);

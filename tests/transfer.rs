@@ -31,7 +31,7 @@ impl SCLogic for TransferADASmartContract {
     ) -> SCLogicResult<TxActions<(), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
-                let u_tx = TxActions::v1().with_transfer(amount, recipient, PolicyId::ADA);
+                let u_tx = TxActions::v1().with_transfer(amount, recipient, PolicyId::Lovelace);
                 Ok(u_tx)
             }
         }
@@ -58,7 +58,7 @@ async fn can_transfer_and_keep_remainder() {
 
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(PolicyId::ADA, input_amount)
+        .with_value(PolicyId::Lovelace, input_amount)
         .with_value(extra_policy.clone(), extra_amount)
         .finish_output()
         .build_in_memory();
@@ -75,7 +75,7 @@ async fn can_transfer_and_keep_remainder() {
     let alice_expected = amount;
     let alice_actual = backend
         .ledger_client
-        .balance_at_address(&alice, &PolicyId::ADA)
+        .balance_at_address(&alice, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(alice_expected, alice_actual);
@@ -83,7 +83,7 @@ async fn can_transfer_and_keep_remainder() {
     let me_expected = input_amount - amount;
     let me_actual = backend
         .ledger_client
-        .balance_at_address(&me, &PolicyId::ADA)
+        .balance_at_address(&me, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(me_expected, me_actual);

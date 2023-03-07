@@ -50,7 +50,7 @@ async fn get_my_lovelace_balance() {
     let addr_string = base_addr.to_address().to_bech32(None).unwrap();
     let my_addr = Address::from_bech32(&addr_string).unwrap();
     let my_balance = client
-        .balance_at_address(&my_addr, &PolicyId::ADA)
+        .balance_at_address(&my_addr, &PolicyId::Lovelace)
         .await
         .unwrap();
 
