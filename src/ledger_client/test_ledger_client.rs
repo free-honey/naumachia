@@ -293,7 +293,6 @@ where
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
             let policy_id = PolicyId::native_token(&id, asset_name);
             let ctx = mint_tx_context(&tx, &signer, &id)?;
-            dbg!(&ctx);
             policy
                 .execute(redeemer.to_owned(), ctx)
                 .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
@@ -440,7 +439,6 @@ fn mint_tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     signer_address: &Address,
     policy_id: &str,
 ) -> LedgerClientResult<TxContext> {
-    dbg!(policy_id);
     let id = hex::decode(policy_id).map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
     let purpose = CtxScriptPurpose::Mint(id);
     tx_context(tx, signer_address, purpose)

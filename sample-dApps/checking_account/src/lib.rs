@@ -246,7 +246,6 @@ async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let my_input = select_any_above_min(ledger_client).await?;
-    dbg!(&my_input);
     let nft = one_shot::get_parameterized_script().map_err(SCLogicError::PolicyScript)?;
     let nft_policy = nft
         .apply(OutputReference::from(&my_input))
