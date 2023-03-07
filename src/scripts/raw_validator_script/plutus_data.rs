@@ -448,7 +448,10 @@ impl From<Vec<u8>> for PlutusData {
 
 impl From<()> for PlutusData {
     fn from(_: ()) -> Self {
-        PlutusData::BoundedBytes(Vec::new())
+        PlutusData::Constr(Constr {
+            constr: 0,
+            fields: Vec::new(),
+        })
     }
 }
 
