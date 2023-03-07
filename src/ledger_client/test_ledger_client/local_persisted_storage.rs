@@ -51,7 +51,7 @@ pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     let tx_hash = arbitrary_tx_id().to_vec();
     let index = 0;
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, amount);
+    values.add_one_value(&PolicyId::Lovelace, amount);
     Output::new_wallet(tx_hash, index, owner.clone(), values)
 }
 
@@ -194,7 +194,7 @@ mod tests {
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
         let expected = starting_amount;
-        let actual = first_output.values().get(&PolicyId::ADA).unwrap();
+        let actual = first_output.values().get(&PolicyId::Lovelace).unwrap();
         assert_eq!(expected, actual);
     }
 

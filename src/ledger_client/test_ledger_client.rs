@@ -439,7 +439,6 @@ fn mint_tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     signer_address: &Address,
     policy_id: &str,
 ) -> LedgerClientResult<TxContext> {
-    dbg!(policy_id);
     let id = hex::decode(policy_id).map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
     let purpose = CtxScriptPurpose::Mint(id);
     tx_context(tx, signer_address, purpose)
@@ -470,6 +469,24 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
             reference_script: None,
         };
         inputs.push(input);
+    }
+
+    for input in &tx.specific_wallet_inputs {
+        let id = input.id();
+        let transaction_id = id.tx_hash().to_vec();
+        let output_index = id.index();
+        let address = input.owner();
+        let value = CtxValue::from(input.values().to_owned());
+
+        let new_input = Input {
+            transaction_id,
+            output_index,
+            address,
+            value,
+            datum: CtxDatum::NoDatum,
+            reference_script: None,
+        };
+        inputs.push(new_input)
     }
 
     for output in tx.unbuilt_outputs.iter() {

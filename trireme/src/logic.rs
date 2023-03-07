@@ -50,7 +50,7 @@ async fn impl_lovelace_balance<LC: LedgerClient<(), ()>>(
         .await
         .map_err(as_lookup_err)?;
     let lovelace = ledger_client
-        .balance_at_address(&address, &PolicyId::ADA)
+        .balance_at_address(&address, &PolicyId::Lovelace)
         .await
         .map_err(as_lookup_err)?;
     let response = TriremeResponses::LovelaceBalance(lovelace);

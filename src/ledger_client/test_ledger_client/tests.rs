@@ -27,7 +27,7 @@ async fn outputs_at_address() {
     assert_eq!(outputs.len(), 1);
     let first_output = outputs.pop().unwrap();
     let expected = starting_amount;
-    let actual = first_output.values().get(&PolicyId::ADA).unwrap();
+    let actual = first_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(expected, actual);
 }
 
@@ -41,7 +41,7 @@ async fn balance_at_address() {
         TestLedgerClient::new_in_memory(signer.clone(), outputs);
     let expected = starting_amount;
     let actual = record
-        .balance_at_address(&signer, &PolicyId::ADA)
+        .balance_at_address(&signer, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(expected, actual);
@@ -58,7 +58,7 @@ async fn issue_transfer() {
         TestLedgerClient::new_in_memory(sender.clone(), outputs);
 
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, transfer_amount);
+    values.add_one_value(&PolicyId::Lovelace, transfer_amount);
     let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
@@ -76,7 +76,7 @@ async fn issue_transfer() {
         .unwrap()
         .pop()
         .unwrap();
-    let actual_bob_ada = actual_bob.values().get(&PolicyId::ADA).unwrap();
+    let actual_bob_ada = actual_bob.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(actual_bob_ada, transfer_amount);
     let actual_bob_tx_hash = actual_bob.id().tx_hash();
 
@@ -86,7 +86,7 @@ async fn issue_transfer() {
         .unwrap()
         .pop()
         .unwrap();
-    let actual_alice_ada = actual_alice.values().get(&PolicyId::ADA).unwrap();
+    let actual_alice_ada = actual_alice.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(actual_alice_ada, starting_amount - transfer_amount);
 
     let actual_alice_tx_hash = actual_alice.id().tx_hash();
@@ -103,7 +103,7 @@ async fn errors_if_spending_more_than_you_own() {
         TestLedgerClient::new_in_memory(sender.clone(), outputs);
 
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, transfer_amount);
+    values.add_one_value(&PolicyId::Lovelace, transfer_amount);
     let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
@@ -135,7 +135,7 @@ async fn cannot_transfer_before_valid_range() {
     record.set_current_time(current_time).await.unwrap();
 
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, transfer_amount);
+    values.add_one_value(&PolicyId::Lovelace, transfer_amount);
     let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
@@ -167,7 +167,7 @@ async fn cannot_transfer_after_valid_range() {
     record.set_current_time(current_time).await.unwrap();
 
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, transfer_amount);
+    values.add_one_value(&PolicyId::Lovelace, transfer_amount);
     let recipient = Address::from_bech32(BOB).unwrap();
     let new_output = UnbuiltOutput::new_wallet(recipient.clone(), values);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
@@ -215,7 +215,7 @@ async fn redeeming_datum() {
         TestLedgerClient::new_in_memory(sender.clone(), outputs);
 
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, locking_amount);
+    values.add_one_value(&PolicyId::Lovelace, locking_amount);
 
     let validator = AlwaysTrueFakeValidator;
 
@@ -232,12 +232,12 @@ async fn redeeming_datum() {
     record.issue(tx).await.unwrap();
 
     let alice_balance = record
-        .balance_at_address(&sender, &PolicyId::ADA)
+        .balance_at_address(&sender, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(alice_balance, starting_amount - locking_amount);
     let script_balance = record
-        .balance_at_address(&script_address, &PolicyId::ADA)
+        .balance_at_address(&script_address, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(script_balance, locking_amount);
@@ -264,12 +264,12 @@ async fn redeeming_datum() {
     record.issue(tx).await.unwrap();
 
     let alice_balance = record
-        .balance_at_address(&sender, &PolicyId::ADA)
+        .balance_at_address(&sender, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(alice_balance, starting_amount);
     let script_balance = record
-        .balance_at_address(&script_address, &PolicyId::ADA)
+        .balance_at_address(&script_address, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(script_balance, 0);
@@ -308,7 +308,7 @@ async fn failing_script_will_not_redeem() {
         TestLedgerClient::new_in_memory(sender.clone(), outputs);
 
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, locking_amount);
+    values.add_one_value(&PolicyId::Lovelace, locking_amount);
 
     let validator = AlwaysFailsFakeValidator;
 
@@ -325,12 +325,12 @@ async fn failing_script_will_not_redeem() {
     record.issue(tx).await.unwrap();
 
     let alice_balance = record
-        .balance_at_address(&sender, &PolicyId::ADA)
+        .balance_at_address(&sender, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(alice_balance, starting_amount - locking_amount);
     let script_balance = record
-        .balance_at_address(&script_address, &PolicyId::ADA)
+        .balance_at_address(&script_address, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(script_balance, locking_amount);
@@ -369,7 +369,7 @@ async fn cannot_redeem_datum_twice() {
         TestLedgerClient::new_in_memory(sender.clone(), outputs);
 
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, locking_amount);
+    values.add_one_value(&PolicyId::Lovelace, locking_amount);
 
     let validator = AlwaysTrueFakeValidator;
 
@@ -386,12 +386,12 @@ async fn cannot_redeem_datum_twice() {
     record.issue(tx).await.unwrap();
 
     let alice_balance = record
-        .balance_at_address(&sender, &PolicyId::ADA)
+        .balance_at_address(&sender, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(alice_balance, starting_amount - locking_amount);
     let script_balance = record
-        .balance_at_address(&script_address, &PolicyId::ADA)
+        .balance_at_address(&script_address, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(script_balance, locking_amount);

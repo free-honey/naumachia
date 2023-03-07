@@ -373,7 +373,7 @@ impl TryFrom<Values> for CMLValue {
         let mut nau_assets: BTreeMap<String, BTreeMap<Option<String>, u64>> = BTreeMap::new();
         for (policy_id, amount) in vals.as_iter() {
             match policy_id {
-                PolicyId::ADA => ada = *amount,
+                PolicyId::Lovelace => ada = *amount,
                 PolicyId::NativeToken(id, asset_name) => {
                     if let Some(mut inner) = nau_assets.remove(id) {
                         inner.insert(asset_name.to_owned(), *amount);
@@ -434,7 +434,7 @@ pub(crate) fn utxo_to_nau_utxo<Datum: PlutusDataInterop>(
 fn as_nau_values(cml_value: &CMLValue) -> LedgerClientResult<Values> {
     let mut values = Values::default();
     let ada = cml_value.coin().into();
-    values.add_one_value(&PolicyId::ADA, ada);
+    values.add_one_value(&PolicyId::Lovelace, ada);
     if let Some(multiasset) = cml_value.multiasset() {
         let ids = multiasset.keys();
         let len = multiasset.len();

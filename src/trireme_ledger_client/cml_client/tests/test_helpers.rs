@@ -17,7 +17,7 @@ use std::{fs::File, io::Read};
 
 pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()> {
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, amount);
+    values.add_one_value(&PolicyId::Lovelace, amount);
     let output = UnbuiltOutput::new_wallet(recipient, values);
     UnbuiltTransaction {
         script_version: TransactionVersion::V1,
@@ -32,7 +32,7 @@ pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()
 pub fn lock_at_always_succeeds_tx(amount: u64) -> UnbuiltTransaction<(), ()> {
     let script_address = always_succeeds_script_address(TESTNET);
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, amount);
+    values.add_one_value(&PolicyId::Lovelace, amount);
     let output = UnbuiltOutput::new_validator(script_address, values, ());
     UnbuiltTransaction {
         script_version: TransactionVersion::V1,

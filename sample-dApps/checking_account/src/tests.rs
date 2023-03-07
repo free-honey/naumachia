@@ -8,21 +8,25 @@ const NETWORK: u8 = 0;
 
 #[tokio::test]
 async fn init_creates_instance_with_correct_balance() {
+    // given
     let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(PolicyId::ADA, start_amount)
+        .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
         .build_in_memory();
 
     let account_amount = 10_000_000;
+
+    // When
     let endpoint = CheckingAccountEndpoints::InitAccount {
         starting_lovelace: account_amount,
     };
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
 
+    // Then
     let script = checking_account_validator().unwrap();
     let address = script.address(NETWORK).unwrap();
     let mut outputs_at_address = backend
@@ -31,8 +35,12 @@ async fn init_creates_instance_with_correct_balance() {
         .await
         .unwrap();
     let script_output = outputs_at_address.pop().unwrap();
-    let value = script_output.values().get(&PolicyId::ADA).unwrap();
+    let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, account_amount);
+    let nft = script_output.values().as_iter().find(|(policy_id, amt)| {
+        policy_id.asset_name() == Some(CHECKING_ACCOUNT_NFT_ASSET_NAME.to_string()) && **amt == 1
+    });
+    assert!(nft.is_some());
 }
 
 #[tokio::test]
@@ -42,7 +50,7 @@ async fn add_puller_creates_new_datum_for_puller() {
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(PolicyId::ADA, start_amount)
+        .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
         .build_in_memory();
 
@@ -95,7 +103,7 @@ async fn remove_puller__removes_the_allowed_puller() {
     let nft_id = vec![1, 2, 3, 4, 5];
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(PolicyId::ADA, start_amount)
+        .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
         .build_in_memory();
 
@@ -143,7 +151,7 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(PolicyId::ADA, start_amount)
+        .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
         .build_in_memory();
 
@@ -178,7 +186,7 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
         .await
         .unwrap();
     let script_output = outputs_at_address.pop().unwrap();
-    let value = script_output.values().get(&PolicyId::ADA).unwrap();
+    let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, account_amount + fund_amount);
 }
 
@@ -188,7 +196,7 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
         .start_output(&me)
-        .with_value(PolicyId::ADA, start_amount)
+        .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
         .build_in_memory();
 
@@ -222,7 +230,7 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
         .await
         .unwrap();
     let script_output = outputs_at_address.pop().unwrap();
-    let value = script_output.values().get(&PolicyId::ADA).unwrap();
+    let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, account_amount - withdraw_amount);
 }
 
@@ -261,7 +269,7 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
     let backend = TestBackendsBuilder::new(&puller)
         .start_output(&account_address)
         .with_datum(account_datum)
-        .with_value(PolicyId::ADA, account_amount)
+        .with_value(PolicyId::Lovelace, account_amount)
         .with_value(
             PolicyId::NativeToken(hex::encode(&checking_account_nft_id), None),
             1,
@@ -309,7 +317,7 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
         .await
         .unwrap();
     let script_output = outputs_at_account_address.pop().unwrap();
-    let value = script_output.values().get(&PolicyId::ADA).unwrap();
+    let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, account_amount - pull_amount);
 
     let mut outputs_at_puller_address = backend
@@ -318,6 +326,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
         .await
         .unwrap();
     let script_output = outputs_at_puller_address.pop().unwrap();
-    let value = script_output.values().get(&PolicyId::ADA).unwrap();
+    let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, pull_amount);
 }

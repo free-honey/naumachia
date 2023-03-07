@@ -21,7 +21,7 @@ prop_compose! {
         let mut builder = TestBackendsBuilder::<(), ()>::new(&signer);
         while total < min_amount as u64 {
             let new_amount = rng.gen_range(0..=min_amount);
-            builder = builder.start_output(&signer).with_value(PolicyId::ADA, new_amount as u64).finish_output();
+            builder = builder.start_output(&signer).with_value(PolicyId::Lovelace, new_amount as u64).finish_output();
             for decoy in &decoys {
                 let new_amount = rng.gen_range(0..=min_amount);
                 builder = builder.start_output(&signer).with_value(decoy.to_owned(), new_amount as u64).finish_output();
@@ -30,7 +30,7 @@ prop_compose! {
         }
         for _ in 0..their_utxo_count {
             let new_amount = rng.gen_range(0..=min_amount);
-            builder = builder.start_output(&recipient).with_value(PolicyId::ADA, new_amount as u64).finish_output();
+            builder = builder.start_output(&recipient).with_value(PolicyId::Lovelace, new_amount as u64).finish_output();
             for decoy in &decoys {
                 let new_amount = rng.gen_range(0..=min_amount);
                 builder = builder.start_output(&recipient).with_value(decoy.to_owned(), new_amount as u64).finish_output();
@@ -63,16 +63,16 @@ async fn inner_test(
     backend: Backend<(), (), TestLedgerClient<(), (), InMemoryStorage<()>>>,
     decoys: Vec<PolicyId>,
 ) {
-    let u_tx = TxActions::v1().with_transfer(amount, recipient.clone(), PolicyId::ADA);
+    let u_tx = TxActions::v1().with_transfer(amount, recipient.clone(), PolicyId::Lovelace);
 
     let my_bal_before = backend
         .ledger_client
-        .balance_at_address(&signer, &PolicyId::ADA)
+        .balance_at_address(&signer, &PolicyId::Lovelace)
         .await
         .unwrap();
     let their_bal_before = backend
         .ledger_client
-        .balance_at_address(&recipient, &PolicyId::ADA)
+        .balance_at_address(&recipient, &PolicyId::Lovelace)
         .await
         .unwrap();
     let mut my_before_decoys = HashMap::new();
@@ -97,14 +97,14 @@ async fn inner_test(
     let expected = their_bal_before + amount;
     let actual = backend
         .ledger_client
-        .balance_at_address(&recipient, &PolicyId::ADA)
+        .balance_at_address(&recipient, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(expected, actual);
     let expected = my_bal_before - amount;
     let actual = backend
         .ledger_client
-        .balance_at_address(&signer, &PolicyId::ADA)
+        .balance_at_address(&signer, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(expected, actual);

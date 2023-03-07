@@ -74,7 +74,7 @@ impl SCLogic for AlwaysSucceedsLogic {
 
 fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
     let mut values = Values::default();
-    values.add_one_value(&PolicyId::ADA, amount);
+    values.add_one_value(&PolicyId::Lovelace, amount);
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
