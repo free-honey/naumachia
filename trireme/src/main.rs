@@ -24,6 +24,10 @@ struct Args {
 enum ActionParams {
     /// Initialize Trireme configuration 🚣
     Init,
+    /// Create a new environment
+    NewEnv,
+    /// Switch Environments
+    SwitchEnv,
     /// Get ADA Balance
     Balance,
 }
@@ -43,6 +47,12 @@ async fn main() -> Result<()> {
                 TriremeResponses::LovelaceBalance(lovelace) => lovelace as f64 / 1_000_000.0,
             };
             println!("Balance: {:?} ADA", ada);
+        }
+        ActionParams::NewEnv => {
+            todo!()
+        }
+        ActionParams::SwitchEnv => {
+            todo!()
         }
     }
     Ok(())
