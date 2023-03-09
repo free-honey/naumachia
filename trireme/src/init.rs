@@ -1,5 +1,5 @@
 use anyhow::Result;
-use dialoguer::Input;
+use dialoguer::{Input, Select};
 use naumachia::error::Error;
 use naumachia::trireme_ledger_client::{
     cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
@@ -10,6 +10,20 @@ use naumachia::trireme_ledger_client::{
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use uuid::Uuid;
 
+pub enum EnvironmentType {
+    Blockfrost,
+    LocalMocked,
+}
+
+impl ToString for EnvironmentType {
+    fn to_string(&self) -> String {
+        match self {
+            EnvironmentType::Blockfrost => "Blockfrost API".to_string(),
+            EnvironmentType::LocalMocked => "Local Mocked".to_string(),
+        }
+    }
+}
+
 pub async fn new_env_impl() -> Result<()> {
     println!();
     println!("🌊 Welcome to Trireme 👁");
@@ -19,14 +33,33 @@ pub async fn new_env_impl() -> Result<()> {
         .with_prompt("Please name your environment")
         .interact_text()?;
     let sub_dir = Uuid::new_v4().to_string();
-    let api_key: String = Input::new()
-        .with_prompt("Insert blockfrost testnet api key")
-        .interact_text()?;
-    let secret_phrase: String = Input::new()
-        .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
-        .interact_text()?;
-    let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, &sub_dir).await?;
-    let secret_phrase_path = write_secret_phrase(&secret_phrase, &sub_dir).await?;
+
+    let items = vec![EnvironmentType::Blockfrost, EnvironmentType::LocalMocked];
+    let item_index = Select::new()
+        .with_prompt("What kind of environment?")
+        .items(&items)
+        .interact()?;
+    let env_variant = items
+        .get(item_index)
+        .expect("Should always be a valid index");
+
+    match env_variant {
+        EnvironmentType::Blockfrost => {
+            let api_key: String = Input::new()
+                .with_prompt("Insert blockfrost testnet api key")
+                .interact_text()?;
+            let secret_phrase: String = Input::new()
+                .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
+                .interact_text()?;
+            let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, &sub_dir).await?;
+            let secret_phrase_path = write_secret_phrase(&secret_phrase, &sub_dir).await?;
+            write_cml_client_config(&name, &sub_dir, blockfrost_api_key_path, secret_phrase_path)
+                .await?;
+        }
+        EnvironmentType::LocalMocked => {
+            todo!()
+        }
+    }
 
     let trireme_config = match get_trireme_config_from_file().await? {
         Some(mut config) => {
@@ -40,8 +73,8 @@ pub async fn new_env_impl() -> Result<()> {
             TriremeConfig::new(&current_env, envs)
         }
     };
+
     write_trireme_config(&trireme_config).await?;
-    write_cml_client_config(&name, &sub_dir, blockfrost_api_key_path, secret_phrase_path).await?;
     println!();
     println!();
     println!("Initialized successfully!");

@@ -69,12 +69,9 @@ pub async fn get_trireme_ledger_client_from_file<
         + DeserializeOwned,
     Redeemer: PlutusDataInterop + Clone + Eq + Debug + Hash + Send + Sync + DeserializeOwned,
 >() -> Result<TriremeLedgerClient<Datum, Redeemer>> {
-    let trireme_config_path = path_to_trireme_config_file()?;
-    let trireme_config = read_toml_struct_from_file::<TriremeConfig>(&trireme_config_path)
-        .await?
-        .ok_or(Error::Trireme(
-            "Trireme not initialized (config not found)".to_string(),
-        ))?;
+    let trireme_config = get_trireme_config_from_file().await?.ok_or(Error::Trireme(
+        "Trireme not initialized (config not found)".to_string(),
+    ))?;
     let sub_dir = trireme_config
         .get_current_env_subdir()
         .ok_or(Error::Trireme("No environment initialized".to_string()))?;
@@ -86,6 +83,11 @@ pub async fn get_trireme_ledger_client_from_file<
         ))?
         .to_client()
         .await
+}
+
+pub async fn get_trireme_config_from_file() -> Result<Option<TriremeConfig>> {
+    let trireme_config_path = path_to_trireme_config_file()?;
+    read_toml_struct_from_file::<TriremeConfig>(&trireme_config_path).await
 }
 
 #[derive(Deserialize, Serialize)]
@@ -134,6 +136,33 @@ impl TriremeConfig {
         self.current_env
             .clone()
             .and_then(|name| self.envs.get(&name).map(|s| s.to_string()))
+    }
+
+    pub fn set_new_env(&mut self, new_env_name: &str, path: &str) -> Result<()> {
+        match self.envs.get(new_env_name) {
+            Some(_) => Err(Error::Trireme(
+                "Environment with that name already exists".to_string(),
+            )),
+            None => {
+                self.current_env = Some(new_env_name.to_string());
+                self.envs.insert(new_env_name.to_string(), path.to_string());
+                Ok(())
+            }
+        }
+    }
+
+    pub fn switch_env(&mut self, env_name: &str) -> Result<()> {
+        match self.envs.get(env_name) {
+            Some(_) => {
+                self.current_env = Some(env_name.to_string());
+                Ok(())
+            }
+            None => Err(Error::Trireme("Environment doesn't exist".to_string())),
+        }
+    }
+
+    pub fn envs(&self) -> Vec<String> {
+        self.envs.iter().map(|(name, _)| name.to_owned()).collect()
     }
 }
 
