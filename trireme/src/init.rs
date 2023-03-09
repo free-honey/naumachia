@@ -1,19 +1,16 @@
 use anyhow::Result;
 use dialoguer::Input;
-use naumachia::trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey;
-use naumachia::trireme_ledger_client::{path_to_client_config_file, TriremeConfig};
-use naumachia::{
-    trireme_ledger_client::raw_secret_phrase::SecretPhrase,
-    trireme_ledger_client::{
-        path_to_trireme_config_dir, path_to_trireme_config_file, write_toml_struct_to_file,
-        ClientConfig, KeySource, LedgerSource, Network,
-    },
+use naumachia::error::Error;
+use naumachia::trireme_ledger_client::{
+    cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
+    path_to_client_config_file, path_to_trireme_config_dir, path_to_trireme_config_file,
+    raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, KeySource,
+    LedgerSource, Network, TriremeConfig,
 };
-use std::collections::HashMap;
-use std::{path::PathBuf, str::FromStr};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use uuid::Uuid;
 
-pub async fn init_impl() -> Result<()> {
+pub async fn new_env_impl() -> Result<()> {
     println!();
     println!("🌊 Welcome to Trireme 👁");
     println!();
@@ -30,10 +27,20 @@ pub async fn init_impl() -> Result<()> {
         .interact_text()?;
     let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, &sub_dir).await?;
     let secret_phrase_path = write_secret_phrase(&secret_phrase, &sub_dir).await?;
-    let current_env = name.clone();
-    let mut envs = HashMap::new();
-    envs.insert(name.clone(), sub_dir.clone());
-    write_trireme_config(&current_env, envs).await?;
+
+    let trireme_config = match get_trireme_config_from_file().await? {
+        Some(mut config) => {
+            config.set_new_env(&name, &sub_dir)?;
+            config
+        }
+        None => {
+            let current_env = name.clone();
+            let mut envs = HashMap::new();
+            envs.insert(name.clone(), sub_dir.clone());
+            TriremeConfig::new(&current_env, envs)
+        }
+    };
+    write_trireme_config(&trireme_config).await?;
     write_cml_client_config(&name, &sub_dir, blockfrost_api_key_path, secret_phrase_path).await?;
     println!();
     println!();
@@ -41,6 +48,23 @@ pub async fn init_impl() -> Result<()> {
     println!();
     println!("🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊");
     Ok(())
+}
+
+pub async fn switch_env() -> Result<()> {
+    match get_trireme_config_from_file().await? {
+        Some(mut config) => {
+            println!("Environments:");
+            config.envs().iter().for_each(|name| println!("{}", name));
+            let name: String = Input::new()
+                .with_prompt("Name the environment")
+                .interact_text()?;
+            config.switch_env(&name)?;
+            write_trireme_config(&config).await?;
+            println!("Switched environment to: {}", &name);
+            Ok(())
+        }
+        None => Err(Error::Trireme("Environment doesn't exist".to_string()).into()),
+    }
 }
 
 fn print_safety_warning() {
@@ -74,10 +98,9 @@ async fn write_blockfrost_api_key(api_key: &str, sub_dir: &str) -> Result<PathBu
     Ok(file_path)
 }
 
-async fn write_trireme_config(current_env: &str, envs: HashMap<String, String>) -> Result<()> {
-    let trireme_config = TriremeConfig::new(current_env, envs);
+async fn write_trireme_config(trireme_config: &TriremeConfig) -> Result<()> {
     let file_path = path_to_trireme_config_file()?;
-    write_toml_struct_to_file(&file_path, &trireme_config).await?;
+    write_toml_struct_to_file(&file_path, trireme_config).await?;
     Ok(())
 }
 
