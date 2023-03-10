@@ -274,8 +274,16 @@ impl ClientConfig {
                 };
                 Ok(trireme_client)
             }
-            ClientVariant::Test(_) => {
-                todo!()
+            ClientVariant::Test(inner) => {
+                let data_dir = inner.data_path;
+                let test_client = TestLedgerClient::load_local_persisted(data_dir);
+                let inner_client = InnerClient::Mocked(test_client);
+                let trireme_client = TriremeLedgerClient {
+                    _datum: Default::default(),
+                    _redeemer: Default::default(),
+                    inner_client,
+                };
+                Ok(trireme_client)
             }
         }
     }

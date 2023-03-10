@@ -63,6 +63,7 @@ pub struct LocalPersistedStorage<T: AsRef<Path>, Datum> {
 
 const DATA: &str = "data";
 
+// TODO: Make fallible!!!
 impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<T, Datum> {
     pub fn init(dir: T, signer: Address, starting_amount: u64) -> Self {
         let path_ref: &Path = dir.as_ref();
@@ -84,7 +85,7 @@ impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<
         }
     }
 
-    pub fn with_dir(dir: T) -> Self {
+    pub fn load(dir: T) -> Self {
         LocalPersistedStorage {
             dir,
             _datum: Default::default(),

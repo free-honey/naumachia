@@ -201,6 +201,16 @@ where
             _redeemer: Default::default(),
         }
     }
+
+    pub fn load_local_persisted(dir: T) -> Self {
+        let storage = LocalPersistedStorage::load(dir);
+        let _ = storage.get_data();
+        TestLedgerClient {
+            storage,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        }
+    }
 }
 
 impl<Datum, Redeemer, Storage> TestLedgerClient<Datum, Redeemer, Storage>
