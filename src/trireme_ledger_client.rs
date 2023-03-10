@@ -274,7 +274,7 @@ where
     Redeemer: PlutusDataInterop,
 {
     Cml(CMLLedgerCLient<BlockFrostLedger, RawSecretPhraseKeys, Datum, Redeemer>),
-    Mocked(TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<Datum>>),
+    Mocked(TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<PathBuf, Datum>>),
 }
 
 pub struct TriremeLedgerClient<Datum, Redeemer>
