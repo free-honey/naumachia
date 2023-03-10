@@ -1,13 +1,16 @@
 use anyhow::Result;
 use dialoguer::{Input, Select};
 use naumachia::error::Error;
+use naumachia::ledger_client::test_ledger_client::local_persisted_storage::LocalPersistedStorage;
 use naumachia::trireme_ledger_client::{
     cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
     path_to_client_config_file, path_to_trireme_config_dir, path_to_trireme_config_file,
-    raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, KeySource,
-    LedgerSource, Network, TriremeConfig,
+    raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, ClientVariant,
+    KeySource, LedgerSource, Network, TriremeConfig,
 };
+use naumachia::Address;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use tokio::fs;
 use uuid::Uuid;
 
 pub enum EnvironmentType {
@@ -57,7 +60,16 @@ pub async fn new_env_impl() -> Result<()> {
                 .await?;
         }
         EnvironmentType::LocalMocked => {
-            todo!()
+            // TODO: Add other keys
+            let alice = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr")?;
+            let start_balance = 100_000_000; // Lovelace
+            let dir = path_to_client_config_file(&sub_dir)?;
+            let parent_dir = dir.parent().unwrap(); // TODO
+            fs::create_dir_all(&parent_dir).await?;
+            let _ =
+                LocalPersistedStorage::<PathBuf, ()>::init(parent_dir.into(), alice, start_balance);
+            let client_config = ClientConfig::new_test(&name, &dir);
+            write_toml_struct_to_file(&dir, &client_config).await?;
         }
     }
 

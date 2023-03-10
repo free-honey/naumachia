@@ -84,6 +84,13 @@ impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<
         }
     }
 
+    pub fn with_dir(dir: T) -> Self {
+        LocalPersistedStorage {
+            dir,
+            _datum: Default::default(),
+        }
+    }
+
     pub(crate) fn get_data(&self) -> LedgerData<Datum> {
         let path_ref: &Path = self.dir.as_ref();
         let path = path_ref.to_owned().join(DATA);

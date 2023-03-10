@@ -187,7 +187,9 @@ pub struct CMLClientConfig {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct TestClientConfig {}
+pub struct TestClientConfig {
+    data_path: PathBuf,
+}
 
 impl ClientConfig {
     pub fn new_cml(
@@ -202,6 +204,17 @@ impl ClientConfig {
             network,
         };
         let variant = ClientVariant::CML(inner);
+        ClientConfig {
+            name: name.to_string(),
+            variant,
+        }
+    }
+
+    pub fn new_test(name: &str, data_path: &PathBuf) -> Self {
+        let inner = TestClientConfig {
+            data_path: data_path.to_owned(),
+        };
+        let variant = ClientVariant::Test(inner);
         ClientConfig {
             name: name.to_string(),
             variant,
