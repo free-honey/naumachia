@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{
     fmt::Debug,
     hash::Hash,
@@ -29,7 +30,6 @@ use local_persisted_storage::LocalPersistedStorage;
 use pallas_addresses::Address;
 use rand::Rng;
 use serde::{de::DeserializeOwned, Serialize};
-use tempfile::TempDir;
 use thiserror::Error;
 
 pub mod in_memory_storage;
@@ -186,13 +186,23 @@ where
         }
     }
 }
-impl<Datum, Redeemer> TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<Datum>>
+impl<T, Datum, Redeemer> TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<T, Datum>>
 where
     Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned,
+    T: AsRef<Path> + Send + Sync,
 {
-    pub fn new_local_persisted(signer: Address, starting_amount: u64) -> Self {
-        let tmp_dir = TempDir::new().unwrap();
-        let storage = LocalPersistedStorage::init(tmp_dir, signer, starting_amount);
+    pub fn new_local_persisted(dir: T, signer: Address, starting_amount: u64) -> Self {
+        let storage = LocalPersistedStorage::init(dir, signer, starting_amount);
+        let _ = storage.get_data();
+        TestLedgerClient {
+            storage,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        }
+    }
+
+    pub fn load_local_persisted(dir: T) -> Self {
+        let storage = LocalPersistedStorage::load(dir);
         let _ = storage.get_data();
         TestLedgerClient {
             storage,

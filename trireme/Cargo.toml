@@ -1,6 +1,6 @@
 [package]
 name = "trireme"
-description = "Manager CLI for Naumachia Cardano dApps"
+description = "Cardano Wallet and dApp Manager"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

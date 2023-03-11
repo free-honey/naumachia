@@ -18,7 +18,7 @@ where
     Logic: SCLogic,
     Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
-    pub smart_contract: &'a Logic,
+    pub offchain_logic: &'a Logic,
     pub backend: &'a Backend<Logic::Datums, Logic::Redeemers, Record>,
 }
 
@@ -28,11 +28,11 @@ where
     Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
     pub fn new(
-        smart_contract: &'a Logic,
+        offchain_logic: &'a Logic,
         backend: &'a Backend<Logic::Datums, Logic::Redeemers, Record>,
     ) -> Self {
         SmartContract {
-            smart_contract,
+            offchain_logic,
             backend,
         }
     }

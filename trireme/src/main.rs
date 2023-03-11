@@ -1,5 +1,6 @@
+use crate::init::switch_env;
 use crate::{
-    init::init_impl,
+    init::new_env_impl,
     logic::{TriremeLogic, TriremeLookups, TriremeResponses},
 };
 use anyhow::Result;
@@ -22,8 +23,10 @@ struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
-    /// Initialize Trireme configuration 🚣
-    Init,
+    /// Create a new environment 🚣
+    NewEnv,
+    /// Switch Environments
+    SwitchEnv,
     /// Get ADA Balance
     Balance,
 }
@@ -32,7 +35,6 @@ enum ActionParams {
 async fn main() -> Result<()> {
     let args = Args::parse();
     match args.action {
-        ActionParams::Init => init_impl().await?,
         ActionParams::Balance => {
             let logic = TriremeLogic;
             let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
@@ -44,6 +46,8 @@ async fn main() -> Result<()> {
             };
             println!("Balance: {:?} ADA", ada);
         }
+        ActionParams::NewEnv => new_env_impl().await?,
+        ActionParams::SwitchEnv => switch_env().await?,
     }
     Ok(())
 }

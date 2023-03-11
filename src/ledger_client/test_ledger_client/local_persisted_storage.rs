@@ -1,12 +1,12 @@
 use pallas_addresses::Address;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::path::Path;
 use std::{
     fmt::Debug,
     fs::File,
     io::{Read, Write},
     marker::PhantomData,
 };
-use tempfile::TempDir;
 use thiserror::Error;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
@@ -55,16 +55,18 @@ pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     Output::new_wallet(tx_hash, index, owner.clone(), values)
 }
 
-pub struct LocalPersistedStorage<Datum> {
-    tmp_dir: TempDir,
+pub struct LocalPersistedStorage<T: AsRef<Path>, Datum> {
+    dir: T,
     _datum: PhantomData<Datum>,
 }
 
 const DATA: &str = "data";
 
-impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
-    pub fn init(tmp_dir: TempDir, signer: Address, starting_amount: u64) -> Self {
-        let path = tmp_dir.path().join(DATA);
+// TODO: Make fallible!!!
+impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<T, Datum> {
+    pub fn init(dir: T, signer: Address, starting_amount: u64) -> Self {
+        let path_ref: &Path = dir.as_ref();
+        let path = path_ref.to_owned().join(DATA);
         if !path.exists() {
             let mut data = LedgerData::<Datum>::new(signer.clone());
             let output = starting_output(&signer, starting_amount);
@@ -77,13 +79,21 @@ impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
         }
 
         LocalPersistedStorage {
-            tmp_dir,
+            dir,
+            _datum: Default::default(),
+        }
+    }
+
+    pub fn load(dir: T) -> Self {
+        LocalPersistedStorage {
+            dir,
             _datum: Default::default(),
         }
     }
 
     pub(crate) fn get_data(&self) -> LedgerData<Datum> {
-        let path = self.tmp_dir.path().join(DATA);
+        let path_ref: &Path = self.dir.as_ref();
+        let path = path_ref.to_owned().join(DATA);
         let mut file = File::open(path).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).expect("Could not read");
@@ -91,7 +101,8 @@ impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
     }
 
     fn update_outputs(&self, new_outputs: Vec<Output<Datum>>) {
-        let path = self.tmp_dir.path().join(DATA);
+        let path_ref: &Path = self.dir.as_ref();
+        let path = path_ref.to_owned().join(DATA);
         let mut data = self.get_data();
         data.outputs = new_outputs;
         let serialized = serde_json::to_string(&data).unwrap();
@@ -100,7 +111,8 @@ impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
     }
 
     fn update_current_time(&self, posix_time: i64) -> LedgerClientResult<()> {
-        let path = self.tmp_dir.path().join(DATA);
+        let path_ref: &Path = self.dir.as_ref();
+        let path = path_ref.to_owned().join(DATA);
         let mut data = self.get_data();
         data.current_time = posix_time;
         let serialized = serde_json::to_string(&data).unwrap();
@@ -111,8 +123,10 @@ impl<Datum: Serialize + DeserializeOwned> LocalPersistedStorage<Datum> {
 }
 
 #[async_trait::async_trait]
-impl<Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq> TestLedgerStorage<Datum>
-    for LocalPersistedStorage<Datum>
+impl<T, Datum> TestLedgerStorage<Datum> for LocalPersistedStorage<T, Datum>
+where
+    T: AsRef<Path> + Send + Sync,
+    Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq,
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
         let signer = self.get_data().signer;
@@ -183,13 +197,15 @@ mod tests {
     #![allow(non_snake_case)]
 
     use super::*;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn outputs_at_address() {
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
-        let storage = LocalPersistedStorage::<()>::init(tmp_dir, signer.clone(), starting_amount);
+        let storage =
+            LocalPersistedStorage::<TempDir, ()>::init(tmp_dir, signer.clone(), starting_amount);
         let mut outputs = storage.all_outputs(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
@@ -204,7 +220,7 @@ mod tests {
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
         let mut storage =
-            LocalPersistedStorage::<()>::init(tmp_dir, signer.clone(), starting_amount);
+            LocalPersistedStorage::<TempDir, ()>::init(tmp_dir, signer.clone(), starting_amount);
         let current_time = storage.current_time().await.unwrap();
         assert_eq!(current_time, 0);
         let new_time = 1000;
