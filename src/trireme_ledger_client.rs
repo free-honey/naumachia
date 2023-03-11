@@ -19,7 +19,6 @@ use cml_client::{
 use dirs::home_dir;
 use pallas_addresses::Address;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::{marker::PhantomData, path::PathBuf};
@@ -120,48 +119,44 @@ impl From<Network> for u8 {
 #[derive(Deserialize, Serialize)]
 pub struct TriremeConfig {
     current_env: Option<String>,
-    envs: HashMap<String, String>,
+    envs: Vec<String>,
 }
 
 impl TriremeConfig {
-    pub fn new(current_env: &str, envs: HashMap<String, String>) -> Self {
+    pub fn new(current_env: &str) -> Self {
         TriremeConfig {
             current_env: Some(current_env.to_string()),
-            envs,
+            envs: vec![current_env.to_string()],
         }
     }
 
     pub fn get_current_env_subdir(&self) -> Option<String> {
-        self.current_env
-            .clone()
-            .and_then(|name| self.envs.get(&name).map(|s| s.to_string()))
+        self.current_env.clone()
     }
 
-    pub fn set_new_env(&mut self, new_env_name: &str, path: &str) -> Result<()> {
-        match self.envs.get(new_env_name) {
-            Some(_) => Err(Error::Trireme(
+    pub fn set_new_env(&mut self, new_env_name: &str) -> Result<()> {
+        if self.envs.contains(&(new_env_name.to_string())) {
+            Err(Error::Trireme(
                 "Environment with that name already exists".to_string(),
-            )),
-            None => {
-                self.current_env = Some(new_env_name.to_string());
-                self.envs.insert(new_env_name.to_string(), path.to_string());
-                Ok(())
-            }
+            ))
+        } else {
+            self.current_env = Some(new_env_name.to_string());
+            self.envs.push(new_env_name.to_string());
+            Ok(())
         }
     }
 
     pub fn switch_env(&mut self, env_name: &str) -> Result<()> {
-        match self.envs.get(env_name) {
-            Some(_) => {
-                self.current_env = Some(env_name.to_string());
-                Ok(())
-            }
-            None => Err(Error::Trireme("Environment doesn't exist".to_string())),
+        if self.envs.contains(&(env_name.to_string())) {
+            self.current_env = Some(env_name.to_string());
+            Ok(())
+        } else {
+            Err(Error::Trireme("Environment doesn't exist".to_string()))
         }
     }
 
     pub fn envs(&self) -> Vec<String> {
-        self.envs.keys().map(|name| name.to_owned()).collect()
+        self.envs.clone()
     }
 }
 
@@ -372,6 +367,7 @@ pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
     toml_struct: &Toml,
 ) -> Result<()> {
     let serialized = toml::to_string(&toml_struct).map_err(|e| Error::TOML(Box::new(e)))?;
+    println!("serialized toml: {:?}", &serialized);
     let parent_dir = file_path
         .parent()
         .ok_or_else(|| TomlError::NoParentDir(format!("{file_path:?}")))
@@ -381,6 +377,7 @@ pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
         .map_err(|e| Error::TOML(Box::new(e)))?;
     let mut file = fs::OpenOptions::new()
         .write(true)
+        .truncate(true)
         .create(true)
         .open(&file_path)
         .await

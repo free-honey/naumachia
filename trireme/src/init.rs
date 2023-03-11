@@ -9,9 +9,8 @@ use naumachia::trireme_ledger_client::{
     LedgerSource, Network, TriremeConfig,
 };
 use naumachia::Address;
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 use tokio::fs;
-use uuid::Uuid;
 
 pub enum EnvironmentType {
     Blockfrost,
@@ -35,7 +34,15 @@ pub async fn new_env_impl() -> Result<()> {
     let name: String = Input::new()
         .with_prompt("Please name your environment")
         .interact_text()?;
-    let sub_dir = Uuid::new_v4().to_string();
+    let sub_dir = name.clone();
+
+    let trireme_config = match get_trireme_config_from_file().await? {
+        Some(mut config) => {
+            config.set_new_env(&name)?;
+            config
+        }
+        None => TriremeConfig::new(&name),
+    };
 
     let items = vec![EnvironmentType::Blockfrost, EnvironmentType::LocalMocked];
     let item_index = Select::new()
@@ -64,27 +71,16 @@ pub async fn new_env_impl() -> Result<()> {
             let alice = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr")?;
             let start_balance = 100_000_000_000; // Lovelace
             let dir = path_to_client_config_file(&sub_dir)?;
-            let parent_dir = dir.parent().unwrap(); // TODO
+            let parent_dir = dir.parent().ok_or(Error::Trireme(
+                "Could not find parent directory for config".to_string(),
+            ))?;
             fs::create_dir_all(&parent_dir).await?;
             let _ =
                 LocalPersistedStorage::<PathBuf, ()>::init(parent_dir.into(), alice, start_balance);
-            let client_config = ClientConfig::new_test(&name, &dir);
-            write_toml_struct_to_file(&(parent_dir.into()), &client_config).await?;
+            let client_config = ClientConfig::new_test(&name, &(parent_dir.into()));
+            write_toml_struct_to_file(&dir, &client_config).await?;
         }
     }
-
-    let trireme_config = match get_trireme_config_from_file().await? {
-        Some(mut config) => {
-            config.set_new_env(&name, &sub_dir)?;
-            config
-        }
-        None => {
-            let current_env = name.clone();
-            let mut envs = HashMap::new();
-            envs.insert(name.clone(), sub_dir.clone());
-            TriremeConfig::new(&current_env, envs)
-        }
-    };
 
     write_trireme_config(&trireme_config).await?;
     println!();
