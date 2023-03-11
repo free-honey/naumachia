@@ -2,13 +2,14 @@ use naumachia::scripts::raw_script::PlutusScriptFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
+use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use sha2::Sha256;
 
 // const SCRIPT_RAW: &str = include_str!("../../plutus/game_v1.plutus");
 const SCRIPT_RAW: &str = include_str!("../../plutus/game_v2.plutus");
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HashedString {
     inner: Vec<u8>,
 }
@@ -40,7 +41,7 @@ impl TryFrom<PlutusData> for HashedString {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ClearString {
     inner: String,
 }

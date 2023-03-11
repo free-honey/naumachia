@@ -5,8 +5,8 @@ use naumachia::ledger_client::test_ledger_client::local_persisted_storage::Local
 use naumachia::trireme_ledger_client::{
     cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
     path_to_client_config_file, path_to_trireme_config_dir, path_to_trireme_config_file,
-    raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, ClientVariant,
-    KeySource, LedgerSource, Network, TriremeConfig,
+    raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, KeySource,
+    LedgerSource, Network, TriremeConfig,
 };
 use naumachia::Address;
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
@@ -69,7 +69,7 @@ pub async fn new_env_impl() -> Result<()> {
             let _ =
                 LocalPersistedStorage::<PathBuf, ()>::init(parent_dir.into(), alice, start_balance);
             let client_config = ClientConfig::new_test(&name, &dir);
-            write_toml_struct_to_file(&dir, &parent_dir).await?;
+            write_toml_struct_to_file(&(parent_dir.into()), &client_config).await?;
         }
     }
 

@@ -22,7 +22,6 @@ use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::path::Path;
 use std::{marker::PhantomData, path::PathBuf};
 use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
@@ -162,7 +161,7 @@ impl TriremeConfig {
     }
 
     pub fn envs(&self) -> Vec<String> {
-        self.envs.iter().map(|(name, _)| name.to_owned()).collect()
+        self.envs.keys().map(|name| name.to_owned()).collect()
     }
 }
 

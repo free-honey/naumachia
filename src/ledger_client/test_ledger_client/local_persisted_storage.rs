@@ -7,7 +7,6 @@ use std::{
     io::{Read, Write},
     marker::PhantomData,
 };
-use tempfile::TempDir;
 use thiserror::Error;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
@@ -198,6 +197,7 @@ mod tests {
     #![allow(non_snake_case)]
 
     use super::*;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn outputs_at_address() {
