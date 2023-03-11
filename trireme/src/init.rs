@@ -94,11 +94,12 @@ pub async fn new_env_impl() -> Result<()> {
 pub async fn switch_env() -> Result<()> {
     match get_trireme_config_from_file().await? {
         Some(mut config) => {
-            println!("Environments:");
-            config.envs().iter().for_each(|name| println!("{}", name));
-            let name: String = Input::new()
-                .with_prompt("Name the environment")
-                .interact_text()?;
+            let items = config.envs();
+            let index = Select::new()
+                .with_prompt("To which environment?")
+                .items(&items)
+                .interact()?;
+            let name = items.get(index).expect("should always be a valid index");
             config.switch_env(&name)?;
             write_trireme_config(&config).await?;
             println!("Switched environment to: {}", &name);
