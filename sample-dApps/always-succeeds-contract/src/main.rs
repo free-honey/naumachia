@@ -59,7 +59,10 @@ async fn main() {
                     println!("Active contracts:");
                     for output in outputs {
                         println!("-------------------------------------");
-                        println!("{:?}", output.id());
+                        let id = output.id();
+                        let tx_hash = hex::encode(id.tx_hash());
+                        let index = id.index();
+                        println!("tx: {:?}, index: {:?}", tx_hash, index);
                         println!("{:?}", output.values());
                         println!("{:?}", output.datum());
                     }

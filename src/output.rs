@@ -1,3 +1,4 @@
+use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::PolicyId;
 use pallas_addresses::Address;
 use serde::{Deserialize, Serialize};
@@ -60,20 +61,28 @@ impl<Datum> UnbuiltOutput<Datum> {
     }
 }
 
-#[serde_with::serde_as]
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
-pub enum Output<Datum> {
-    Wallet {
-        id: OutputId,
-        owner: String,
-        values: Values,
-    },
-    Validator {
-        id: OutputId,
-        owner: String,
-        values: Values,
-        datum: Datum,
-    },
+pub enum DatumKind<Datum> {
+    Typed(Datum),
+    UnTyped(PlutusData),
+    None,
+}
+
+impl<Datum> From<DatumKind<Datum>> for Option<Datum> {
+    fn from(value: DatumKind<Datum>) -> Self {
+        match value {
+            DatumKind::Typed(datum) => Some(datum),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
+pub struct Output<Datum> {
+    id: OutputId,
+    owner: String,
+    values: Values,
+    datum: DatumKind<Datum>,
 }
 
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
@@ -102,10 +111,11 @@ impl<Datum> Output<Datum> {
     pub fn new_wallet(tx_hash: Vec<u8>, index: u64, owner: Address, values: Values) -> Self {
         let id = OutputId::new(tx_hash, index);
         let addr = owner.to_bech32().expect("Already Validated");
-        Output::Wallet {
+        Output {
             id,
             owner: addr,
             values,
+            datum: DatumKind::None,
         }
     }
 
@@ -118,41 +128,67 @@ impl<Datum> Output<Datum> {
     ) -> Self {
         let id = OutputId::new(tx_hash, index);
         let addr = owner.to_bech32().expect("Already Validated");
-        Output::Validator {
+        Output {
             id,
             owner: addr,
             values,
-            datum,
+            datum: DatumKind::Typed(datum),
         }
     }
 
     pub fn id(&self) -> &OutputId {
-        match self {
-            Output::Wallet { id, .. } => id,
-            Output::Validator { id, .. } => id,
-        }
+        &self.id
     }
 
     pub fn owner(&self) -> Address {
-        match self {
-            Output::Wallet { owner, .. } => Address::from_bech32(owner).expect("Already Validated"),
-            Output::Validator { owner, .. } => {
-                Address::from_bech32(owner).expect("Already Validated")
-            }
-        }
+        Address::from_bech32(&self.owner).expect("Already Validated")
     }
 
     pub fn values(&self) -> &Values {
-        match self {
-            Output::Wallet { values, .. } => values,
-            Output::Validator { values, .. } => values,
-        }
+        &self.values
     }
 
-    pub fn datum(&self) -> Option<&Datum> {
-        match self {
-            Output::Wallet { .. } => None,
-            Output::Validator { datum, .. } => Some(datum),
+    pub fn datum(&self) -> &DatumKind<Datum> {
+        &self.datum
+    }
+}
+
+impl<Datum: Clone + Into<PlutusData>> Output<Datum> {
+    pub fn with_untyped_datum(&self) -> Output<Datum> {
+        let new_datum = match &self.datum {
+            DatumKind::Typed(datum) => DatumKind::UnTyped(datum.to_owned().into()),
+            DatumKind::UnTyped(data) => DatumKind::UnTyped(data.clone()),
+            DatumKind::None => DatumKind::None,
+        };
+
+        Output {
+            id: self.id.clone(),
+            owner: self.owner.clone(),
+            values: self.values.clone(),
+            datum: new_datum,
+        }
+    }
+}
+
+impl<Datum: Clone + TryFrom<PlutusData>> Output<Datum> {
+    pub fn with_typed_datum_if_possible(&self) -> Output<Datum> {
+        let new_datum = match &self.datum {
+            DatumKind::Typed(datum) => DatumKind::Typed(datum.clone()),
+            DatumKind::UnTyped(data) => {
+                if let Some(datum) = Datum::try_from(data.clone()).ok() {
+                    DatumKind::Typed(datum)
+                } else {
+                    DatumKind::UnTyped(data.clone())
+                }
+            }
+            DatumKind::None => DatumKind::None,
+        };
+
+        Output {
+            id: self.id.clone(),
+            owner: self.owner.clone(),
+            values: self.values.clone(),
+            datum: new_datum,
         }
     }
 }

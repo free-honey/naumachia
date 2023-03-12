@@ -225,7 +225,10 @@ where
         enterprise_addr.to_address()
     }
 
-    async fn build_v1_cml_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn build_v1_cml_script_input<
+        Datum: PlutusDataInterop + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
@@ -248,9 +251,8 @@ where
             .map_err(as_failed_to_issue_tx)?;
         let utxo_info = TransactionOutput::new(&cml_script_address, &value);
         let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
-        let data = input
-            .datum()
-            .ok_or(LedgerClientError::NoDatumOnScriptInput)?;
+        let maybe_data: Option<Datum> = input.datum().to_owned().into();
+        let data = maybe_data.ok_or(LedgerClientError::NoDatumOnScriptInput)?;
         let datum = data.to_plutus_data();
         let cml_input = input_builder
             .plutus_script(&partial_witness, &required_signers, &datum)
@@ -259,7 +261,10 @@ where
         Ok(cml_input)
     }
 
-    async fn build_v2_cml_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn build_v2_cml_script_input<
+        Datum: PlutusDataInterop + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
@@ -282,9 +287,8 @@ where
             .map_err(as_failed_to_issue_tx)?;
         let utxo_info = TransactionOutput::new(&cml_script_address, &value);
         let input_builder = SingleInputBuilder::new(&script_input, &utxo_info);
-        let data = input
-            .datum()
-            .ok_or(LedgerClientError::NoDatumOnScriptInput)?;
+        let maybe_data: Option<Datum> = input.datum().to_owned().into();
+        let data = maybe_data.ok_or(LedgerClientError::NoDatumOnScriptInput)?;
         let datum = data.to_plutus_data();
         let cml_input = input_builder
             .plutus_script(&partial_witness, &required_signers, &datum)
@@ -293,7 +297,7 @@ where
         Ok(cml_input)
     }
 
-    async fn add_v1_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_v1_script_input<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
@@ -310,7 +314,7 @@ where
         Ok(())
     }
 
-    async fn add_v2_script_input<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_v2_script_input<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
@@ -384,7 +388,7 @@ where
         Ok(res)
     }
 
-    async fn add_v1_script_inputs<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_v1_script_inputs<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -396,7 +400,7 @@ where
         Ok(())
     }
 
-    async fn add_v2_script_inputs<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_v2_script_inputs<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -440,7 +444,7 @@ where
         Ok(TxId::new(&submit_res))
     }
 
-    async fn issue_v1_tx<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+    async fn issue_v1_tx<Datum: PlutusDataInterop + Debug + Clone, Redeemer: PlutusDataInterop>(
         &self,
         tx: UnbuiltTransaction<Datum, Redeemer>,
         my_utxos: Vec<UTxO>,
@@ -462,7 +466,7 @@ where
         Ok(tx_id)
     }
 
-    async fn issue_v2_tx<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+    async fn issue_v2_tx<Datum: PlutusDataInterop + Debug + Clone, Redeemer: PlutusDataInterop>(
         &self,
         tx: UnbuiltTransaction<Datum, Redeemer>,
         my_utxos: Vec<UTxO>,
@@ -553,7 +557,7 @@ impl<L, K, Datum, Redeemer> LedgerClient<Datum, Redeemer> for CMLLedgerCLient<L,
 where
     L: Ledger + Send + Sync,
     K: Keys + Send + Sync,
-    Datum: PlutusDataInterop + Send + Sync + Debug,
+    Datum: PlutusDataInterop + Send + Sync + Debug + Clone,
     Redeemer: PlutusDataInterop + Send + Sync,
 {
     async fn signer_base_address(&self) -> LedgerClientResult<Address> {

@@ -1,22 +1,21 @@
-use std::path::Path;
 use std::{
     fmt::Debug,
     hash::Hash,
     marker::PhantomData,
+    path::Path,
     sync::{Arc, Mutex},
 };
 
-use crate::scripts::context::{
-    pub_key_hash_from_address_if_available, CtxDatum, CtxOutput, CtxOutputReference,
-};
 use crate::{
     backend::Backend,
     ledger_client::{
         test_ledger_client::in_memory_storage::InMemoryStorage, LedgerClient, LedgerClientError,
         LedgerClientResult,
     },
-    output::Output,
-    output::UnbuiltOutput,
+    output::{DatumKind, Output, UnbuiltOutput},
+    scripts::context::{
+        pub_key_hash_from_address_if_available, CtxDatum, CtxOutput, CtxOutputReference,
+    },
     scripts::{
         context::{CtxScriptPurpose, CtxValue, Input, TxContext, ValidRange},
         raw_validator_script::plutus_data::PlutusData,
@@ -139,6 +138,8 @@ enum TestLCError {
     NotEnoughInputs,
     #[error("The same input is listed twice")]
     DuplicateInput,
+    #[error("Can't read Datum")]
+    WrongDatum,
     #[error("Tx too early")]
     TxTooEarly,
     #[error("Tx too late")]
@@ -188,7 +189,14 @@ where
 }
 impl<T, Datum, Redeemer> TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<T, Datum>>
 where
-    Datum: Clone + Send + Sync + PartialEq + Serialize + DeserializeOwned,
+    Datum: Clone
+        + Send
+        + Sync
+        + PartialEq
+        + Serialize
+        + DeserializeOwned
+        + Into<PlutusData>
+        + TryFrom<PlutusData>,
     T: AsRef<Path> + Send + Sync,
 {
     pub fn new_local_persisted(dir: T, signer: Address, starting_amount: u64) -> Self {
@@ -267,7 +275,7 @@ where
 
         let mut spending_outputs: Vec<Output<_>> = Vec::new();
         for (input, redeemer, script) in tx.script_inputs().iter() {
-            if let Some(datum) = input.datum() {
+            if let DatumKind::Typed(datum) = input.datum() {
                 if !spending_outputs.contains(input) {
                     let ctx = spend_tx_context(&tx, &signer, input)?;
                     // TODO: Check that the output is at the script address
@@ -282,8 +290,14 @@ where
                         TestLCError::DuplicateInput,
                     )));
                 }
+            } else {
+                return Err(LedgerClientError::FailedToIssueTx(Box::new(
+                    TestLCError::WrongDatum,
+                )));
             }
         }
+
+        println!("Combined Inputs: {:?}", &combined_inputs);
 
         let mut total_input_value =
             combined_inputs
@@ -311,6 +325,8 @@ where
 
         total_input_value.add_values(&minted_value);
 
+        println!("Input Value: {:?}", &total_input_value);
+
         let total_output_value =
             tx.unbuilt_outputs()
                 .iter()
@@ -318,6 +334,8 @@ where
                     acc.add_values(utxo.values());
                     acc
                 });
+
+        println!("Output Value: {:?}", &total_output_value);
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| TestLCError::NotEnoughInputs)
@@ -340,6 +358,7 @@ where
 
         combined_outputs.extend(built_outputs);
 
+        println!("Outputs: {:?}", &combined_outputs);
         for output in combined_outputs {
             self.storage.add_output(&output).await?;
         }
@@ -467,7 +486,8 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     for (utxo, _, _) in tx.script_inputs.iter() {
         let id = utxo.id();
         let value = CtxValue::from(utxo.values().to_owned());
-        let datum = utxo.datum().map(|d| d.to_owned()).into();
+        let maybe_datum: Option<Datum> = utxo.datum().to_owned().into();
+        let datum = maybe_datum.map(|d| d.to_owned()).into();
         let address = utxo.owner();
         let transaction_id = id.tx_hash().to_vec();
         let input = Input {
