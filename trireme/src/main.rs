@@ -1,4 +1,4 @@
-use crate::init::switch_env;
+use crate::init::{env_impl, switch_env_impl};
 use crate::{
     init::new_env_impl,
     logic::{TriremeLogic, TriremeLookups, TriremeResponses},
@@ -23,6 +23,8 @@ struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
+    /// View current env
+    Env,
     /// Create a new environment 🚣
     NewEnv,
     /// Switch Environments
@@ -46,8 +48,9 @@ async fn main() -> Result<()> {
             };
             println!("Balance: {:?} ADA", ada);
         }
+        ActionParams::Env => env_impl().await?,
         ActionParams::NewEnv => new_env_impl().await?,
-        ActionParams::SwitchEnv => switch_env().await?,
+        ActionParams::SwitchEnv => switch_env_impl().await?,
     }
     Ok(())
 }

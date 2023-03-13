@@ -91,7 +91,7 @@ pub async fn new_env_impl() -> Result<()> {
     Ok(())
 }
 
-pub async fn switch_env() -> Result<()> {
+pub async fn switch_env_impl() -> Result<()> {
     match get_trireme_config_from_file().await? {
         Some(mut config) => {
             let items = config.envs();
@@ -107,6 +107,17 @@ pub async fn switch_env() -> Result<()> {
         }
         None => Err(Error::Trireme("Environment doesn't exist".to_string()).into()),
     }
+}
+
+pub async fn env_impl() -> Result<()> {
+    const ERROR_MSG: &str = "No Environment Set";
+    let env = get_trireme_config_from_file()
+        .await?
+        .and_then(|config| config.current_env())
+        .ok_or(Error::Trireme(ERROR_MSG.to_string()))?;
+    println!("Current Environment:");
+    println!("{}", env);
+    Ok(())
 }
 
 fn print_safety_warning() {
