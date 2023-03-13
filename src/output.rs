@@ -153,6 +153,15 @@ impl<Datum> Output<Datum> {
     }
 }
 
+impl<Datum: Clone> Output<Datum> {
+    pub fn typed_datum(&self) -> Option<Datum> {
+        match &self.datum {
+            DatumKind::Typed(datum) => Some(datum.to_owned()),
+            _ => None,
+        }
+    }
+}
+
 impl<Datum: Clone + Into<PlutusData>> Output<Datum> {
     pub fn with_untyped_datum(&self) -> Output<Datum> {
         let new_datum = match &self.datum {
@@ -175,7 +184,7 @@ impl<Datum: Clone + TryFrom<PlutusData>> Output<Datum> {
         let new_datum = match &self.datum {
             DatumKind::Typed(datum) => DatumKind::Typed(datum.clone()),
             DatumKind::UnTyped(data) => {
-                if let Some(datum) = Datum::try_from(data.clone()).ok() {
+                if let Ok(datum) = Datum::try_from(data.clone()) {
                     DatumKind::Typed(datum)
                 } else {
                     DatumKind::UnTyped(data.clone())

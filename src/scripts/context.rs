@@ -187,9 +187,7 @@ impl ContextBuilder {
         let output_index = id.index();
         let address = input.owner();
         let value = CtxValue::from(input.values().to_owned());
-        let maybe_datum: Option<D> = input.datum().to_owned().into();
-        let maybe_datum = maybe_datum.map(|v| v.to_owned());
-        let datum = CtxDatum::from(maybe_datum);
+        let datum = input.typed_datum().into();
         let ctx_input = Input {
             transaction_id,
             output_index,
@@ -220,9 +218,7 @@ impl ContextBuilder {
     pub fn add_specific_output<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
         let address = input.owner();
         let value = CtxValue::from(input.values().to_owned());
-        let maybe_datum: Option<D> = input.datum().to_owned().into();
-        let maybe_datum = maybe_datum.map(|v| v.to_owned());
-        let datum = CtxDatum::from(maybe_datum);
+        let datum = input.typed_datum().into();
         let ctx_input = CtxOutput {
             address,
             value,

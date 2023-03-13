@@ -421,13 +421,13 @@ async fn fund_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     output_id: OutputId,
     amount: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let validator =
+    let checking_account_validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let address = validator
+    let checking_account_address = checking_account_validator
         .address(0)
         .map_err(SCLogicError::ValidatorScript)?;
     let output = ledger_client
-        .all_outputs_at_address(&address)
+        .all_outputs_at_address(&checking_account_address)
         .await
         .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
         .into_iter()
@@ -436,17 +436,17 @@ async fn fund_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let new_datum = output
-        .datum()
-        .ok_or(CheckingAccountError::OutputNotFound(output_id))
+        .typed_datum()
+        .ok_or(CheckingAccountError::DatumNotFoundForOutput(output_id))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
         .clone();
     let redeemer = ();
-    let script = Box::new(validator);
+    let script = Box::new(checking_account_validator);
     let mut values = output.values().to_owned();
     values.add_one_value(&PolicyId::Lovelace, amount);
     let actions = TxActions::v2()
         .with_script_redeem(output, redeemer, script)
-        .with_script_init(new_datum, values, address);
+        .with_script_init(new_datum, values, checking_account_address);
     Ok(actions)
 }
 
@@ -471,8 +471,10 @@ async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let new_datum = output
-        .datum()
-        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .typed_datum()
+        .ok_or(CheckingAccountError::DatumNotFoundForOutput(
+            output_id.clone(),
+        ))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
         .clone();
     let redeemer = ();
@@ -483,7 +485,7 @@ async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let new_value = old_values
         .try_subtract(&sub_values)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-        .ok_or(CheckingAccountError::OutputNotFound(output_id.clone()))
+        .ok_or(CheckingAccountError::OutputNotFound(output_id))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let actions = TxActions::v2()
         .with_script_redeem(output, redeemer, script)
@@ -529,8 +531,8 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let old_allow_pull_datum = allow_pull_output
-        .datum()
-        .ok_or(CheckingAccountError::OutputNotFound(
+        .typed_datum()
+        .ok_or(CheckingAccountError::DatumNotFoundForOutput(
             allow_pull_output_id.clone(),
         ))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
@@ -560,8 +562,8 @@ async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     };
 
     let new_checking_account_datum = checking_account_output
-        .datum()
-        .ok_or(CheckingAccountError::OutputNotFound(
+        .typed_datum()
+        .ok_or(CheckingAccountError::DatumNotFoundForOutput(
             checking_account_output_id.clone(),
         ))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
