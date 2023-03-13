@@ -157,6 +157,10 @@ impl TriremeConfig {
         }
     }
 
+    pub fn current_env(&self) -> Option<String> {
+        self.current_env.clone()
+    }
+
     pub fn envs(&self) -> Vec<String> {
         self.envs.clone()
     }
