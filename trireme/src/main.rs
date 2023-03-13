@@ -1,17 +1,15 @@
-use crate::init::{env_impl, switch_env_impl};
 use crate::{
-    init::new_env_impl,
+    balance::ada_balance_impl,
+    balance::balance_impl,
+    environment::new_env_impl,
+    environment::{env_impl, switch_env_impl},
     logic::{TriremeLogic, TriremeLookups, TriremeResponses},
 };
 use anyhow::Result;
 use clap::Parser;
-use naumachia::{
-    backend::Backend,
-    smart_contract::{SmartContract, SmartContractTrait},
-    trireme_ledger_client::get_trireme_ledger_client_from_file,
-};
 
-mod init;
+mod balance;
+mod environment;
 mod logic;
 
 #[derive(Parser, Debug)]
@@ -30,6 +28,8 @@ enum ActionParams {
     /// Switch Environments
     SwitchEnv,
     /// Get ADA Balance
+    AdaBalance,
+    /// Get Total Balance
     Balance,
 }
 
@@ -37,20 +37,11 @@ enum ActionParams {
 async fn main() -> Result<()> {
     let args = Args::parse();
     match args.action {
-        ActionParams::Balance => {
-            let logic = TriremeLogic;
-            let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
-            let backend = Backend::new(ledger_client);
-            let contract = SmartContract::new(&logic, &backend);
-            let res = contract.lookup(TriremeLookups::LovelaceBalance).await?;
-            let ada = match res {
-                TriremeResponses::LovelaceBalance(lovelace) => lovelace as f64 / 1_000_000.0,
-            };
-            println!("Balance: {:?} ADA", ada);
-        }
         ActionParams::Env => env_impl().await?,
         ActionParams::NewEnv => new_env_impl().await?,
         ActionParams::SwitchEnv => switch_env_impl().await?,
+        ActionParams::AdaBalance => ada_balance_impl().await?,
+        ActionParams::Balance => balance_impl().await?,
     }
     Ok(())
 }
