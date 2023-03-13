@@ -13,6 +13,8 @@
 
 Naumachia is a framework for writing Smart Contracts on the Cardano Blockchain using Rust!
 
+Find us at the [TxPipe Discord!](https://discord.gg/4hUAdHAexb)
+
 **Work in Progress :)**
 
 Checkout the feature progress [roadmap](docs/ROADMAP.md)
