@@ -10,6 +10,7 @@ use std::{
 use thiserror::Error;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
+use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     ledger_client::{test_ledger_client::TestLedgerStorage, LedgerClientError, LedgerClientResult},
     output::Output,
@@ -126,7 +127,14 @@ impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<
 impl<T, Datum> TestLedgerStorage<Datum> for LocalPersistedStorage<T, Datum>
 where
     T: AsRef<Path> + Send + Sync,
-    Datum: Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq,
+    Datum: Clone
+        + Send
+        + Sync
+        + Serialize
+        + DeserializeOwned
+        + PartialEq
+        + Into<PlutusData>
+        + TryFrom<PlutusData>,
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
         let signer = self.get_data().signer;
@@ -144,6 +152,7 @@ where
             .into_iter()
             .filter(|o| &o.owner() == address)
             .take(count)
+            .map(|output| output.with_typed_datum_if_possible())
             .collect();
         Ok(outputs)
     }
@@ -154,16 +163,18 @@ where
             .outputs
             .into_iter()
             .filter(|o| &o.owner() == address)
+            .map(|output| output.with_typed_datum_if_possible())
             .collect();
         Ok(outputs)
     }
 
     async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
         let mut ledger_utxos = self.get_data().outputs;
+        let sanitized_output = output.with_untyped_datum();
 
         let index = ledger_utxos
             .iter()
-            .position(|x| x == output)
+            .position(|x| x == &sanitized_output)
             .ok_or_else(|| {
                 LedgerClientError::FailedToRetrieveOutputWithId(
                     output.id().clone(),
@@ -176,8 +187,9 @@ where
     }
 
     async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
+        let sanitized_output = output.with_untyped_datum();
         let mut ledger_utxos = self.get_data().outputs;
-        ledger_utxos.push(output.to_owned());
+        ledger_utxos.push(sanitized_output);
         self.update_outputs(ledger_utxos);
         Ok(())
     }

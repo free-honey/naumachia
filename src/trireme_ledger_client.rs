@@ -64,7 +64,9 @@ pub async fn get_trireme_ledger_client_from_file<
         + Send
         + Sync
         + Serialize
-        + DeserializeOwned,
+        + DeserializeOwned
+        + Into<PlutusData>
+        + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop + Clone + Eq + Debug + Hash + Send + Sync + DeserializeOwned,
 >() -> Result<TriremeLedgerClient<Datum, Redeemer>> {
     let trireme_config = get_trireme_config_from_file().await?.ok_or(Error::Trireme(
@@ -225,7 +227,9 @@ impl ClientConfig {
             + Send
             + Sync
             + Serialize
-            + DeserializeOwned,
+            + DeserializeOwned
+            + Into<PlutusData>
+            + TryFrom<PlutusData>,
         Redeemer: PlutusDataInterop + Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
     >(
         self,
@@ -285,7 +289,15 @@ impl ClientConfig {
 
 enum InnerClient<Datum, Redeemer>
 where
-    Datum: PlutusDataInterop + Clone + Send + Sync + DeserializeOwned + Serialize + PartialEq,
+    Datum: PlutusDataInterop
+        + Clone
+        + Send
+        + Sync
+        + DeserializeOwned
+        + Serialize
+        + PartialEq
+        + Into<PlutusData>
+        + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
     Cml(CMLLedgerCLient<BlockFrostLedger, RawSecretPhraseKeys, Datum, Redeemer>),
@@ -294,7 +306,15 @@ where
 
 pub struct TriremeLedgerClient<Datum, Redeemer>
 where
-    Datum: PlutusDataInterop + Clone + Send + Sync + Serialize + DeserializeOwned + PartialEq,
+    Datum: PlutusDataInterop
+        + Clone
+        + Send
+        + Sync
+        + Serialize
+        + DeserializeOwned
+        + PartialEq
+        + Into<PlutusData>
+        + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
     _datum: PhantomData<Datum>,
@@ -313,7 +333,8 @@ where
         + PartialEq
         + Serialize
         + DeserializeOwned
-        + Into<PlutusData>,
+        + Into<PlutusData>
+        + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop + Send + Sync + Clone + Eq + PartialEq + Debug + Hash,
 {
     async fn signer_base_address(&self) -> LedgerClientResult<Address> {
@@ -367,7 +388,6 @@ pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
     toml_struct: &Toml,
 ) -> Result<()> {
     let serialized = toml::to_string(&toml_struct).map_err(|e| Error::TOML(Box::new(e)))?;
-    println!("serialized toml: {:?}", &serialized);
     let parent_dir = file_path
         .parent()
         .ok_or_else(|| TomlError::NoParentDir(format!("{file_path:?}")))

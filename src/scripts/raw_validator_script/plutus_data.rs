@@ -5,9 +5,10 @@ use crate::scripts::context::{
 use crate::scripts::ScriptError;
 use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
 use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub enum PlutusData {
     Constr(Constr<PlutusData>),
     Map(BTreeMap<PlutusData, PlutusData>),
@@ -25,13 +26,13 @@ impl PlutusData {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct Constr<T> {
     pub constr: u64,
     pub fields: Vec<T>,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub enum BigInt {
     Int { neg: bool, val: u64 },
     BigUInt(Vec<u8>),

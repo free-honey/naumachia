@@ -4,7 +4,6 @@ use pallas_addresses::Address;
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
 pub mod selection;
-pub mod tx_checks;
 
 #[cfg(test)]
 mod tests;
