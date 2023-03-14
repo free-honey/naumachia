@@ -41,6 +41,10 @@ async fn init_creates_instance_with_correct_balance() {
         policy_id.asset_name() == Some(CHECKING_ACCOUNT_NFT_ASSET_NAME.to_string()) && **amt == 1
     });
     assert!(nft.is_some());
+    assert_eq!(
+        script_output.values().get(&PolicyId::Lovelace).unwrap(),
+        account_amount
+    )
 }
 
 #[tokio::test]

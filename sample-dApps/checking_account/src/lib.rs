@@ -67,13 +67,13 @@ pub enum CheckingAccountEndpoints {
 #[derive(Debug, Eq, PartialEq)]
 pub struct CheckingAccountLogic;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum CheckingAccountDatums {
     CheckingAccount(CheckingAccount),
     AllowedPuller(AllowedPuller),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct CheckingAccount {
     owner: PubKeyHash,
     spend_token_policy: Vec<u8>,
@@ -85,7 +85,7 @@ impl From<CheckingAccount> for CheckingAccountDatums {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct AllowedPuller {
     owner: PubKeyHash,
     puller: PubKeyHash,
@@ -149,6 +149,14 @@ impl From<CheckingAccountDatums> for PlutusData {
                 })
             }
         }
+    }
+}
+
+impl TryFrom<PlutusData> for CheckingAccountDatums {
+    type Error = ();
+
+    fn try_from(value: PlutusData) -> Result<Self, Self::Error> {
+        todo!()
     }
 }
 

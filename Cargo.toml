@@ -38,9 +38,9 @@ hex = "0.4.3"
 dirs = "4.0.0"
 uplc = "0.0.29"
 tempfile = "3.3.0"
-minicbor = "0.18.0"
+minicbor = "0.19.0"
 rand = "0.8.5"
-pallas-addresses = "0.17.0"
+pallas-addresses = "0.18.0"
 
 [dependencies.blockfrost-http-client]
 version = "0.0.11"
@@ -71,6 +71,8 @@ uplc = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", br
 aiken = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
 aiken-lang = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
 aiken-project = { version = "0.0.29", git = "https://github.com/aiken-lang/aiken.git", branch = "main"}
+pallas-addresses = { version = "0.18.0", path = "../forks/pallas/pallas-addresses"}
+pallas-crypto = { version = "0.18.0", path = "../forks/pallas/pallas-crypto"}
 
 #[patch."https://github.com/aiken-lang/aiken.git"]
 #aiken = { version = "0.0.29", path = "../aiken-lang/aiken/crates/aiken"}

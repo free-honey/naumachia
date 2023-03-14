@@ -63,8 +63,6 @@ pub async fn get_trireme_ledger_client_from_file<
         + Hash
         + Send
         + Sync
-        + Serialize
-        + DeserializeOwned
         + Into<PlutusData>
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop + Clone + Eq + Debug + Hash + Send + Sync + DeserializeOwned,
@@ -230,8 +228,6 @@ impl ClientConfig {
             + Hash
             + Send
             + Sync
-            + Serialize
-            + DeserializeOwned
             + Into<PlutusData>
             + TryFrom<PlutusData>,
         Redeemer: PlutusDataInterop + Clone + Eq + PartialEq + Debug + Hash + Send + Sync,

@@ -189,14 +189,7 @@ where
 }
 impl<T, Datum, Redeemer> TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<T, Datum>>
 where
-    Datum: Clone
-        + Send
-        + Sync
-        + PartialEq
-        + Serialize
-        + DeserializeOwned
-        + Into<PlutusData>
-        + TryFrom<PlutusData>,
+    Datum: Clone + Send + Sync + PartialEq + Into<PlutusData> + TryFrom<PlutusData>,
     T: AsRef<Path> + Send + Sync,
 {
     pub fn new_local_persisted(dir: T, signer: Address, starting_amount: u64) -> Self {
