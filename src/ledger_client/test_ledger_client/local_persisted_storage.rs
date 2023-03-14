@@ -1,5 +1,5 @@
 use pallas_addresses::Address;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::{
     fmt::Debug,

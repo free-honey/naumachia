@@ -18,7 +18,6 @@ use naumachia::{
     values::Values,
     Address,
 };
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod scripts;
@@ -155,7 +154,7 @@ impl From<CheckingAccountDatums> for PlutusData {
 impl TryFrom<PlutusData> for CheckingAccountDatums {
     type Error = ();
 
-    fn try_from(value: PlutusData) -> Result<Self, Self::Error> {
+    fn try_from(_value: PlutusData) -> Result<Self, Self::Error> {
         todo!()
     }
 }

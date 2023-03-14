@@ -28,7 +28,6 @@ use async_trait::async_trait;
 use local_persisted_storage::LocalPersistedStorage;
 use pallas_addresses::Address;
 use rand::Rng;
-use serde::{de::DeserializeOwned, Serialize};
 use thiserror::Error;
 
 pub mod in_memory_storage;
