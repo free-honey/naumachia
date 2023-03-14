@@ -18,6 +18,7 @@ use naumachia::{
     values::Values,
     Address,
 };
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod scripts;

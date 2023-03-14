@@ -16,7 +16,7 @@ async fn run_lookup(lookup: TriremeLookups) -> Result<TriremeResponses> {
 }
 
 fn lovelace_to_ada(lovelace: f64) -> f64 {
-    lovelace as f64 / 1_000_000.0
+    lovelace as f64 / 1_000_000.0 // TODO: Panic
 }
 
 pub(crate) async fn ada_balance_impl() -> Result<()> {

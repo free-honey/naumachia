@@ -77,7 +77,7 @@ impl<Datum> From<DatumKind<Datum>> for Option<Datum> {
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Debug, Eq)]
 pub struct Output<Datum> {
     id: OutputId,
     owner: String,
@@ -136,6 +136,23 @@ impl<Datum> Output<Datum> {
         }
     }
 
+    pub fn new_untyped_validator(
+        tx_hash: Vec<u8>,
+        index: u64,
+        owner: Address,
+        values: Values,
+        datum: PlutusData,
+    ) -> Self {
+        let id = OutputId::new(tx_hash, index);
+        let addr = owner.to_bech32().expect("Already Validated");
+        Output {
+            id,
+            owner: addr,
+            values,
+            datum: DatumKind::UnTyped(datum),
+        }
+    }
+
     pub fn id(&self) -> &OutputId {
         &self.id
     }
@@ -175,6 +192,14 @@ impl<Datum: Clone + Into<PlutusData>> Output<Datum> {
             owner: self.owner.clone(),
             values: self.values.clone(),
             datum: new_datum,
+        }
+    }
+
+    pub fn datum_plutus_data(&self) -> Option<PlutusData> {
+        match &self.datum {
+            DatumKind::Typed(datum) => Some(datum.to_owned().into()),
+            DatumKind::UnTyped(data) => Some(data.to_owned()),
+            DatumKind::None => None,
         }
     }
 }

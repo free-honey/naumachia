@@ -297,8 +297,6 @@ where
         + Clone
         + Send
         + Sync
-        + DeserializeOwned
-        + Serialize
         + PartialEq
         + Into<PlutusData>
         + TryFrom<PlutusData>,
@@ -314,8 +312,6 @@ where
         + Clone
         + Send
         + Sync
-        + Serialize
-        + DeserializeOwned
         + PartialEq
         + Into<PlutusData>
         + TryFrom<PlutusData>,
@@ -335,8 +331,6 @@ where
         + Sync
         + Debug
         + PartialEq
-        + Serialize
-        + DeserializeOwned
         + Into<PlutusData>
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop + Send + Sync + Clone + Eq + PartialEq + Debug + Hash,
