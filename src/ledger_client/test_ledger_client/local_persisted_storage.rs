@@ -1,5 +1,5 @@
 use pallas_addresses::Address;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::{
     fmt::Debug,
@@ -10,6 +10,7 @@ use std::{
 use thiserror::Error;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
+use crate::output::OutputId;
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::{
     ledger_client::{test_ledger_client::TestLedgerStorage, LedgerClientError, LedgerClientResult},
@@ -19,10 +20,48 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct LedgerData<Datum> {
+pub(crate) struct LedgerData {
     signer: String,
-    outputs: Vec<Output<Datum>>,
+    outputs: Vec<LDOutput>,
     current_time: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+struct LDOutput {
+    id: OutputId,
+    owner: String,
+    values: Values,
+    datum: Option<PlutusData>,
+}
+
+impl<Datum: Clone + Into<PlutusData>> From<Output<Datum>> for LDOutput {
+    fn from(output: Output<Datum>) -> Self {
+        LDOutput {
+            id: output.id().to_owned(),
+            owner: output.owner().to_bech32().expect("Already validated"),
+            values: output.values().clone(),
+            datum: output.datum_plutus_data(),
+        }
+    }
+}
+
+impl<Datum> From<LDOutput> for Output<Datum> {
+    fn from(value: LDOutput) -> Self {
+        let LDOutput {
+            id,
+            owner,
+            values,
+            datum,
+        } = value;
+        let tx_hash = id.tx_hash().to_owned();
+        let index = id.index();
+        let owner = Address::from_bech32(&owner).unwrap(); // TODO: Unwrap
+        if let Some(datum) = datum {
+            Output::new_untyped_validator(tx_hash, index, owner, values, datum)
+        } else {
+            Output::new_wallet(tx_hash, index, owner, values)
+        }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -33,7 +72,7 @@ enum LocalPersistedLCError {
     DuplicateInput, // TODO: WE don't need this once we dedupe
 }
 
-impl<Datum> LedgerData<Datum> {
+impl LedgerData {
     pub fn new(signer: Address) -> Self {
         let outputs = Vec::new();
         LedgerData {
@@ -43,8 +82,8 @@ impl<Datum> LedgerData<Datum> {
         }
     }
 
-    pub fn add_output(&mut self, output: Output<Datum>) {
-        self.outputs.push(output)
+    pub fn add_output<Datum: Clone + Into<PlutusData>>(&mut self, output: Output<Datum>) {
+        self.outputs.push(output.into())
     }
 }
 
@@ -64,13 +103,17 @@ pub struct LocalPersistedStorage<T: AsRef<Path>, Datum> {
 const DATA: &str = "data";
 
 // TODO: Make fallible!!!
-impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<T, Datum> {
+impl<T, Datum> LocalPersistedStorage<T, Datum>
+where
+    T: AsRef<Path>,
+    Datum: Clone + Into<PlutusData>,
+{
     pub fn init(dir: T, signer: Address, starting_amount: u64) -> Self {
         let path_ref: &Path = dir.as_ref();
         let path = path_ref.to_owned().join(DATA);
         if !path.exists() {
-            let mut data = LedgerData::<Datum>::new(signer.clone());
-            let output = starting_output(&signer, starting_amount);
+            let mut data = LedgerData::new(signer.clone());
+            let output: Output<Datum> = starting_output(&signer, starting_amount);
             data.add_output(output); // TODO: Parameterize
             let serialized = serde_json::to_string(&data).unwrap();
             let mut file = File::create(path).unwrap();
@@ -92,7 +135,7 @@ impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<
         }
     }
 
-    pub(crate) fn get_data(&self) -> LedgerData<Datum> {
+    pub(crate) fn get_data(&self) -> LedgerData {
         let path_ref: &Path = self.dir.as_ref();
         let path = path_ref.to_owned().join(DATA);
         let mut file = File::open(path).unwrap();
@@ -101,11 +144,11 @@ impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<
         serde_json::from_str(&contents).unwrap()
     }
 
-    fn update_outputs(&self, new_outputs: Vec<Output<Datum>>) {
+    fn update_outputs(&self, new_outputs: Vec<LDOutput>) {
         let path_ref: &Path = self.dir.as_ref();
         let path = path_ref.to_owned().join(DATA);
         let mut data = self.get_data();
-        data.outputs = new_outputs;
+        data.outputs = new_outputs.into_iter().map(Into::into).collect();
         let serialized = serde_json::to_string(&data).unwrap();
         let mut file = File::create(path).unwrap();
         file.write_all(&serialized.into_bytes()).unwrap();
@@ -127,14 +170,7 @@ impl<T: AsRef<Path>, Datum: Serialize + DeserializeOwned> LocalPersistedStorage<
 impl<T, Datum> TestLedgerStorage<Datum> for LocalPersistedStorage<T, Datum>
 where
     T: AsRef<Path> + Send + Sync,
-    Datum: Clone
-        + Send
-        + Sync
-        + Serialize
-        + DeserializeOwned
-        + PartialEq
-        + Into<PlutusData>
-        + TryFrom<PlutusData>,
+    Datum: Clone + Send + Sync + PartialEq + Into<PlutusData> + TryFrom<PlutusData>,
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
         let signer = self.get_data().signer;
@@ -150,6 +186,7 @@ where
         let outputs = data
             .outputs
             .into_iter()
+            .map(Into::<Output<Datum>>::into)
             .filter(|o| &o.owner() == address)
             .take(count)
             .map(|output| output.with_typed_datum_if_possible())
@@ -162,6 +199,7 @@ where
         let outputs = data
             .outputs
             .into_iter()
+            .map(Into::<Output<Datum>>::into)
             .filter(|o| &o.owner() == address)
             .map(|output| output.with_typed_datum_if_possible())
             .collect();
@@ -170,7 +208,7 @@ where
 
     async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
         let mut ledger_utxos = self.get_data().outputs;
-        let sanitized_output = output.with_untyped_datum();
+        let sanitized_output = output.clone().into();
 
         let index = ledger_utxos
             .iter()
@@ -187,7 +225,7 @@ where
     }
 
     async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()> {
-        let sanitized_output = output.with_untyped_datum();
+        let sanitized_output = output.clone().into();
         let mut ledger_utxos = self.get_data().outputs;
         ledger_utxos.push(sanitized_output);
         self.update_outputs(ledger_utxos);

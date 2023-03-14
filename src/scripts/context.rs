@@ -3,6 +3,7 @@ use crate::{
     PolicyId,
 };
 use pallas_addresses::Address;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
@@ -42,7 +43,7 @@ impl CtxOutputReference {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct PubKeyHash(Vec<u8>);
 
 impl PubKeyHash {

@@ -28,7 +28,6 @@ use async_trait::async_trait;
 use local_persisted_storage::LocalPersistedStorage;
 use pallas_addresses::Address;
 use rand::Rng;
-use serde::{de::DeserializeOwned, Serialize};
 use thiserror::Error;
 
 pub mod in_memory_storage;
@@ -189,14 +188,7 @@ where
 }
 impl<T, Datum, Redeemer> TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<T, Datum>>
 where
-    Datum: Clone
-        + Send
-        + Sync
-        + PartialEq
-        + Serialize
-        + DeserializeOwned
-        + Into<PlutusData>
-        + TryFrom<PlutusData>,
+    Datum: Clone + Send + Sync + PartialEq + Into<PlutusData> + TryFrom<PlutusData>,
     T: AsRef<Path> + Send + Sync,
 {
     pub fn new_local_persisted(dir: T, signer: Address, starting_amount: u64) -> Self {
@@ -297,8 +289,6 @@ where
             }
         }
 
-        println!("Combined Inputs: {:?}", &combined_inputs);
-
         let mut total_input_value =
             combined_inputs
                 .iter()
@@ -325,8 +315,6 @@ where
 
         total_input_value.add_values(&minted_value);
 
-        println!("Input Value: {:?}", &total_input_value);
-
         let total_output_value =
             tx.unbuilt_outputs()
                 .iter()
@@ -335,7 +323,6 @@ where
                     acc
                 });
 
-        println!("Output Value: {:?}", &total_output_value);
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| TestLCError::NotEnoughInputs)
@@ -358,7 +345,6 @@ where
 
         combined_outputs.extend(built_outputs);
 
-        println!("Outputs: {:?}", &combined_outputs);
         for output in combined_outputs {
             self.storage.add_output(&output).await?;
         }
