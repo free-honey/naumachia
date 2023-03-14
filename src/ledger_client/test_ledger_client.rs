@@ -290,8 +290,6 @@ where
             }
         }
 
-        println!("Combined Inputs: {:?}", &combined_inputs);
-
         let mut total_input_value =
             combined_inputs
                 .iter()
@@ -318,8 +316,6 @@ where
 
         total_input_value.add_values(&minted_value);
 
-        println!("Input Value: {:?}", &total_input_value);
-
         let total_output_value =
             tx.unbuilt_outputs()
                 .iter()
@@ -328,7 +324,6 @@ where
                     acc
                 });
 
-        println!("Output Value: {:?}", &total_output_value);
         let maybe_remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| TestLCError::NotEnoughInputs)
@@ -351,7 +346,6 @@ where
 
         combined_outputs.extend(built_outputs);
 
-        println!("Outputs: {:?}", &combined_outputs);
         for output in combined_outputs {
             self.storage.add_output(&output).await?;
         }
