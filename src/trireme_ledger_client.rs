@@ -155,6 +155,20 @@ impl TriremeConfig {
         }
     }
 
+    pub fn remove_env(&mut self, env_name: &str) -> Result<()> {
+        if self.envs.contains(&(env_name.to_string())) {
+            self.envs.retain(|env| env != env_name);
+            if let Some(env) = &self.current_env {
+                if env == env_name {
+                    self.current_env = None;
+                }
+            }
+            Ok(())
+        } else {
+            Err(Error::Trireme("Environment doesn't exist".to_string()))
+        }
+    }
+
     pub fn current_env(&self) -> Option<String> {
         self.current_env.clone()
     }

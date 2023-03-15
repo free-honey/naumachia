@@ -1,14 +1,16 @@
 use anyhow::Result;
 use dialoguer::{Input, Select};
-use naumachia::error::Error;
-use naumachia::ledger_client::test_ledger_client::local_persisted_storage::LocalPersistedStorage;
-use naumachia::trireme_ledger_client::{
-    cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
-    path_to_client_config_file, path_to_trireme_config_dir, path_to_trireme_config_file,
-    raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, KeySource,
-    LedgerSource, Network, TriremeConfig,
+use naumachia::{
+    error::Error,
+    ledger_client::test_ledger_client::local_persisted_storage::LocalPersistedStorage,
+    trireme_ledger_client::{
+        cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
+        path_to_client_config_file, path_to_trireme_config_dir, path_to_trireme_config_file,
+        raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, KeySource,
+        LedgerSource, Network, TriremeConfig,
+    },
+    Address,
 };
-use naumachia::Address;
 use std::{path::PathBuf, str::FromStr};
 use tokio::fs;
 
@@ -109,14 +111,44 @@ pub async fn switch_env_impl() -> Result<()> {
     }
 }
 
+pub async fn remove_env_impl() -> Result<()> {
+    match get_trireme_config_from_file().await? {
+        Some(mut config) => {
+            let items = config.envs();
+            let index = Select::new()
+                .with_prompt("Delete which environment?")
+                .items(&items)
+                .interact()?;
+            let name = items.get(index).expect("should always be a valid index");
+            let confirmation_name: String = Input::new()
+                .with_prompt("Type in name of env to confirm:")
+                .interact_text()?;
+            if &confirmation_name == name {
+                config.remove_env(&name)?;
+                write_trireme_config(&config).await?;
+                delete_directory(&name).await?;
+                println!("🌀 Removed env: {}", &name);
+            } else {
+                println!("Confirmation name doesn't match. Deletion Aborted ⚓")
+            }
+
+            Ok(())
+        }
+        None => Err(Error::Trireme("Environment doesn't exist".to_string()).into()),
+    }
+}
+
 pub async fn env_impl() -> Result<()> {
     const ERROR_MSG: &str = "No Environment Set";
-    let env = get_trireme_config_from_file()
+    if let Some(env) = get_trireme_config_from_file()
         .await?
         .and_then(|config| config.current_env())
-        .ok_or(Error::Trireme(ERROR_MSG.to_string()))?;
-    println!("Current Environment:");
-    println!("{}", env);
+    {
+        println!("Current Environment:");
+        println!("{}", env);
+    } else {
+        println!("No environment set");
+    }
     Ok(())
 }
 
@@ -169,5 +201,14 @@ async fn write_cml_client_config(
     let client_config = ClientConfig::new_cml(name, ledger_source, key_source, network);
     let file_path = path_to_client_config_file(sub_dir)?;
     write_toml_struct_to_file(&file_path, &client_config).await?;
+    Ok(())
+}
+
+async fn delete_directory(sub_dir: &str) -> Result<()> {
+    let file_path = path_to_client_config_file(sub_dir)?;
+    let parent_dir = file_path.parent().ok_or(Error::Trireme(
+        "Could not find parent directory for config".to_string(),
+    ))?;
+    fs::remove_dir_all(parent_dir).await?;
     Ok(())
 }

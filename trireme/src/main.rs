@@ -1,3 +1,4 @@
+use crate::environment::remove_env_impl;
 use crate::{
     balance::ada_balance_impl,
     balance::balance_impl,
@@ -27,6 +28,8 @@ enum ActionParams {
     NewEnv,
     /// Switch Environments
     SwitchEnv,
+    /// Remove Env
+    RemoveEnv,
     /// Get ADA Balance
     AdaBalance,
     /// Get Total Balance
@@ -40,6 +43,7 @@ async fn main() -> Result<()> {
         ActionParams::Env => env_impl().await?,
         ActionParams::NewEnv => new_env_impl().await?,
         ActionParams::SwitchEnv => switch_env_impl().await?,
+        ActionParams::RemoveEnv => remove_env_impl().await?,
         ActionParams::AdaBalance => ada_balance_impl().await?,
         ActionParams::Balance => balance_impl().await?,
     }
