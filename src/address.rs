@@ -28,6 +28,13 @@ impl PolicyId {
         }
     }
 
+    pub fn id(&self) -> String {
+        match self {
+            PolicyId::Lovelace => "".to_string(),
+            PolicyId::NativeToken(id, _) => id.clone(),
+        }
+    }
+
     pub fn asset_name(&self) -> Option<String> {
         match self {
             PolicyId::Lovelace => None,

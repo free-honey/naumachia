@@ -90,7 +90,33 @@ impl From<CheckingAccountDatums> for PlutusData {
 impl TryFrom<PlutusData> for CheckingAccountDatums {
     type Error = ();
 
-    fn try_from(_value: PlutusData) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(value: PlutusData) -> Result<Self, Self::Error> {
+        let PlutusData::Constr(constr) = value else {
+            return Err(())
+        };
+
+        let datum = match constr.fields.len() {
+            2 => checking_account_datum(&constr.fields)?,
+            8 => allowed_puller(&constr.fields)?,
+            _ => return Err(()),
+        };
+
+        Ok(datum)
     }
+}
+
+fn checking_account_datum(fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
+    let PlutusData::BoundedBytes(owner_bytes) = fields.get(0).ok_or(())? else { return Err(())};
+    let owner = PubKeyHash::new(&owner_bytes);
+    let PlutusData::BoundedBytes(policy_bytes) = fields.get(1).ok_or(())? else { return Err(())};
+    let spend_token_policy = policy_bytes.to_vec();
+    Ok(CheckingAccount {
+        owner,
+        spend_token_policy,
+    }
+    .into())
+}
+
+fn allowed_puller(_fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
+    todo!()
 }

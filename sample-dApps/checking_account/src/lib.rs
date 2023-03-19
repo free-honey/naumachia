@@ -1,15 +1,17 @@
-use crate::add_puller::add_puller;
-use crate::fund_account::fund_account;
-use crate::init_account::init_account;
-use crate::pull::pull_from_account;
-use crate::remove_puller::remove_puller;
-use crate::scripts::{
-    checking_account_validtor::checking_account_validator, pull_validator::pull_validator,
-    spend_token_policy::spend_token_policy,
+use crate::lookups::get_my_accounts;
+use crate::{
+    scripts::{
+        checking_account_validtor::checking_account_validator, pull_validator::pull_validator,
+        spend_token_policy::spend_token_policy,
+    },
+    withdraw::withdraw_from_account,
 };
-use crate::withdraw::withdraw_from_account;
 use async_trait::async_trait;
 use datum::{AllowedPuller, CheckingAccount, CheckingAccountDatums};
+use endpoints::{
+    add_puller::add_puller, fund_account::fund_account, init_account::init_account,
+    pull::pull_from_account, remove_puller::remove_puller,
+};
 use naumachia::{
     ledger_client::LedgerClient,
     logic::{SCLogic, SCLogicResult},
@@ -20,18 +22,11 @@ use naumachia::{
 };
 use thiserror::Error;
 
-mod add_puller;
 pub mod datum;
-mod fund_account;
-mod init_account;
-mod pull;
-mod remove_puller;
+mod endpoints;
+mod lookups;
 pub mod scripts;
 mod withdraw;
-
-#[allow(non_snake_case)]
-#[cfg(test)]
-mod tests;
 
 pub const CHECKING_ACCOUNT_NFT_ASSET_NAME: &str = "CHECKING ACCOUNT";
 pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
@@ -73,6 +68,20 @@ pub enum CheckingAccountEndpoints {
     },
 }
 
+pub enum CheckingAccountLookups {
+    MyAccounts,
+}
+
+pub enum CheckingAccountLookupResponses {
+    MyAccounts(Vec<Account>),
+}
+
+#[derive(Debug)]
+pub struct Account {
+    pub balance_ada: f64,
+    pub nft: Option<String>,
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct CheckingAccountLogic;
 
@@ -93,8 +102,8 @@ pub enum CheckingAccountError {
 #[async_trait]
 impl SCLogic for CheckingAccountLogic {
     type Endpoints = CheckingAccountEndpoints;
-    type Lookups = ();
-    type LookupResponses = ();
+    type Lookups = CheckingAccountLookups;
+    type LookupResponses = CheckingAccountLookupResponses;
     type Datums = CheckingAccountDatums;
     type Redeemers = ();
 
@@ -153,9 +162,11 @@ impl SCLogic for CheckingAccountLogic {
     }
 
     async fn lookup<Record: LedgerClient<Self::Datums, Self::Redeemers>>(
-        _query: Self::Lookups,
-        _ledger_client: &Record,
+        query: Self::Lookups,
+        ledger_client: &Record,
     ) -> SCLogicResult<Self::LookupResponses> {
-        todo!()
+        match query {
+            CheckingAccountLookups::MyAccounts => get_my_accounts(ledger_client).await,
+        }
     }
 }
