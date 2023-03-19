@@ -1,5 +1,8 @@
 use anyhow::Result;
-use checking::{CheckingAccountEndpoints, CheckingAccountLogic};
+use checking::{
+    CheckingAccountEndpoints, CheckingAccountLogic, CheckingAccountLookupResponses,
+    CheckingAccountLookups,
+};
 use clap::Parser;
 use naumachia::{
     backend::Backend,
@@ -21,6 +24,8 @@ enum ActionParams {
         /// ADA Amount
         starting_ada: f64,
     },
+    /// Lookup all checking accounts owned by me
+    MyAccounts,
 }
 
 #[tokio::main]
@@ -28,6 +33,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     match args.action {
         ActionParams::Init { starting_ada } => init_checking_account_impl(starting_ada).await?,
+        ActionParams::MyAccounts => my_account_impl().await?,
     }
     Ok(())
 }
@@ -41,8 +47,35 @@ async fn hit_endpoint(endpoint: CheckingAccountEndpoints) -> Result<()> {
     Ok(res)
 }
 
+async fn run_lookup(lookup: CheckingAccountLookups) -> Result<CheckingAccountLookupResponses> {
+    let logic = CheckingAccountLogic;
+    let ledger_client = get_trireme_ledger_client_from_file().await?;
+    let backend = Backend::new(ledger_client);
+    let contract = SmartContract::new(&logic, &backend);
+    let res = contract.lookup(lookup).await?;
+    Ok(res)
+}
+
+// TODO: Give some feedback?
 async fn init_checking_account_impl(starting_ada: f64) -> Result<()> {
     let starting_lovelace = (starting_ada * 1_000_000.0) as u64; // TODO: Panic
     let endpoint = CheckingAccountEndpoints::InitAccount { starting_lovelace };
     hit_endpoint(endpoint).await
+}
+
+async fn my_account_impl() -> Result<()> {
+    let lookup = CheckingAccountLookups::MyAccounts;
+    let res = run_lookup(lookup).await?;
+    match res {
+        CheckingAccountLookupResponses::MyAccounts(accounts) => {
+            accounts.iter().for_each(|account| {
+                println!("==========================================");
+                println!("{:?} ADA", account.balance_ada);
+                if let Some(nft) = &account.nft {
+                    println!("attached to nft: {:?}", nft);
+                }
+            })
+        }
+    }
+    Ok(())
 }

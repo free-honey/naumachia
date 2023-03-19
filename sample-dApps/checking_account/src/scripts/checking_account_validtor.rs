@@ -1,4 +1,4 @@
-use crate::CheckingAccountDatums;
+use crate::datum::CheckingAccountDatums;
 use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::scripts::raw_validator_script::RawPlutusValidator;
@@ -41,7 +41,7 @@ pub fn checking_account_validator() -> ScriptResult<RawPlutusValidator<CheckingA
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::CheckingAccount;
+    use crate::datum::CheckingAccount;
     use hex;
     use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
     use naumachia::scripts::ValidatorCode;

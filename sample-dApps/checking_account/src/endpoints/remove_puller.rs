@@ -1,0 +1,30 @@
+use crate::{pull_validator, CheckingAccountDatums, CheckingAccountError};
+use naumachia::{
+    ledger_client::LedgerClient,
+    logic::{SCLogicError, SCLogicResult},
+    output::OutputId,
+    scripts::ValidatorCode,
+    transaction::TxActions,
+};
+
+pub async fn remove_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
+    ledger_client: &LC,
+    output_id: OutputId,
+) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let validator = pull_validator().map_err(SCLogicError::ValidatorScript)?;
+    let address = validator
+        .address(0)
+        .map_err(SCLogicError::ValidatorScript)?;
+    let output = ledger_client
+        .all_outputs_at_address(&address)
+        .await
+        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .into_iter()
+        .find(|o| o.id() == &output_id)
+        .ok_or(CheckingAccountError::OutputNotFound(output_id))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let redeemer = ();
+    let script = Box::new(validator);
+    let actions = TxActions::v2().with_script_redeem(output, redeemer, script);
+    Ok(actions)
+}

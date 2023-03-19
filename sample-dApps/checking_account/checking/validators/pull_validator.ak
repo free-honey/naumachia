@@ -138,8 +138,8 @@ fn find_account_output(datum: PullDatum, ctx: ScriptContext) -> Option<Output> {
     })
 }
 
-validator spend {
-    fn(datum: PullDatum, _redeemer: Void, ctx: ScriptContext) -> Bool {
+validator {
+    fn spend(datum: PullDatum, _redeemer: Void, ctx: ScriptContext) -> Bool {
         let signed_by_owner = ctx.transaction.extra_signatories
         |> list.any(fn(signature) {
             signature == datum.owner
