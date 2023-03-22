@@ -132,7 +132,8 @@ That's it!
 
 How do wo know it works though? We can right unit tests!
 
-We can use the `TestBackendBuilder` to build an in-memory representation of a ledger:
+We can use the `TestBackendBuilder` to build an in-memory representation of a ledger. You can start by giving a
+starting balance to the address `me` who is specified as the signer in `new()`.
 
 ```rust
     let me = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
@@ -149,7 +150,6 @@ Then it's as simple as hitting the `Lock` endpoint:
 ```rust
     let amount = 10_000_000;
     let endpoint = AlwaysSucceedsEndpoints::Lock { amount };
-    ...
     let contract = SmartContract::new(&AlwaysSucceedsLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
 ```
@@ -158,6 +158,7 @@ And then we can do checks on the balances at the script address and at the locke
 
 ```rust
     {
+        let script = get_script().unwrap();
         let expected = amount;
         let actual = backend
             .ledger_client
@@ -182,7 +183,7 @@ Here's it all together:
 
 ```rust
 #[tokio::test]
-async fn lock_and_claim() {
+async fn lock() {
     let me = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
     let start_amount = 100_000_000;
     let backend = TestBackendsBuilder::new(&me)
@@ -193,10 +194,11 @@ async fn lock_and_claim() {
 
     let amount = 10_000_000;
     let endpoint = AlwaysSucceedsEndpoints::Lock { amount };
-    let script = get_script().unwrap();
     let contract = SmartContract::new(&AlwaysSucceedsLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
+
     {
+        let script = get_script().unwrap();
         let expected = amount;
         let actual = backend
             .ledger_client

@@ -90,4 +90,8 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 is not a `PlutusData` representation in Naumachia These generics allow you to constrain the ledger to allow conversion
 for your Rust datum and redeemer types to be converted to some ledger-specific representation.*)
 
+Naumachia provides multiple implementations of `LedgerClient` out of the bag. For example `TestLedgerClient` provides
+a mock ledger that is in-memory, or persisted to the filesystem. The `TriremeLedgerClient` provides compatibility
+with the `trireme` wallet cli tool. More is covered later in the [Trireme](docs/getting_started/TRIREME.md) section.
+
 [Next: Implementing your smart contract](docs/getting_started/SMART_CONTRACT.md)
