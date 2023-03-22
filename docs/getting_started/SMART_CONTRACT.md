@@ -1,9 +1,9 @@
 ### Implementing Your Smart Contract
 
-Let's write a simple `always_succeeds` smart contract.
+Let's look at a simple `always_succeeds` smart contract.
 
 The contract is made up of just one spending script that allows any transaction to spend outputs at the script address.
-We need to define the API for some consumer who might want to lock value or claim value stored at the address.
+We need to define the API for some consumer who might want to lock value or claim value stored at the script address.
 
 #### Endpoints
 
@@ -16,7 +16,7 @@ pub enum AlwaysSucceedsEndpoints {
 
 The two actions our consumer might make are 
 - `Lock`: Send the specified `amount` in Lovelace to the script address
-- `Claim`: Claim some "locked" value by specifing the `output_id` of some output at the script address
+- `Claim`: Claim some "locked" value by specifing the `output_id` of the corresponding output at the script address
 
 #### Lookups & LookupResponses
 
@@ -80,13 +80,13 @@ impl SCLogic for AlwaysSucceedsLogic {
 ### `TxActions`
 
 As you can see, the `handle_endpoint` and `lookup` methods also need to be filled in. In our above implemenation, each
-variant of `Entpoints` and `Lookups` is matched with a corresponding function. 
+variant of `Endpoints` and `Lookups` is matched with a corresponding function. 
 
 `TxActions` is a declarative API for building transactions in Naumachia. Because `SCLogic` is agnostic of the backend,
 `TxActions` allow you to specify what actions you want in your transaction, without needing to build the actual 
 transaction that is submitted to chain.
 
-Let's take a look at the function for `Lock`. `handle_endpoint` expects type `TxActions`.
+Let's take a look at the function for `Lock`. `handle_endpoint` expects the return type to be `TxActions`:
 
 ```rust
 fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
@@ -109,7 +109,7 @@ This output only has `Lovelace` of the specified `amount`
 2. Finding the script and script address
 
 We use some function `always_succeeds_script()` to get the script. We'll talk about defining and building scripts
-more in the [next](docs/getting_started/SCRIPTS.md) section. From that script, we can also lookup the script `address`.
+more in the [next](docs/getting_started/SCRIPTS.md) section. From that script, we can also derive the script `address`.
 The address is dependent on which `NETWORK` we are using, which in this case is:
 
 ```rust
@@ -118,9 +118,9 @@ const NETWORK: u8 = 0;
 
 for test networks.
 
-(*note: `network()` will soon be an enpoint on the LedgerClient so that you don't need to hardcode it*)
+(*note: `network()` will soon be an endpoint on the LedgerClient so that you don't need to hardcode it*)
 
-3. Creating the `tx_actions`
+3. Creating the `TxActions`
 
 In the case of `Lock`, the only action taken in the transaction is sending an output to the script address. This is 
 done by calling the `with_script_init()` method, which takes the datum `()`, the values `values`, 
@@ -130,7 +130,7 @@ That's it!
 
 ### Testing
 
-How do wo know it works though? We can right unit tests!
+How do wo know it works though? We can write unit tests!
 
 We can use the `TestBackendBuilder` to build an in-memory representation of a ledger. You can start by giving a
 starting balance to the address `me` who is specified as the signer in `new()`.
@@ -221,4 +221,4 @@ async fn lock() {
 ```
 
 
-[Next: Writing & Using Scripts](docs/getting_started/SCRIPTS.md)
+[Next: Writing & Using Scripts](SCRIPTS.md)
