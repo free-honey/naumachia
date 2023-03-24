@@ -20,12 +20,10 @@ Find us at the [TxPipe Discord!](https://discord.gg/4hUAdHAexb)
 ### Getting Started
 
 - [Smart Contracts with Naumachia](docs/getting_started/BASICS.md)
+- [Contract Testing](docs/getting_started/SMART_CONTRACT.md)
 - [Script Testing](docs/getting_started/SCRIPTS.md)
-- [Contract Testing](docs/getting_started/BACKEND_BUILDER.md)
 - [Trireme](docs/getting_started/TRIREME.md)
 - [Try It Out](docs/getting_started/TRY_IT_OUT.md)
-
-
 
 
 
@@ -40,8 +38,7 @@ Big fan of modern programming techniques. We are trying to prioritize
 3. Performance, once the other stuff is solid
 
 Feel free to start issues/discussions if there are things you feel are missing or whatever.
-I love feedback as I'm figuring out a lot of this as I go. 
-I want to get the design right. Questions also welcome.
+We love feedback!
 
 Check out our [architecture diagram](docs/ARCHITECTURE.md).
 
