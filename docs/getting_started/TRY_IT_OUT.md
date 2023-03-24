@@ -18,26 +18,13 @@ I've only tested on Linux.
 Please only use a secret phrase from a TESTNET wallet with funds you are willing to lose.
 ⚠️⚠️Naumachia and the Trireme CLI are still under development!
 
-To interact with your contract, you will need to install the `trireme` cli:
-```
-cargo install --path ./trireme
-```
+To interact with your contract, you will need to install the `trireme` cli. 
+Follow the instructions in the [Trireme](TRIREME.md) section to set it up.
 
-Trireme allows you to manage your secrets for all your Naumachia dApps.
+Trireme provides an environment for you to test your dApps in. It can be mocked locally, or it can connect you to 
+the PreProd testnet. Prod is coming soon!
 
-To add your api key and your secret phrase, run:
-```
-trireme init
-```
-Which will prompt you to enter your information.
-⚠️⚠️Your config files will be stored in plain text on your local file system under `~/.trireme`.
-
-Use `Trireme` to check your initial balance!
-``` 
-trireme balance
-```
-
-Now that Trireme is set up, you are ready to interact with the blockchain!
+Now that Trireme is set up, you are ready to interact with your environment!
 
 First, install the dApp CLI:
 ```
@@ -48,18 +35,15 @@ and try locking 10 ADA at the contract address:
 always-cli lock 10
 ```
 
-It can take a few minutes for your transaction to show up on chain.
+(*note: If using an actual chain, it can take a few minutes for your transaction to show up*)
 
-You can `trireme balance` again to check your balance. Or, use the returned TxId to track
-on the [testnet explorer](https://explorer.cardano-testnet.iohkdev.io/en) or
-in your wallet interface (Yoroi, Nami, etc). Your balance should have decreased by 10 + fees.
-
+You can `trireme balance` again to check your balance. 
 
 Once it has gone through, you can run
 ```
 always-cli list 5
 ```
-Which will show the 5 newest locked UTxOs at the script address (feel free to look at more). You will probably see
+Which will show the 5 newest locked UTxOs at the script address (feel free to look at more or fewer). You will probably see
 a bunch of other UTxOs locked at the script address. You can try and claim those,
 but many of them aren't claimable for a number of reasons.
 
@@ -67,7 +51,5 @@ You will need to find yours and include the Output Id info in your `claim` comma
 ```
 always-cli claim <tx_hash> <index>
 ```
-Again, this might take a few minutes to execute. But check `trireme balance` or your wallet interface
-to see that your balance has returned to your original balance minus fees for the two txs.
 
 **Fin!**

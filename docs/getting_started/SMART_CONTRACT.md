@@ -2,6 +2,8 @@
 
 Let's look at a simple `always_succeeds` smart contract.
 
+*Check out the full code [here](../../sample-dApps/always-succeeds-contract/src/logic.rs)*
+
 The contract is made up of just one spending script that allows any transaction to spend outputs at the script address.
 We need to define the API for some consumer who might want to lock value or claim value stored at the script address.
 
@@ -92,7 +94,7 @@ Let's take a look at the function for `Lock`. `handle_endpoint` expects the retu
 fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, amount);
-    let script = always_succeeds_script().map_err(SCLogicError::ValidatorScript)?;
+    let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
         .address(NETWORK)
         .map_err(SCLogicError::ValidatorScript)?;
@@ -108,7 +110,7 @@ This output only has `Lovelace` of the specified `amount`
 
 2. Finding the script and script address
 
-We use some function `always_succeeds_script()` to get the script. We'll talk about defining and building scripts
+We use some function `get_script()` to get the script. We'll talk about defining and building scripts
 more in the [next](docs/getting_started/SCRIPTS.md) section. From that script, we can also derive the script `address`.
 The address is dependent on which `NETWORK` we are using, which in this case is:
 
