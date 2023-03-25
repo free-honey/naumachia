@@ -32,7 +32,7 @@ pub enum AlwaysSucceedsLookupResponses {
 }
 ```
 
-The only lookup is just to see what locked outputs there are at the script address.
+The only lookup is to see what locked outputs there are at the script address.
 
 `ListActiveContracts` requires a `count` of outputs you want to list and `ActiveContracts` will return up to that
 number of outputs that are at the script address.
@@ -67,10 +67,10 @@ impl SCLogic for AlwaysSucceedsLogic {
     }
 
     async fn lookup<LC: LedgerClient<Self::Datums, Self::Redeemers>>(
-        query: Self::Lookups,
+        lookup: Self::Lookups,
         ledger_client: &LC,
     ) -> SCLogicResult<Self::LookupResponses> {
-        match query {
+        match lookup {
             AlwaysSucceedsLookups::ListActiveContracts { count } => {
                 impl_list_active_contracts(ledger_client, count).await
             }
@@ -82,13 +82,17 @@ impl SCLogic for AlwaysSucceedsLogic {
 ### `TxActions`
 
 As you can see, the `handle_endpoint` and `lookup` methods also need to be filled in. In our above implemenation, each
-variant of `Endpoints` and `Lookups` is matched with a corresponding function. 
+variant of `Endpoints` and `Lookups` is matched with a corresponding function:
+
+```rust
+            AlwaysSucceedsEndpoints::Lock { amount } => impl_lock(amount),
+```
+
+Let's take a look at the function for `Lock`. `handle_endpoint` expects the return type to be `TxActions`.
 
 `TxActions` is a declarative API for building transactions in Naumachia. Because `SCLogic` is agnostic of the backend,
-`TxActions` allow you to specify what actions you want in your transaction, without needing to build the actual 
+`TxActions` allow you to specify what actions you want in your transaction, without needing to build the actual
 transaction that is submitted to chain.
-
-Let's take a look at the function for `Lock`. `handle_endpoint` expects the return type to be `TxActions`:
 
 ```rust
 fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
@@ -103,6 +107,8 @@ fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
 }
 ```
 
+
+
 There are three main things happening here:
 1. Specify the `Value` of the output we want to lock
 
@@ -110,8 +116,8 @@ This output only has `Lovelace` of the specified `amount`
 
 2. Finding the script and script address
 
-We use some function `get_script()` to get the script. We'll talk about defining and building scripts
-more in the [next](docs/getting_started/SCRIPTS.md) section. From that script, we can also derive the script `address`.
+We use some function `get_script()` to load the script. We'll talk about defining and building scripts
+more in the [next](SCRIPTS.md) section. From that script, we can also derive the script `address`.
 The address is dependent on which `NETWORK` we are using, which in this case is:
 
 ```rust
@@ -134,7 +140,7 @@ That's it!
 
 How do wo know it works though? We can write unit tests!
 
-We can use the `TestBackendBuilder` to build an in-memory representation of a ledger. You can start by giving a
+We can use the `TestBackendBuilder` to build an in-memory representation of a ledger. You can give a
 starting balance to the address `me` who is specified as the signer in `new()`.
 
 ```rust

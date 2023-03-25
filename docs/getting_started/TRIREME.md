@@ -28,11 +28,18 @@ Select `Local Mocked` for now. This will allow you to run your dApps locally wit
 (*note: ⚠️⚠️If you choose Blockfrost API, your config files will be stored in plain text on your local file system 
 under `~/.trireme`. Please use test wallets only while `trireme` is still new.*)
 
-This will allow any dApp with a `TriremeLedgerClient` to interact with your environment seamlessly.
+### Check your balance!
 
-Use `Trireme` to check your initial balance!
+Use `trireme` to check your initial balance!
 ``` 
 trireme balance
 ```
+
+### `TriremeLedgerClient`
+
+The current environment selected by your `trireme` cli will be used by your dApps with a `TriremeLedgerClient`.
+This enables quick switching between dApps without configuring each for different environments :).
+
+In fact, `trireme` itself is using Naumachia under to the hood for certain commands!
 
 [Next: Try out the contract!](./TRY_IT_OUT.md)

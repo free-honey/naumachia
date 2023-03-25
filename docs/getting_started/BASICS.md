@@ -4,20 +4,20 @@
 
 ### What is Naumachia?
 
-The Cardano Smart Contract scheme pushes a lot of the code off-chain.
-Naumachia is designed to make the development of off-chain code as easy as possible, but also give you an
-environment to test your on-chain code.
+Naumachia is a way to write off-chain code for Cardano Smart Contracts.
 
-Included in the library are the tools for declaratively orchestrating interactions with validator scripts,
-minting policies, and wallets;
-building and checking your transaction against your on-chain code;
-testing at multiple abstraction layers;
-deploying, managing, and interacting with your Smart Contract in production.
+On-chain code, known as "validator scripts," are passive. This means they don't do anything automatically. 
+Well designed validator scripts act as locks on value and data; they prevent the user from spending tokens they 
+don't own, minting tokens they're not allowed to mint, or changing data they're not allowed to change. 
+The transaction for actually spending tokens or changing data however, is built off-chain. 
+
+Naumachia helps you define these transactions! Not just at a blockchain level, but at a business level. 
+The blockchain is just an implementation detail.
 
 ### Common API
 
 The thesis behind the Naumachia Smart Contract framework is that smart contracts all have a similar api shape, namely:
-- **Endpoints:** The set of actions a consumer of the contract might make
+- **Endpoints:** Domain specific transactions that a contract user can make
 - **Lookups:** The set of queries a consumer might be interested in
 - **Lookup Responses:** The set of data types that can be returned by the lookups
 
@@ -87,11 +87,11 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 ```
 
 (*note: Notice that the `LedgerClient` is generic for `Datum` and `Redeemer`. This might change in the future as there
-is not a `PlutusData` representation in Naumachia These generics allow you to constrain the ledger to allow conversion
-for your Rust datum and redeemer types to be converted to some ledger-specific representation.*)
+is now a `PlutusData` representation in Naumachia These generics allow you to constrain the ledger to convert
+your Rust datum and redeemer types to a ledger-specific representation.*)
 
 Naumachia provides multiple implementations of `LedgerClient` out of the bag. For example `TestLedgerClient` provides
 a mock ledger that is in-memory, or persisted to the filesystem. The `TriremeLedgerClient` provides compatibility
-with the `trireme` wallet cli tool. More is covered later in the [Trireme](docs/getting_started/TRIREME.md) section.
+with the `trireme` wallet cli tool. More is covered later in the [Trireme](TRIREME.md) section.
 
 [Next: Implementing your smart contract](SMART_CONTRACT.md)
