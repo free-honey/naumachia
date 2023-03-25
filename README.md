@@ -20,8 +20,8 @@ Find us at the [TxPipe Discord!](https://discord.gg/4hUAdHAexb)
 ### Getting Started
 
 - [Smart Contracts with Naumachia](docs/getting_started/BASICS.md)
-- [Contract Testing](docs/getting_started/SMART_CONTRACT.md)
-- [Script Testing](docs/getting_started/SCRIPTS.md)
+- [Contracts and Contract Testing](docs/getting_started/SMART_CONTRACT.md)
+- [Scripts and Script Testing](docs/getting_started/SCRIPTS.md)
 - [Trireme](docs/getting_started/TRIREME.md)
 - [Try It Out](docs/getting_started/TRY_IT_OUT.md)
 
