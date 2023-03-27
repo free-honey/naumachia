@@ -99,14 +99,15 @@ async fn add_puller_impl() -> Result<()> {
         .interact_text()?;
     let puller_address = Address::from_bech32(&puller_address_string)?;
     let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
-    let amount_lovelace: u64 = dialoguer::Input::new()
+    let amount_ada: u64 = dialoguer::Input::new()
         .with_prompt("Amount of ADA to pull")
         .interact_text()?;
+    let amount_lovelace = amount_ada * 1_000_000;
     let period: i64 = dialoguer::Input::new()
-        .with_prompt("Period in seconds")
+        .with_prompt("Period in milliseconds")
         .interact_text()?;
     let next_pull: i64 = dialoguer::Input::new()
-        .with_prompt("Next pull in seconds")
+        .with_prompt("Next pull in milliseconds")
         .interact_text()?;
     let endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft,
