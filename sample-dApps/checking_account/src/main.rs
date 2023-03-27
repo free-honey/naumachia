@@ -4,10 +4,12 @@ use checking::{
     CheckingAccountLookups,
 };
 use clap::Parser;
+use naumachia::scripts::context::pub_key_hash_from_address_if_available;
 use naumachia::{
     backend::Backend,
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
+    Address,
 };
 
 #[derive(Parser, Debug)]
@@ -26,6 +28,8 @@ enum ActionParams {
     },
     /// Lookup all checking accounts owned by me
     MyAccounts,
+    /// Starts a dialogue to add a puller for a checking account
+    AddPuller,
 }
 
 #[tokio::main]
@@ -34,6 +38,7 @@ async fn main() -> Result<()> {
     match args.action {
         ActionParams::Init { starting_ada } => init_checking_account_impl(starting_ada).await?,
         ActionParams::MyAccounts => my_account_impl().await?,
+        ActionParams::AddPuller => add_puller_impl().await?,
     }
     Ok(())
 }
@@ -78,4 +83,38 @@ async fn my_account_impl() -> Result<()> {
         }
     }
     Ok(())
+}
+
+// Create dialogue for filling out the puller endpoint
+async fn add_puller_impl() -> Result<()> {
+    let checking_account_nft: String = dialoguer::Input::new()
+        .with_prompt("Checking account NFT")
+        .interact_text()?;
+    let address_string: String = dialoguer::Input::new()
+        .with_prompt("Checking account address")
+        .interact_text()?;
+    let checking_account_address = Address::from_bech32(&address_string)?;
+    let puller_address_string: String = dialoguer::Input::new()
+        .with_prompt("Puller address")
+        .interact_text()?;
+    let puller_address = Address::from_bech32(&puller_address_string)?;
+    let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
+    let amount_lovelace: u64 = dialoguer::Input::new()
+        .with_prompt("Amount of ADA to pull")
+        .interact_text()?;
+    let period: i64 = dialoguer::Input::new()
+        .with_prompt("Period in seconds")
+        .interact_text()?;
+    let next_pull: i64 = dialoguer::Input::new()
+        .with_prompt("Next pull in seconds")
+        .interact_text()?;
+    let endpoint = CheckingAccountEndpoints::AddPuller {
+        checking_account_nft,
+        checking_account_address,
+        puller,
+        amount_lovelace,
+        period,
+        next_pull,
+    };
+    hit_endpoint(endpoint).await
 }
