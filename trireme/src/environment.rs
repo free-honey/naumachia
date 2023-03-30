@@ -1,5 +1,6 @@
 use anyhow::Result;
 use dialoguer::{Input, Select};
+use naumachia::trireme_ledger_client::{read_toml_struct_from_file, ClientVariant};
 use naumachia::{
     error::Error,
     ledger_client::test_ledger_client::local_persisted_storage::LocalPersistedStorage,
@@ -69,16 +70,30 @@ pub async fn new_env_impl() -> Result<()> {
                 .await?;
         }
         EnvironmentType::LocalMocked => {
-            // TODO: Add other keys
-            let alice = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr")?;
+            let alice_name = "Alice";
+            let alice_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr")?;
+            let bob_name = "Bob";
+            let bob_address = Address::from_bech32("addr_test1qzulfkd06qm7t2nwe44nnuxh57k4h3p8zdrqukrjcekwn3kcra4ulhfn3g7j9gmnvmefjwzfsd55fq5ndecwlhgcw4zq07drdr")?;
+            let charlotte_name = "Charlotte";
+            let charlotte_address = Address::from_bech32("addr_test1qryc5tck5kqqs3arcqnl4lplvw5yg2ujsdnhx5eawn9lyzzvpmpraw365fayhrtpzpl4nulq6f9hhdkh4cdyh0tgnjxsg03qnh")?;
+            let dick_name = "Dick";
+            let dick_address = Address::from_bech32("addr_test1qr25qu9uu2putyngq38p04suc7w4lsgq5ylvt5q8hf3d9jh8gqwn858xkeuq7dlg5zycefeztfps6dmh62zpvac5wqxqvtgh4x")?;
+
             let start_balance = 100_000_000_000; // Lovelace
             let dir = path_to_client_config_file(&sub_dir)?;
             let parent_dir = dir.parent().ok_or(Error::Trireme(
                 "Could not find parent directory for config".to_string(),
             ))?;
             fs::create_dir_all(&parent_dir).await?;
-            let _ =
-                LocalPersistedStorage::<PathBuf, ()>::init(parent_dir.into(), alice, start_balance);
+            let storage = LocalPersistedStorage::<PathBuf, ()>::init(
+                parent_dir.into(),
+                alice_name,
+                &alice_address,
+                start_balance,
+            );
+            storage.add_new_signer(bob_name, &bob_address, start_balance);
+            storage.add_new_signer(charlotte_name, &charlotte_address, start_balance);
+            storage.add_new_signer(dick_name, &dick_address, start_balance);
             let client_config = ClientConfig::new_test(&name, &(parent_dir.into()));
             write_toml_struct_to_file(&dir, &client_config).await?;
         }
@@ -121,7 +136,7 @@ pub async fn remove_env_impl() -> Result<()> {
                 .interact()?;
             let name = items.get(index).expect("should always be a valid index");
             let confirmation_name: String = Input::new()
-                .with_prompt("Type in name of env to confirm:")
+                .with_prompt("Type in name of env to confirm")
                 .interact_text()?;
             if &confirmation_name == name {
                 config.remove_env(&name)?;
@@ -159,6 +174,58 @@ fn print_safety_warning() {
     println!("⚠️  Trireme only works on Testnet currently!");
     println!("⚠️  Keys will be stored in plaintext files on your computer!");
     println!();
+}
+
+pub async fn active_signer_impl() -> Result<()> {
+    let sub_dir = get_trireme_config_from_file()
+        .await?
+        .and_then(|config| config.current_env())
+        .unwrap(); // TODO
+    let dir = path_to_client_config_file(&sub_dir)?;
+    let config = read_toml_struct_from_file::<ClientConfig>(&dir)
+        .await?
+        .unwrap(); // TODO
+    match config.variant() {
+        ClientVariant::Test(inner) => {
+            let path = inner.data_path();
+            let storage = LocalPersistedStorage::<PathBuf, ()>::load(path);
+            let signer = storage.active_signer_name();
+            println!("Active signer: {}", signer);
+        }
+        _ => {
+            unimplemented!("Only the mock supports multiple signers");
+        }
+    }
+    Ok(())
+}
+
+pub async fn switch_signer_impl() -> Result<()> {
+    let sub_dir = get_trireme_config_from_file()
+        .await?
+        .and_then(|config| config.current_env())
+        .unwrap();
+    let dir = path_to_client_config_file(&sub_dir)?;
+    let config = read_toml_struct_from_file::<ClientConfig>(&dir)
+        .await?
+        .unwrap(); // TODO
+    match config.variant() {
+        ClientVariant::Test(inner) => {
+            let path = inner.data_path();
+            let storage = LocalPersistedStorage::<PathBuf, ()>::load(path);
+            let items = storage.get_signers();
+            let choice = Select::new()
+                .with_prompt("To which signer?")
+                .items(&items)
+                .interact()?;
+            let name = items.get(choice).expect("should always be a valid index");
+            storage.switch_signer(&name);
+            println!("Switched signer to: {}", &name);
+        }
+        _ => {
+            unimplemented!("Only the mock supports adding signers");
+        }
+    }
+    Ok(())
 }
 
 const RAW_PHRASE_FILE: &str = "secret_phrase.toml";

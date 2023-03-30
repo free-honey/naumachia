@@ -1,9 +1,7 @@
-use crate::environment::remove_env_impl;
+use crate::environment::{active_signer_impl, switch_signer_impl};
 use crate::{
-    balance::ada_balance_impl,
-    balance::balance_impl,
-    environment::new_env_impl,
-    environment::{env_impl, switch_env_impl},
+    balance::{ada_balance_impl, balance_impl},
+    environment::{env_impl, new_env_impl, remove_env_impl, switch_env_impl},
     logic::{TriremeLogic, TriremeLookups, TriremeResponses},
 };
 use anyhow::Result;
@@ -34,6 +32,10 @@ enum ActionParams {
     AdaBalance,
     /// Get Total Balance
     Balance,
+    /// Reports active signer
+    Signer,
+    /// Switch to different signer (Mock Network Only)
+    SwitchSigner,
 }
 
 #[tokio::main]
@@ -46,6 +48,8 @@ async fn main() -> Result<()> {
         ActionParams::RemoveEnv => remove_env_impl().await?,
         ActionParams::AdaBalance => ada_balance_impl().await?,
         ActionParams::Balance => balance_impl().await?,
+        ActionParams::Signer => active_signer_impl().await?,
+        ActionParams::SwitchSigner => switch_signer_impl().await?,
     }
     Ok(())
 }

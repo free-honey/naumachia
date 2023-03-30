@@ -1,5 +1,6 @@
 use pallas_addresses::Address;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 use std::{
     fmt::Debug,
@@ -21,7 +22,9 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct LedgerData {
-    signer: String,
+    active_signer_name: String,
+    active_signer: String,
+    signers: HashMap<String, String>,
     outputs: Vec<LDOutput>,
     current_time: i64,
 }
@@ -73,17 +76,40 @@ enum LocalPersistedLCError {
 }
 
 impl LedgerData {
-    pub fn new(signer: Address) -> Self {
+    pub fn new(signer_name: &str, signer_address: &Address) -> Self {
         let outputs = Vec::new();
+        let address_bech_32 = signer_address.to_bech32().expect("Already validated");
+        let mut signers = HashMap::new();
+        signers.insert(signer_name.to_string(), address_bech_32.clone());
         LedgerData {
-            signer: signer.to_bech32().expect("Already validated"),
+            active_signer_name: signer_name.to_string(),
+            active_signer: address_bech_32.clone(),
+            signers,
             outputs,
             current_time: 0,
         }
     }
 
+    pub fn signers(&self) -> Vec<String> {
+        self.signers.keys().cloned().collect()
+    }
+
     pub fn add_output<Datum: Clone + Into<PlutusData>>(&mut self, output: Output<Datum>) {
         self.outputs.push(output.into())
+    }
+
+    pub fn add_signer(&mut self, name: &str, address: &Address) {
+        let address_bech_32 = address.to_bech32().expect("Already validated");
+        self.signers.insert(name.to_string(), address_bech_32);
+    }
+
+    pub fn switch_signer(&mut self, name: &str) {
+        self.active_signer_name = name.to_string();
+        if let Some(address) = self.signers.get(name) {
+            self.active_signer = address.to_string();
+        } else {
+            panic!("Signer not found"); // TODO
+        };
     }
 }
 
@@ -108,12 +134,12 @@ where
     T: AsRef<Path>,
     Datum: Clone + Into<PlutusData>,
 {
-    pub fn init(dir: T, signer: Address, starting_amount: u64) -> Self {
+    pub fn init(dir: T, signer_name: &str, signer: &Address, starting_amount: u64) -> Self {
         let path_ref: &Path = dir.as_ref();
         let path = path_ref.to_owned().join(DATA);
         if !path.exists() {
-            let mut data = LedgerData::new(signer.clone());
-            let output: Output<Datum> = starting_output(&signer, starting_amount);
+            let mut data = LedgerData::new(signer_name, signer);
+            let output: Output<Datum> = starting_output(signer, starting_amount);
             data.add_output(output); // TODO: Parameterize
             let serialized = serde_json::to_string(&data).unwrap();
             let mut file = File::create(path).unwrap();
@@ -164,6 +190,38 @@ where
         file.write_all(&serialized.into_bytes()).unwrap();
         Ok(())
     }
+
+    pub fn add_new_signer(&self, name: &str, address: &Address, starting_amount: u64) {
+        let path_ref: &Path = self.dir.as_ref();
+        let path = path_ref.to_owned().join(DATA);
+        let mut data = self.get_data();
+        let output: Output<Datum> = starting_output(address, starting_amount);
+        data.add_output(output);
+        data.add_signer(name, address);
+        let serialized = serde_json::to_string(&data).unwrap();
+        let mut file = File::create(path).unwrap();
+        file.write_all(&serialized.into_bytes()).unwrap();
+    }
+
+    pub fn active_signer_name(&self) -> String {
+        let data = self.get_data();
+        data.active_signer_name
+    }
+
+    pub fn get_signers(&self) -> Vec<String> {
+        let data = self.get_data();
+        data.signers()
+    }
+
+    pub fn switch_signer(&self, name: &str) {
+        let path_ref: &Path = self.dir.as_ref();
+        let path = path_ref.to_owned().join(DATA);
+        let mut data = self.get_data();
+        data.switch_signer(name);
+        let serialized = serde_json::to_string(&data).unwrap();
+        let mut file = File::create(path).unwrap();
+        file.write_all(&serialized.into_bytes()).unwrap();
+    }
 }
 
 #[async_trait::async_trait]
@@ -173,7 +231,7 @@ where
     Datum: Clone + Send + Sync + PartialEq + Into<PlutusData> + TryFrom<PlutusData>,
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
-        let signer = self.get_data().signer;
+        let signer = self.get_data().active_signer;
         Address::from_bech32(&signer).map_err(|e| LedgerClientError::BadAddress(Box::new(e)))
     }
 

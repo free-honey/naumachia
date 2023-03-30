@@ -191,8 +191,9 @@ where
     Datum: Clone + Send + Sync + PartialEq + Into<PlutusData> + TryFrom<PlutusData>,
     T: AsRef<Path> + Send + Sync,
 {
-    pub fn new_local_persisted(dir: T, signer: Address, starting_amount: u64) -> Self {
-        let storage = LocalPersistedStorage::init(dir, signer, starting_amount);
+    pub fn new_local_persisted(dir: T, signer: &Address, starting_amount: u64) -> Self {
+        let signer_name = "Alice";
+        let storage = LocalPersistedStorage::init(dir, signer_name, signer, starting_amount);
         let _ = storage.get_data();
         TestLedgerClient {
             storage,
