@@ -83,7 +83,7 @@ impl LedgerData {
         signers.insert(signer_name.to_string(), address_bech_32.clone());
         LedgerData {
             active_signer_name: signer_name.to_string(),
-            active_signer: address_bech_32.clone(),
+            active_signer: address_bech_32,
             signers,
             outputs,
             current_time: 0,
@@ -309,11 +309,16 @@ mod tests {
 
     #[tokio::test]
     async fn outputs_at_address() {
+        let signer_name = "Alice";
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
-        let storage =
-            LocalPersistedStorage::<TempDir, ()>::init(tmp_dir, signer.clone(), starting_amount);
+        let storage = LocalPersistedStorage::<TempDir, ()>::init(
+            tmp_dir,
+            signer_name,
+            &signer,
+            starting_amount,
+        );
         let mut outputs = storage.all_outputs(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
         let first_output = outputs.pop().unwrap();
@@ -324,16 +329,48 @@ mod tests {
 
     #[tokio::test]
     async fn current_time() {
+        let signer_name = "Alice";
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
-        let mut storage =
-            LocalPersistedStorage::<TempDir, ()>::init(tmp_dir, signer.clone(), starting_amount);
+        let mut storage = LocalPersistedStorage::<TempDir, ()>::init(
+            tmp_dir,
+            signer_name,
+            &signer,
+            starting_amount,
+        );
         let current_time = storage.current_time().await.unwrap();
         assert_eq!(current_time, 0);
         let new_time = 1000;
         storage.set_current_time(new_time).await.unwrap();
         let current_time = storage.current_time().await.unwrap();
         assert_eq!(current_time, new_time);
+    }
+
+    #[tokio::test]
+    async fn can_change_signer() {
+        // Given
+        let alice = "Alice";
+        let alice_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+        let starting_amount = 10_000_000;
+        let tmp_dir = TempDir::new().unwrap();
+        let storage = LocalPersistedStorage::<TempDir, ()>::init(
+            tmp_dir,
+            alice,
+            &alice_address,
+            starting_amount,
+        );
+        let bob = "Bob";
+        let bob_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
+        storage.add_new_signer(bob, &bob_address, starting_amount);
+
+        // When
+        let signer = storage.signer().await.unwrap();
+        assert_eq!(signer, alice_address);
+
+        // And
+        storage.switch_signer(bob);
+        let signer = storage.signer().await.unwrap();
+        assert_eq!(signer, bob_address);
     }
 }
