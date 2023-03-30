@@ -88,19 +88,19 @@ pub async fn get_trireme_config_from_file() -> Result<Option<TriremeConfig>> {
     read_toml_struct_from_file::<TriremeConfig>(&trireme_config_path).await
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum LedgerSource {
     BlockFrost { api_key_file: PathBuf },
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum KeySource {
     RawSecretPhrase { phrase_file: PathBuf },
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum Network {
     Preprod,
@@ -184,23 +184,29 @@ pub struct ClientConfig {
     variant: ClientVariant,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum ClientVariant {
     CML(CMLClientConfig),
     Test(TestClientConfig),
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct CMLClientConfig {
     ledger_source: LedgerSource,
     key_source: KeySource,
     network: Network,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct TestClientConfig {
     data_path: PathBuf,
+}
+
+impl TestClientConfig {
+    pub fn data_path(&self) -> PathBuf {
+        self.data_path.clone()
+    }
 }
 
 impl ClientConfig {
@@ -231,6 +237,14 @@ impl ClientConfig {
             name: name.to_string(),
             variant,
         }
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn variant(&self) -> ClientVariant {
+        self.variant.clone()
     }
 
     pub async fn to_client<
