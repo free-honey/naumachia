@@ -1,4 +1,4 @@
-use crate::environment::{active_signer_impl, switch_signer_impl};
+use crate::environment::{active_signer_impl, get_address_impl, switch_signer_impl};
 use crate::{
     balance::{ada_balance_impl, balance_impl},
     environment::{env_impl, new_env_impl, remove_env_impl, switch_env_impl},
@@ -20,21 +20,23 @@ struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
-    /// View current env
+    /// View current env 🌄
     Env,
     /// Create a new environment 🚣
     NewEnv,
-    /// Switch Environments
+    /// Switch Environments ⛵
     SwitchEnv,
-    /// Remove Env
+    /// Remove Env 🌀
     RemoveEnv,
-    /// Get ADA Balance
+    /// Get ADA Balance ₳
     AdaBalance,
-    /// Get Total Balance
+    /// Get Total Balance 💰
     Balance,
-    /// Reports active signer
+    /// Get Signer's Base Address 📬
+    Address,
+    /// Reports active signer 😊 (Mock Network Only)
     Signer,
-    /// Switch to different signer (Mock Network Only)
+    /// Switch to different signer 👽 (Mock Network Only)
     SwitchSigner,
 }
 
@@ -48,6 +50,7 @@ async fn main() -> Result<()> {
         ActionParams::RemoveEnv => remove_env_impl().await?,
         ActionParams::AdaBalance => ada_balance_impl().await?,
         ActionParams::Balance => balance_impl().await?,
+        ActionParams::Address => get_address_impl().await?,
         ActionParams::Signer => active_signer_impl().await?,
         ActionParams::SwitchSigner => switch_signer_impl().await?,
     }
