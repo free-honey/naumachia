@@ -40,8 +40,6 @@ Big fan of modern programming techniques. We are trying to prioritize
 Feel free to start issues/discussions if there are things you feel are missing or whatever.
 We love feedback!
 
-Check out our [architecture diagram](docs/ARCHITECTURE.md).
-
 FYI, CI requires these commands to pass. So, try to run them locally to save yourself some time.
 ```
 cargo build --workspace
