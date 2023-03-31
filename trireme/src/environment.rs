@@ -1,14 +1,16 @@
 use anyhow::Result;
 use dialoguer::{Input, Select};
-use naumachia::trireme_ledger_client::{read_toml_struct_from_file, ClientVariant};
 use naumachia::{
     error::Error,
-    ledger_client::test_ledger_client::local_persisted_storage::LocalPersistedStorage,
+    ledger_client::{
+        test_ledger_client::local_persisted_storage::LocalPersistedStorage, LedgerClient,
+    },
     trireme_ledger_client::{
         cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
-        path_to_client_config_file, path_to_trireme_config_dir, path_to_trireme_config_file,
-        raw_secret_phrase::SecretPhrase, write_toml_struct_to_file, ClientConfig, KeySource,
-        LedgerSource, Network, TriremeConfig,
+        get_trireme_ledger_client_from_file, path_to_client_config_file,
+        path_to_trireme_config_dir, path_to_trireme_config_file, raw_secret_phrase::SecretPhrase,
+        read_toml_struct_from_file, write_toml_struct_to_file, ClientConfig, ClientVariant,
+        KeySource, LedgerSource, Network, TriremeConfig, TriremeLedgerClient,
     },
     Address,
 };
@@ -196,6 +198,14 @@ pub async fn active_signer_impl() -> Result<()> {
             unimplemented!("Only the mock supports multiple signers");
         }
     }
+    Ok(())
+}
+
+pub async fn get_address_impl() -> Result<()> {
+    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let address = ledger_client.signer_base_address().await?;
+    let address_string = address.to_bech32()?;
+    println!("Address: {address_string}");
     Ok(())
 }
 
