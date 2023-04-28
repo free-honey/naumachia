@@ -64,13 +64,9 @@ async fn add_puller_creates_new_datum_for_puller() {
         .build_in_memory();
 
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
-    let checking_account_address =
-        Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
-            .unwrap();
     let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(&nft_id),
-        checking_account_address,
         puller: puller_pubkey_hash,
         amount_lovelace: 15_000_000,
         period: 1000,
@@ -117,13 +113,9 @@ async fn remove_puller__removes_the_allowed_puller() {
         .build_in_memory();
 
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
-    let checking_account_address =
-        Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
-            .unwrap();
     let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
     let add_endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft: hex::encode(nft_id),
-        checking_account_address,
         puller: puller_pubkey_hash,
         amount_lovelace: 15_000_000,
         period: 1000,
@@ -271,7 +263,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
         next_pull: 0,
         period: 0,
         spending_token: spending_token_policy.clone(),
-        checking_account_address: account_address.clone(),
         checking_account_nft: checking_account_nft_id.clone(),
     }
     .into();

@@ -1,7 +1,9 @@
+use crate::Error;
 use anyhow::Result;
 use dialoguer::{Input, Select};
+use hex;
+use naumachia::scripts::context::pub_key_hash_from_address_if_available;
 use naumachia::{
-    error::Error,
     ledger_client::{
         test_ledger_client::local_persisted_storage::LocalPersistedStorage, LedgerClient,
     },
@@ -83,7 +85,7 @@ pub async fn new_env_impl() -> Result<()> {
 
             let start_balance = 100_000_000_000; // Lovelace
             let dir = path_to_client_config_file(&sub_dir)?;
-            let parent_dir = dir.parent().ok_or(Error::Trireme(
+            let parent_dir = dir.parent().ok_or(Error::CLI(
                 "Could not find parent directory for config".to_string(),
             ))?;
             fs::create_dir_all(&parent_dir).await?;
@@ -124,7 +126,7 @@ pub async fn switch_env_impl() -> Result<()> {
             println!("Switched environment to: {}", &name);
             Ok(())
         }
-        None => Err(Error::Trireme("Environment doesn't exist".to_string()).into()),
+        None => Err(Error::CLI("Environment doesn't exist".to_string()).into()),
     }
 }
 
@@ -151,7 +153,7 @@ pub async fn remove_env_impl() -> Result<()> {
 
             Ok(())
         }
-        None => Err(Error::Trireme("Environment doesn't exist".to_string()).into()),
+        None => Err(Error::CLI("Environment doesn't exist".to_string()).into()),
     }
 }
 
@@ -206,6 +208,17 @@ pub async fn get_address_impl() -> Result<()> {
     let address = ledger_client.signer_base_address().await?;
     let address_string = address.to_bech32()?;
     println!("Address: {address_string}");
+    Ok(())
+}
+
+pub async fn get_pubkey_hash_impl() -> Result<()> {
+    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let address = ledger_client.signer_base_address().await?;
+    let pubkey_hash = pub_key_hash_from_address_if_available(&address).ok_or(Error::CLI(
+        "Could not derive Pubkey Hash from Address".to_string(),
+    ))?;
+    let pubkey_hash_string = hex::encode(pubkey_hash.bytes());
+    println!("Pubkey Hash: {pubkey_hash_string}");
     Ok(())
 }
 
@@ -283,7 +296,7 @@ async fn write_cml_client_config(
 
 async fn delete_directory(sub_dir: &str) -> Result<()> {
     let file_path = path_to_client_config_file(sub_dir)?;
-    let parent_dir = file_path.parent().ok_or(Error::Trireme(
+    let parent_dir = file_path.parent().ok_or(Error::CLI(
         "Could not find parent directory for config".to_string(),
     ))?;
     fs::remove_dir_all(parent_dir).await?;

@@ -97,7 +97,6 @@ mod tests {
                 next_pull: 10,
                 period: 10,
                 spending_token: spending_token.clone(),
-                checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
             }
             .into();
@@ -110,7 +109,6 @@ mod tests {
                 next_pull: 20,
                 period: 10,
                 spending_token: spending_token.clone(),
-                checking_account_address: checking_account_address.clone(),
                 checking_account_nft: checking_account_nft_id.to_vec(),
             }
             .into();
@@ -364,33 +362,6 @@ mod tests {
     }
 
     #[test]
-    fn execute__new_pull_datum_fails_if_account_address_changes() {
-        // given
-        let mut ctx_builder = PullTestContext::pull_happy_path();
-        let script = pull_validator().unwrap();
-
-        // when
-        let bad_address =
-            Address::from_bech32("addr_test1vzpwq95z3xyum8vqndgdd9mdnmafh3djcxnc6jemlgdmswcve6tkw")
-                .unwrap();
-        let new_datum = match ctx_builder.output_datum.unwrap() {
-            CheckingAccountDatums::AllowedPuller(old_allowed_puller) => AllowedPuller {
-                checking_account_address: bad_address,
-                ..old_allowed_puller
-            }
-            .into(),
-            _ => panic!("wrong variant"),
-        };
-        ctx_builder.output_datum = Some(new_datum);
-
-        //then
-        let input_datum = ctx_builder.input_datum.clone().unwrap();
-        let ctx = ctx_builder.build();
-
-        let _eval = script.execute(input_datum, (), ctx).unwrap_err();
-    }
-
-    #[test]
     fn execute__new_pull_datum_fails_if_account_nft_changes() {
         // given
         let mut ctx_builder = PullTestContext::pull_happy_path();
@@ -596,9 +567,6 @@ mod tests {
         let owner = pub_key_hash_from_address_if_available(&account_address).unwrap();
         let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
         let spending_token = vec![5, 5, 5, 5];
-        let checking_account_address =
-            Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
-                .unwrap();
         let checking_account_nft = vec![7, 7, 7, 7, 7];
 
         let datum = AllowedPuller {
@@ -608,7 +576,6 @@ mod tests {
             next_pull: 9999999,
             period: 234,
             spending_token,
-            checking_account_address,
             checking_account_nft,
         }
         .into();

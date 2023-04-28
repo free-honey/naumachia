@@ -4,12 +4,11 @@ use checking::{
     CheckingAccountLookups,
 };
 use clap::Parser;
-use naumachia::scripts::context::pub_key_hash_from_address_if_available;
+use naumachia::scripts::context::PubKeyHash;
 use naumachia::{
     backend::Backend,
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
-    Address,
 };
 
 #[derive(Parser, Debug)]
@@ -79,6 +78,13 @@ async fn my_account_impl() -> Result<()> {
                 if let Some(nft) = &account.nft {
                     println!("attached to nft: {:?}", nft);
                 }
+                for puller in &account.pullers {
+                    let pkh = hex::encode(puller.puller.bytes());
+                    let amount = puller.amount_lovelace / 1_000_000;
+                    let period = puller.period;
+                    let next_pull = puller.next_pull;
+                    println!("puller: {pkh:?}, amount: {amount:?} ADA, period: {period:?} ms, next pull: {next_pull:?} ms");
+                }
             })
         }
     }
@@ -90,15 +96,11 @@ async fn add_puller_impl() -> Result<()> {
     let checking_account_nft: String = dialoguer::Input::new()
         .with_prompt("Checking account NFT")
         .interact_text()?;
-    let address_string: String = dialoguer::Input::new()
-        .with_prompt("Checking account address")
+    let puller_pkh_string: String = dialoguer::Input::new()
+        .with_prompt("Puller pub key hash")
         .interact_text()?;
-    let checking_account_address = Address::from_bech32(&address_string)?;
-    let puller_address_string: String = dialoguer::Input::new()
-        .with_prompt("Puller address")
-        .interact_text()?;
-    let puller_address = Address::from_bech32(&puller_address_string)?;
-    let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
+    let puller_pkh_bytes = hex::decode(puller_pkh_string)?;
+    let puller = PubKeyHash::new(&puller_pkh_bytes);
     let amount_ada: u64 = dialoguer::Input::new()
         .with_prompt("Amount of ADA to pull")
         .interact_text()?;
@@ -111,7 +113,6 @@ async fn add_puller_impl() -> Result<()> {
         .interact_text()?;
     let endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft,
-        checking_account_address,
         puller,
         amount_lovelace,
         period,
