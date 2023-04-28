@@ -1,6 +1,6 @@
 use crate::{
-    pull_validator, spend_token_policy, AllowedPuller, CheckingAccountDatums, CheckingAccountError,
-    SPEND_TOKEN_ASSET_NAME,
+    checking_account_validator, pull_validator, spend_token_policy, AllowedPuller,
+    CheckingAccountDatums, CheckingAccountError, SPEND_TOKEN_ASSET_NAME,
 };
 use naumachia::{
     address::PolicyId,
@@ -11,13 +11,11 @@ use naumachia::{
     scripts::ValidatorCode,
     transaction::TxActions,
     values::Values,
-    Address,
 };
 
 pub async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     checking_account_nft_id: String,
-    checking_account_address: Address,
     puller: PubKeyHash,
     amount_lovelace: u64,
     period: i64,
@@ -31,9 +29,10 @@ pub async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         Box::new(CheckingAccountError::InvalidAddress(me.clone())),
     ))?;
 
-    let parameterized_spending_token_policy = spend_token_policy().unwrap();
     let nft_id_bytes = hex::decode(checking_account_nft_id).unwrap();
     let my_pubkey = pub_key_hash_from_address_if_available(&me).unwrap();
+
+    let parameterized_spending_token_policy = spend_token_policy().unwrap();
     let policy = parameterized_spending_token_policy
         .apply(nft_id_bytes.clone().into())
         .unwrap()
@@ -60,7 +59,6 @@ pub async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         next_pull,
         period,
         spending_token: hex::decode(&id).unwrap(), // TODO
-        checking_account_address: checking_account_address.clone(),
         checking_account_nft: nft_id_bytes,
     }
     .into();

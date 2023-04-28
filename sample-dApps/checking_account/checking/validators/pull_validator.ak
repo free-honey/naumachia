@@ -13,8 +13,6 @@ pub type PullDatum {
     next_pull: Int,
     period: Int,
     spend_token: ByteArray,
-    // probably don't really need this
-    checking_account_address: Address,
     checking_account_nft: ByteArray,
 }
 
@@ -49,7 +47,6 @@ fn new_datum_is_made(datum: PullDatum, ctx: ScriptContext) -> Bool {
             new_datum.amount_lovelace == old_datum.amount_lovelace &&
             new_datum.period == old_datum.period &&
             new_datum.spend_token == old_datum.spend_token &&
-            new_datum.checking_account_address == old_datum.checking_account_address &&
             new_datum.checking_account_nft == old_datum.checking_account_nft &&
             //    d. Check that UTxO includes spending token!
             { 
@@ -83,7 +80,8 @@ fn find_input_address(output_ref: OutputReference, outputs: List<Input>) -> Opti
 
 fn checking_account_checks(datum: PullDatum, ctx: ScriptContext) -> Bool {
     expect Some(input) = find_account_input(datum, ctx)
-    expect Some(output) = find_account_output(datum, ctx)
+    let account_address = input.output.address
+    expect Some(output) = find_account_output(datum, ctx, account_address)
     expect InlineDatum(input_datum) = input.output.datum
     expect input_account_datum: CheckingAccountDatum = input_datum
     expect InlineDatum(output_datum) = output.datum
@@ -102,9 +100,6 @@ fn checking_account_checks(datum: PullDatum, ctx: ScriptContext) -> Bool {
 
 fn find_account_input(datum: PullDatum, ctx: ScriptContext) -> Option<Input> {
     ctx.transaction.inputs
-    |> list.filter(fn(input) -> Bool {
-        input.output.address == datum.checking_account_address
-    })
     |> list.find(fn(input) -> Bool {
         let list_length = input.output.value
         |> value.flatten()
@@ -119,10 +114,10 @@ fn find_account_input(datum: PullDatum, ctx: ScriptContext) -> Option<Input> {
     })
 }
 
-fn find_account_output(datum: PullDatum, ctx: ScriptContext) -> Option<Output> {
+fn find_account_output(datum: PullDatum, ctx: ScriptContext, account_address: Address) -> Option<Output> {
     ctx.transaction.outputs
     |> list.filter(fn(output) -> Bool {
-        output.address == datum.checking_account_address
+        output.address == account_address
     })
     |> list.find(fn(output) -> Bool {
         let list_length = output.value

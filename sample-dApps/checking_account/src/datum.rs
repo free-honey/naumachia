@@ -28,7 +28,6 @@ pub struct AllowedPuller {
     pub next_pull: i64,
     pub period: i64,
     pub spending_token: Vec<u8>,
-    pub checking_account_address: Address,
     pub checking_account_nft: Vec<u8>,
 }
 
@@ -59,12 +58,11 @@ impl From<CheckingAccountDatums> for PlutusData {
                 next_pull,
                 period,
                 spending_token,
-                checking_account_address,
                 checking_account_nft,
             }) => {
                 let owner = owner.into();
                 let puller = puller.into();
-                let amount_lovelace = PlutusData::BigInt((amount_lovelace as i64).into());
+                let amount_lovelace = PlutusData::BigInt((amount_lovelace as i64).into()); // TODO
                 let next_pull = PlutusData::BigInt(next_pull.into());
                 let period = PlutusData::BigInt(period.into());
                 let spending_token = PlutusData::BoundedBytes(spending_token);
@@ -78,7 +76,6 @@ impl From<CheckingAccountDatums> for PlutusData {
                         next_pull,
                         period,
                         spending_token,
-                        checking_account_address.into(),
                         checking_account_nft,
                     ],
                 })
@@ -117,6 +114,29 @@ fn checking_account_datum(fields: &[PlutusData]) -> Result<CheckingAccountDatums
     .into())
 }
 
-fn allowed_puller(_fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
-    todo!()
+fn allowed_puller(fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
+    let PlutusData::BoundedBytes(owner_bytes) = fields.get(0).ok_or(())? else { return Err(())};
+    let owner = PubKeyHash::new(&owner_bytes);
+    let PlutusData::BoundedBytes(puller_bytes) = fields.get(1).ok_or(())? else { return Err(())};
+    let puller = PubKeyHash::new(&puller_bytes);
+    let PlutusData::BigInt(amount_lovelace) = fields.get(2).ok_or(())? else { return Err(())};
+    let amount_lovelace: i64 = amount_lovelace.into();
+    let PlutusData::BigInt(next_pull) = fields.get(3).ok_or(())? else { return Err(())};
+    let next_pull: i64 = next_pull.into();
+    let PlutusData::BigInt(period) = fields.get(4).ok_or(())? else { return Err(())};
+    let period: i64 = period.into();
+    let PlutusData::BoundedBytes(spending_token) = fields.get(5).ok_or(())? else { return Err(())};
+    let spending_token = spending_token.to_vec();
+    let PlutusData::BoundedBytes(checking_account_nft) = fields.get(6).ok_or(())? else { return Err(())};
+    let checking_account_nft = checking_account_nft.to_vec();
+    let datum = CheckingAccountDatums::AllowedPuller(AllowedPuller {
+        owner,
+        puller,
+        amount_lovelace: amount_lovelace as u64, //TODO
+        next_pull,
+        period,
+        spending_token,
+        checking_account_nft,
+    });
+    Ok(datum)
 }

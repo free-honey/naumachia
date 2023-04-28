@@ -90,10 +90,6 @@ async fn add_puller_impl() -> Result<()> {
     let checking_account_nft: String = dialoguer::Input::new()
         .with_prompt("Checking account NFT")
         .interact_text()?;
-    let address_string: String = dialoguer::Input::new()
-        .with_prompt("Checking account address")
-        .interact_text()?;
-    let checking_account_address = Address::from_bech32(&address_string)?;
     let puller_address_string: String = dialoguer::Input::new()
         .with_prompt("Puller address")
         .interact_text()?;
@@ -111,7 +107,6 @@ async fn add_puller_impl() -> Result<()> {
         .interact_text()?;
     let endpoint = CheckingAccountEndpoints::AddPuller {
         checking_account_nft,
-        checking_account_address,
         puller,
         amount_lovelace,
         period,

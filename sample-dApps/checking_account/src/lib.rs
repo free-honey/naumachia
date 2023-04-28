@@ -42,7 +42,6 @@ pub enum CheckingAccountEndpoints {
     /// starting on the next_pull time, in milliseconds POSIX
     AddPuller {
         checking_account_nft: String,
-        checking_account_address: Address,
         puller: PubKeyHash,
         amount_lovelace: u64,
         period: i64,
@@ -60,6 +59,7 @@ pub enum CheckingAccountEndpoints {
         output_id: OutputId,
         withdraw_amount: u64,
     },
+    // Puller Endpoints
     /// Use allowed puller validator to pull from checking account
     PullFromCheckingAccount {
         allow_pull_output_id: OutputId,
@@ -80,6 +80,7 @@ pub enum CheckingAccountLookupResponses {
 pub struct Account {
     pub balance_ada: f64,
     pub nft: Option<String>,
+    pub pullers: Vec<PubKeyHash>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -117,7 +118,6 @@ impl SCLogic for CheckingAccountLogic {
             }
             CheckingAccountEndpoints::AddPuller {
                 checking_account_nft,
-                checking_account_address,
                 puller,
                 amount_lovelace,
                 period,
@@ -126,7 +126,6 @@ impl SCLogic for CheckingAccountLogic {
                 add_puller(
                     ledger_client,
                     checking_account_nft,
-                    checking_account_address,
                     puller,
                     amount_lovelace,
                     period,
