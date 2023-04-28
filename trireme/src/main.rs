@@ -1,4 +1,6 @@
-use crate::environment::{active_signer_impl, get_address_impl, switch_signer_impl};
+use crate::environment::{
+    active_signer_impl, get_address_impl, get_pubkey_hash_impl, switch_signer_impl,
+};
 use crate::{
     balance::{ada_balance_impl, balance_impl},
     environment::{env_impl, new_env_impl, remove_env_impl, switch_env_impl},
@@ -6,6 +8,7 @@ use crate::{
 };
 use anyhow::Result;
 use clap::Parser;
+use thiserror::Error;
 
 mod balance;
 mod environment;
@@ -34,10 +37,18 @@ enum ActionParams {
     Balance,
     /// Get Signer's Base Address 📬
     Address,
+    /// Get Signer's Hex Encoded Public Key Hash 🗝
+    PubKeyHash,
     /// Reports active signer 😊 (Mock Network Only)
     Signer,
     /// Switch to different signer 👽 (Mock Network Only)
     SwitchSigner,
+}
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Error within the CLI Logic: {0}")]
+    CLI(String),
 }
 
 #[tokio::main]
@@ -51,6 +62,7 @@ async fn main() -> Result<()> {
         ActionParams::AdaBalance => ada_balance_impl().await?,
         ActionParams::Balance => balance_impl().await?,
         ActionParams::Address => get_address_impl().await?,
+        ActionParams::PubKeyHash => get_pubkey_hash_impl().await?,
         ActionParams::Signer => active_signer_impl().await?,
         ActionParams::SwitchSigner => switch_signer_impl().await?,
     }
