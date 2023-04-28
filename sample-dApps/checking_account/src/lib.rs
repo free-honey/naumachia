@@ -80,7 +80,15 @@ pub enum CheckingAccountLookupResponses {
 pub struct Account {
     pub balance_ada: f64,
     pub nft: Option<String>,
-    pub pullers: Vec<PubKeyHash>,
+    pub pullers: Vec<AccountPuller>,
+}
+
+#[derive(Debug)]
+pub struct AccountPuller {
+    pub puller: PubKeyHash,
+    pub amount_lovelace: u64,
+    pub period: i64,
+    pub next_pull: i64,
 }
 
 #[derive(Debug, Eq, PartialEq)]

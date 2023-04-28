@@ -94,7 +94,7 @@ impl TryFrom<PlutusData> for CheckingAccountDatums {
 
         let datum = match constr.fields.len() {
             2 => checking_account_datum(&constr.fields)?,
-            8 => allowed_puller(&constr.fields)?,
+            7 => allowed_puller(&constr.fields)?,
             _ => return Err(()),
         };
 

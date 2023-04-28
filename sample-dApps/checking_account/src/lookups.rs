@@ -1,5 +1,5 @@
 use crate::{
-    checking_account_validator, pull_validator, Account, CheckingAccountDatums,
+    checking_account_validator, pull_validator, Account, AccountPuller, CheckingAccountDatums,
     CheckingAccountLookupResponses, CHECKING_ACCOUNT_NFT_ASSET_NAME,
 };
 use naumachia::address::PolicyId;
@@ -78,7 +78,7 @@ pub async fn get_my_accounts<LC: LedgerClient<CheckingAccountDatums, ()>>(
 async fn find_pullers_for_nft<LC: LedgerClient<CheckingAccountDatums, ()>>(
     nft_policy_id: &str,
     ledger_client: &LC,
-) -> SCLogicResult<Vec<PubKeyHash>> {
+) -> SCLogicResult<Vec<AccountPuller>> {
     let address = pull_validator()
         .map_err(SCLogicError::ValidatorScript)?
         .address(0)
@@ -94,7 +94,13 @@ async fn find_pullers_for_nft<LC: LedgerClient<CheckingAccountDatums, ()>>(
             if let CheckingAccountDatums::AllowedPuller(inner) = datum {
                 let nft_bytes = hex::decode(nft_policy_id).unwrap(); // TODO
                 if inner.checking_account_nft == nft_bytes {
-                    Some(inner.puller)
+                    let account_puller = AccountPuller {
+                        puller: inner.puller,
+                        amount_lovelace: inner.amount_lovelace,
+                        period: inner.period,
+                        next_pull: inner.next_pull,
+                    };
+                    Some(account_puller)
                 } else {
                     None
                 }
