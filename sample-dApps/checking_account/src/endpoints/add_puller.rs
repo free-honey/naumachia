@@ -1,6 +1,6 @@
 use crate::{
-    checking_account_validator, pull_validator, spend_token_policy, AllowedPuller,
-    CheckingAccountDatums, CheckingAccountError, SPEND_TOKEN_ASSET_NAME,
+    pull_validator, spend_token_policy, AllowedPuller, CheckingAccountDatums, CheckingAccountError,
+    SPEND_TOKEN_ASSET_NAME,
 };
 use naumachia::{
     address::PolicyId,

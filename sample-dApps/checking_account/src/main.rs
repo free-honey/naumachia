@@ -4,12 +4,11 @@ use checking::{
     CheckingAccountLookups,
 };
 use clap::Parser;
-use naumachia::scripts::context::{pub_key_hash_from_address_if_available, PubKeyHash};
+use naumachia::scripts::context::PubKeyHash;
 use naumachia::{
     backend::Backend,
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
-    Address,
 };
 
 #[derive(Parser, Debug)]

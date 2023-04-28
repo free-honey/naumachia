@@ -567,9 +567,6 @@ mod tests {
         let owner = pub_key_hash_from_address_if_available(&account_address).unwrap();
         let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();
         let spending_token = vec![5, 5, 5, 5];
-        let checking_account_address =
-            Address::from_bech32("addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl")
-                .unwrap();
         let checking_account_nft = vec![7, 7, 7, 7, 7];
 
         let datum = AllowedPuller {
