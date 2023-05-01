@@ -72,8 +72,12 @@ where
     pub fn build_in_memory(
         &self,
     ) -> Backend<Datum, Redeemer, TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>> {
-        let ledger_client =
-            TestLedgerClient::new_in_memory(self.signer.clone(), self.outputs.clone());
+        let block_length = 1000;
+        let ledger_client = TestLedgerClient::new_in_memory(
+            self.signer.clone(),
+            self.outputs.clone(),
+            block_length,
+        );
         Backend {
             _datum: PhantomData::default(),
             _redeemer: PhantomData::default(),
@@ -159,7 +163,8 @@ pub trait TestLedgerStorage<Datum> {
     async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()>;
     async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()>;
     async fn current_time(&self) -> LedgerClientResult<i64>;
-    async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()>;
+    async fn set_current_time(&self, posix_time: i64) -> LedgerClientResult<()>;
+    async fn get_block_length(&self) -> LedgerClientResult<i64>;
 }
 
 #[derive(Debug)]
@@ -173,11 +178,16 @@ impl<Datum, Redeemer> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>
 where
     Datum: Clone + Send + Sync + PartialEq,
 {
-    pub fn new_in_memory(signer: Address, outputs: Vec<(Address, Output<Datum>)>) -> Self {
+    pub fn new_in_memory(
+        signer: Address,
+        outputs: Vec<(Address, Output<Datum>)>,
+        block_length: i64,
+    ) -> Self {
         let storage = InMemoryStorage {
             signer,
             outputs: Arc::new(Mutex::new(outputs)),
-            current_posix_time: 0,
+            current_posix_time: Arc::new(Mutex::new(0)),
+            block_length,
         };
         TestLedgerClient {
             storage,
@@ -193,7 +203,9 @@ where
 {
     pub fn new_local_persisted(dir: T, signer: &Address, starting_amount: u64) -> Self {
         let signer_name = "Alice";
-        let storage = LocalPersistedStorage::init(dir, signer_name, signer, starting_amount);
+        let block_length = 1000;
+        let storage =
+            LocalPersistedStorage::init(dir, signer_name, signer, starting_amount, block_length);
         let _ = storage.get_data();
         TestLedgerClient {
             storage,
@@ -222,8 +234,15 @@ where
         self.storage.current_time().await
     }
 
-    pub async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()> {
+    pub async fn set_current_time(&self, posix_time: i64) -> LedgerClientResult<()> {
         self.storage.set_current_time(posix_time).await
+    }
+
+    pub async fn advance_time_one_block(&self) -> LedgerClientResult<()> {
+        let block_length = self.storage.get_block_length().await?;
+        let current_time = self.storage.current_time().await?;
+        let new_time = block_length + current_time;
+        self.storage.set_current_time(new_time).await
     }
 }
 
@@ -349,6 +368,8 @@ where
         for output in combined_outputs {
             self.storage.add_output(&output).await?;
         }
+
+        self.advance_time_one_block().await?;
 
         Ok(TxId::new(&hex::encode(construction_ctx.tx_hash())))
     }

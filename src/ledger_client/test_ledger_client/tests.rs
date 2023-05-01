@@ -15,6 +15,8 @@ use crate::{
 const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
 const BOB: &str = "addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua";
 
+const BLOCK_LENGTH: i64 = 1000;
+
 #[tokio::test]
 async fn outputs_at_address() {
     let signer = Address::from_bech32(ALICE).unwrap();
@@ -22,7 +24,7 @@ async fn outputs_at_address() {
     let output = starting_output::<()>(&signer, starting_amount);
     let outputs = vec![(signer.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(signer.clone(), outputs);
+        TestLedgerClient::new_in_memory(signer.clone(), outputs, BLOCK_LENGTH);
     let mut outputs = record.all_outputs_at_address(&signer).await.unwrap();
     assert_eq!(outputs.len(), 1);
     let first_output = outputs.pop().unwrap();
@@ -38,7 +40,7 @@ async fn balance_at_address() {
     let output = starting_output::<()>(&signer, starting_amount);
     let outputs = vec![(signer.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(signer.clone(), outputs);
+        TestLedgerClient::new_in_memory(signer.clone(), outputs, BLOCK_LENGTH);
     let expected = starting_amount;
     let actual = record
         .balance_at_address(&signer, &PolicyId::Lovelace)
@@ -55,7 +57,7 @@ async fn issue_transfer() {
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, transfer_amount);
@@ -95,12 +97,33 @@ async fn issue_transfer() {
 }
 
 #[tokio::test]
+async fn issuing_tx_advances_time_by_block_length() {
+    let signer = Address::from_bech32(ALICE).unwrap();
+    let outputs = vec![];
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(signer.clone(), outputs, BLOCK_LENGTH);
+    let starting_time = record.current_time().await.unwrap();
+    let tx = UnbuiltTransaction {
+        script_version: TransactionVersion::V2,
+        script_inputs: vec![],
+        unbuilt_outputs: vec![],
+        minting: Default::default(),
+        specific_wallet_inputs: vec![],
+        valid_range: (None, None),
+    };
+    record.issue(tx).await.unwrap();
+    let expected = starting_time + BLOCK_LENGTH;
+    let actual = record.current_time().await.unwrap();
+    assert_eq!(expected, actual);
+}
+
+#[tokio::test]
 async fn errors_if_spending_more_than_you_own() {
     let sender = Address::from_bech32(ALICE).unwrap();
     let transfer_amount = 3_000_000;
     let outputs = vec![];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, transfer_amount);
@@ -127,8 +150,8 @@ async fn cannot_transfer_before_valid_range() {
 
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
-    let mut record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let current_time = 5;
     let valid_time = 10;
@@ -159,8 +182,8 @@ async fn cannot_transfer_after_valid_range() {
 
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
-    let mut record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+    let record: TestLedgerClient<(), (), _> =
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let current_time = 10;
     let valid_time = 5;
@@ -212,7 +235,7 @@ async fn redeeming_datum() {
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, locking_amount);
@@ -305,7 +328,7 @@ async fn failing_script_will_not_redeem() {
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, locking_amount);
@@ -366,7 +389,7 @@ async fn cannot_redeem_datum_twice() {
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, locking_amount);
@@ -447,7 +470,7 @@ async fn mint_always_true() {
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let policy = AlwaysTruePolicy;
     let id = policy.id().unwrap();
@@ -495,7 +518,7 @@ async fn mint_always_fails_errors() {
     let output = starting_output::<()>(&sender, starting_amount);
     let outputs = vec![(sender.clone(), output)];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(sender.clone(), outputs);
+        TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH);
 
     let policy = AlwaysFailsPolicy;
     let id = policy.id().unwrap();
@@ -561,7 +584,7 @@ async fn spends_specific_script_value() {
     let output = starting_output::<()>(&minter, starting_amount);
     let outputs = vec![(minter.clone(), output), (val_address, input.clone())];
     let record: TestLedgerClient<(), (), _> =
-        TestLedgerClient::new_in_memory(minter.clone(), outputs);
+        TestLedgerClient::new_in_memory(minter.clone(), outputs, BLOCK_LENGTH);
 
     let policy = SpendsNFTPolicy {
         policy_id: nft_policy_id,
