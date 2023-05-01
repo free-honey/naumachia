@@ -74,6 +74,11 @@ pub async fn new_env_impl() -> Result<()> {
                 .await?;
         }
         EnvironmentType::LocalMocked => {
+            let block_length: i64 = Input::new()
+                .with_prompt("What is the block length in ms?")
+                .default(1000)
+                .interact_text()?;
+
             let alice_name = "Alice";
             let alice_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr")?;
             let bob_name = "Bob";
@@ -94,6 +99,7 @@ pub async fn new_env_impl() -> Result<()> {
                 alice_name,
                 &alice_address,
                 start_balance,
+                block_length,
             );
             storage.add_new_signer(bob_name, &bob_address, start_balance);
             storage.add_new_signer(charlotte_name, &charlotte_address, start_balance);

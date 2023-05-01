@@ -11,7 +11,8 @@ type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
 pub struct InMemoryStorage<Datum> {
     pub signer: Address,
     pub outputs: MutableData<Datum>,
-    pub current_posix_time: i64,
+    pub current_posix_time: Arc<Mutex<i64>>,
+    pub block_length: i64,
 }
 
 #[async_trait::async_trait]
@@ -85,12 +86,25 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
     }
 
     async fn current_time(&self) -> LedgerClientResult<i64> {
-        let time = self.current_posix_time;
-        Ok(time)
+        let time = self
+            .current_posix_time
+            .lock()
+            .map_err(|e| TestLCError::Mutex(format! {"{e:?}"}))
+            .map_err(|e| FailedToIssueTx(Box::new(e)))?;
+        Ok(*time)
     }
 
-    async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()> {
-        self.current_posix_time = posix_time;
+    async fn set_current_time(&self, posix_time: i64) -> LedgerClientResult<()> {
+        *self
+            .current_posix_time
+            .lock()
+            .map_err(|e| TestLCError::Mutex(format! {"{e:?}"}))
+            .map_err(|e| FailedToIssueTx(Box::new(e)))? = posix_time;
         Ok(())
+    }
+
+    async fn get_block_length(&self) -> LedgerClientResult<i64> {
+        let block_length = self.block_length;
+        Ok(block_length)
     }
 }

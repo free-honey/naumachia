@@ -27,6 +27,7 @@ pub(crate) struct LedgerData {
     signers: HashMap<String, String>,
     outputs: Vec<LDOutput>,
     current_time: i64,
+    block_length: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -76,7 +77,7 @@ enum LocalPersistedLCError {
 }
 
 impl LedgerData {
-    pub fn new(signer_name: &str, signer_address: &Address) -> Self {
+    pub fn new(signer_name: &str, signer_address: &Address, block_length: i64) -> Self {
         let outputs = Vec::new();
         let address_bech_32 = signer_address.to_bech32().expect("Already validated");
         let mut signers = HashMap::new();
@@ -87,6 +88,7 @@ impl LedgerData {
             signers,
             outputs,
             current_time: 0,
+            block_length,
         }
     }
 
@@ -134,11 +136,17 @@ where
     T: AsRef<Path>,
     Datum: Clone + Into<PlutusData>,
 {
-    pub fn init(dir: T, signer_name: &str, signer: &Address, starting_amount: u64) -> Self {
+    pub fn init(
+        dir: T,
+        signer_name: &str,
+        signer: &Address,
+        starting_amount: u64,
+        block_length: i64,
+    ) -> Self {
         let path_ref: &Path = dir.as_ref();
         let path = path_ref.to_owned().join(DATA);
         if !path.exists() {
-            let mut data = LedgerData::new(signer_name, signer);
+            let mut data = LedgerData::new(signer_name, signer, block_length);
             let output: Output<Datum> = starting_output(signer, starting_amount);
             data.add_output(output); // TODO: Parameterize
             let serialized = serde_json::to_string(&data).unwrap();
@@ -294,9 +302,14 @@ where
         Ok(self.get_data().current_time)
     }
 
-    async fn set_current_time(&mut self, posix_time: i64) -> LedgerClientResult<()> {
+    async fn set_current_time(&self, posix_time: i64) -> LedgerClientResult<()> {
         self.update_current_time(posix_time).unwrap();
         Ok(())
+    }
+
+    async fn get_block_length(&self) -> LedgerClientResult<i64> {
+        let block_length = self.get_data().block_length;
+        Ok(block_length)
     }
 }
 
@@ -306,6 +319,8 @@ mod tests {
 
     use super::*;
     use tempfile::TempDir;
+
+    const BLOCK_LENGTH: i64 = 1000;
 
     #[tokio::test]
     async fn outputs_at_address() {
@@ -318,6 +333,7 @@ mod tests {
             signer_name,
             &signer,
             starting_amount,
+            BLOCK_LENGTH,
         );
         let mut outputs = storage.all_outputs(&signer).await.unwrap();
         assert_eq!(outputs.len(), 1);
@@ -333,11 +349,12 @@ mod tests {
         let signer = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let starting_amount = 10_000_000;
         let tmp_dir = TempDir::new().unwrap();
-        let mut storage = LocalPersistedStorage::<TempDir, ()>::init(
+        let storage = LocalPersistedStorage::<TempDir, ()>::init(
             tmp_dir,
             signer_name,
             &signer,
             starting_amount,
+            BLOCK_LENGTH,
         );
         let current_time = storage.current_time().await.unwrap();
         assert_eq!(current_time, 0);
@@ -359,6 +376,7 @@ mod tests {
             alice,
             &alice_address,
             starting_amount,
+            BLOCK_LENGTH,
         );
         let bob = "Bob";
         let bob_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
