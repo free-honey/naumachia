@@ -9,6 +9,7 @@ use crate::{
 
 use crate::ledger_client::test_ledger_client::local_persisted_storage::LocalPersistedStorage;
 use crate::ledger_client::test_ledger_client::TestLedgerClient;
+use crate::ledger_client::LedgerClientError;
 use crate::scripts::raw_validator_script::plutus_data::PlutusData;
 use crate::trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey;
 use async_trait::async_trait;
@@ -344,6 +345,27 @@ where
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
     inner_client: InnerClient<Datum, Redeemer>,
+}
+
+impl<Datum, Redeemer> TriremeLedgerClient<Datum, Redeemer>
+where
+    Datum: PlutusDataInterop
+        + Clone
+        + Send
+        + Sync
+        + PartialEq
+        + Into<PlutusData>
+        + TryFrom<PlutusData>,
+    Redeemer: PlutusDataInterop,
+{
+    pub async fn last_block_time_ms(&self) -> LedgerClientResult<i64> {
+        match &self.inner_client {
+            InnerClient::Cml(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
+                Error::Trireme("Not implemented for CML client".to_string()),
+            ))),
+            InnerClient::Mocked(test_client) => test_client.current_time().await,
+        }
+    }
 }
 
 #[async_trait]

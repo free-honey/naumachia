@@ -73,6 +73,8 @@ pub enum LedgerClientError {
     NoDatumOnScriptInput,
     #[error("The script input you're trying to spend doesn't have a datum")]
     ConfigError(String),
+    #[error("While getting current time: {0:?}")]
+    CurrentTime(Box<dyn error::Error + Send + Sync>),
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

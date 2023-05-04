@@ -164,7 +164,6 @@ pub async fn remove_env_impl() -> Result<()> {
 }
 
 pub async fn env_impl() -> Result<()> {
-    const ERROR_MSG: &str = "No Environment Set";
     if let Some(env) = get_trireme_config_from_file()
         .await?
         .and_then(|config| config.current_env())
@@ -254,6 +253,13 @@ pub async fn switch_signer_impl() -> Result<()> {
             unimplemented!("Only the mock supports adding signers");
         }
     }
+    Ok(())
+}
+
+pub async fn last_block_time_impl() -> Result<()> {
+    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let block_time = ledger_client.last_block_time_ms().await?;
+    println!("Last block time: {}", block_time);
     Ok(())
 }
 

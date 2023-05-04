@@ -1,5 +1,6 @@
 use crate::environment::{
-    active_signer_impl, get_address_impl, get_pubkey_hash_impl, switch_signer_impl,
+    active_signer_impl, get_address_impl, get_pubkey_hash_impl, last_block_time_impl,
+    switch_signer_impl,
 };
 use crate::{
     balance::{ada_balance_impl, balance_impl},
@@ -23,7 +24,7 @@ struct Args {
 
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
-    /// View current env 🌄
+    /// View current env info 🌄
     Env,
     /// Create a new environment 🚣
     NewEnv,
@@ -43,6 +44,8 @@ enum ActionParams {
     Signer,
     /// Switch to different signer 👽 (Mock Network Only)
     SwitchSigner,
+    /// Get Last Block Time 🕒
+    LastBlockTime,
 }
 
 #[derive(Debug, Error)]
@@ -65,6 +68,7 @@ async fn main() -> Result<()> {
         ActionParams::PubKeyHash => get_pubkey_hash_impl().await?,
         ActionParams::Signer => active_signer_impl().await?,
         ActionParams::SwitchSigner => switch_signer_impl().await?,
+        ActionParams::LastBlockTime => last_block_time_impl().await?,
     }
     Ok(())
 }
