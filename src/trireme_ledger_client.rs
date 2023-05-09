@@ -419,6 +419,14 @@ where
         }
         .await
     }
+
+    async fn network(&self) -> LedgerClientResult<pallas_addresses::Network> {
+        match &self.inner_client {
+            InnerClient::Cml(cml_client) => cml_client.network(),
+            InnerClient::Mocked(test_client) => test_client.network(),
+        }
+        .await
+    }
 }
 
 #[derive(Debug, Error)]

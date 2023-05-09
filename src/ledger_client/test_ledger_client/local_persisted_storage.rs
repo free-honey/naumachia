@@ -1,4 +1,4 @@
-use pallas_addresses::Address;
+use pallas_addresses::{Address, Network};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -310,6 +310,10 @@ where
     async fn get_block_length(&self) -> LedgerClientResult<i64> {
         let block_length = self.get_data().block_length;
         Ok(block_length)
+    }
+
+    async fn network(&self) -> LedgerClientResult<Network> {
+        Ok(Network::Testnet)
     }
 }
 

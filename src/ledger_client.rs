@@ -10,7 +10,7 @@ use crate::{
     transaction::UnbuiltTransaction,
     PolicyId,
 };
-use pallas_addresses::Address;
+use pallas_addresses::{Address, Network};
 use std::error;
 
 // TODO: Having this bound to a specific Datum/Redeemer doesn't really make sense at this scope.
@@ -51,6 +51,8 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
         Ok(bal)
     }
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId>; // TODO: Move to other trait
+
+    async fn network(&self) -> LedgerClientResult<Network>;
 }
 
 #[derive(Debug, Error)]

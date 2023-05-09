@@ -26,7 +26,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use local_persisted_storage::LocalPersistedStorage;
-use pallas_addresses::Address;
+use pallas_addresses::{Address, Network};
 use rand::Rng;
 use thiserror::Error;
 
@@ -165,6 +165,7 @@ pub trait TestLedgerStorage<Datum> {
     async fn current_time(&self) -> LedgerClientResult<i64>;
     async fn set_current_time(&self, posix_time: i64) -> LedgerClientResult<()>;
     async fn get_block_length(&self) -> LedgerClientResult<i64>;
+    async fn network(&self) -> LedgerClientResult<Network>;
 }
 
 #[derive(Debug)]
@@ -372,6 +373,10 @@ where
         self.advance_time_one_block().await?;
 
         Ok(TxId::new(&hex::encode(construction_ctx.tx_hash())))
+    }
+
+    async fn network(&self) -> LedgerClientResult<Network> {
+        self.storage.network().await
     }
 }
 

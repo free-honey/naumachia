@@ -2,7 +2,7 @@ use crate::ledger_client::test_ledger_client::{TestLCError, TestLedgerStorage};
 use crate::ledger_client::LedgerClientError::FailedToIssueTx;
 use crate::ledger_client::{LedgerClientError, LedgerClientResult};
 use crate::output::Output;
-use pallas_addresses::Address;
+use pallas_addresses::{Address, Network};
 use std::sync::{Arc, Mutex};
 
 type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
@@ -106,5 +106,9 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
     async fn get_block_length(&self) -> LedgerClientResult<i64> {
         let block_length = self.block_length;
         Ok(block_length)
+    }
+
+    async fn network(&self) -> LedgerClientResult<Network> {
+        Ok(Network::Testnet)
     }
 }

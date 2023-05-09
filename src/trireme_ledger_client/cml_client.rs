@@ -38,7 +38,7 @@ use cardano_multiplatform_lib::{
     TransactionInput, TransactionOutput,
 };
 use error::*;
-use pallas_addresses::Address;
+use pallas_addresses::{Address, Network};
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, ops::Deref};
 
 pub mod blockfrost_ledger;
@@ -652,5 +652,14 @@ where
             TransactionVersion::V1 => self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await,
             TransactionVersion::V2 => self.issue_v2_tx(tx, my_utxos, my_address, priv_key).await,
         }
+    }
+
+    async fn network(&self) -> LedgerClientResult<Network> {
+        let network = match self.network {
+            0 => Network::Testnet,
+            1 => Network::Mainnet,
+            _ => Network::Other(self.network),
+        };
+        Ok(network)
     }
 }

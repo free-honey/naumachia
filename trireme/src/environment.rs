@@ -70,8 +70,16 @@ pub async fn new_env_impl() -> Result<()> {
                 .interact_text()?;
             let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, &sub_dir).await?;
             let secret_phrase_path = write_secret_phrase(&secret_phrase, &sub_dir).await?;
-            write_cml_client_config(&name, &sub_dir, blockfrost_api_key_path, secret_phrase_path)
-                .await?;
+            // TODO: Do a prompt or derive network from api key
+            let network = Network::Preprod;
+            write_cml_client_config(
+                &name,
+                &sub_dir,
+                blockfrost_api_key_path,
+                secret_phrase_path,
+                network,
+            )
+            .await?;
         }
         EnvironmentType::LocalMocked => {
             let block_length: i64 = Input::new()
@@ -296,10 +304,10 @@ async fn write_cml_client_config(
     sub_dir: &str,
     api_key_file: PathBuf,
     phrase_file: PathBuf,
+    network: Network,
 ) -> Result<()> {
     let ledger_source = LedgerSource::BlockFrost { api_key_file };
     let key_source = KeySource::RawSecretPhrase { phrase_file };
-    let network = Network::Preprod;
     let client_config = ClientConfig::new_cml(name, ledger_source, key_source, network);
     let file_path = path_to_client_config_file(sub_dir)?;
     write_toml_struct_to_file(&file_path, &client_config).await?;
