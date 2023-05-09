@@ -214,7 +214,7 @@ impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
         Ok(ExecutionCost::default())
     }
 
-    fn address(&self, _network: u8) -> ScriptResult<Address> {
+    fn address(&self, _network: Network) -> ScriptResult<Address> {
         Ok(
             Address::from_bech32("addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu")
                 .unwrap(),
@@ -241,8 +241,9 @@ async fn redeeming_datum() {
     values.add_one_value(&PolicyId::Lovelace, locking_amount);
 
     let validator = AlwaysTrueFakeValidator;
+    let network = Network::Testnet;
 
-    let script_address = validator.address(0).unwrap();
+    let script_address = validator.address(network).unwrap();
     let new_output = UnbuiltOutput::new_validator(script_address.clone(), values, ());
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V1,
@@ -307,7 +308,7 @@ impl ValidatorCode<(), ()> for AlwaysFailsFakeValidator {
         ))
     }
 
-    fn address(&self, _network: u8) -> ScriptResult<Address> {
+    fn address(&self, _network: Network) -> ScriptResult<Address> {
         Ok(
             Address::from_bech32("addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu")
                 .unwrap(),
@@ -335,7 +336,8 @@ async fn failing_script_will_not_redeem() {
 
     let validator = AlwaysFailsFakeValidator;
 
-    let script_address = validator.address(0).unwrap();
+    let network = Network::Testnet;
+    let script_address = validator.address(network).unwrap();
     let new_output = UnbuiltOutput::new_validator(script_address.clone(), values, ());
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V2,
@@ -396,7 +398,8 @@ async fn cannot_redeem_datum_twice() {
 
     let validator = AlwaysTrueFakeValidator;
 
-    let script_address = validator.address(0).unwrap();
+    let network = Network::Testnet;
+    let script_address = validator.address(network).unwrap();
     let new_output = UnbuiltOutput::new_validator(script_address.clone(), values, ());
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V2,
@@ -575,7 +578,8 @@ async fn spends_specific_script_value() {
 
     let nft_policy_id = "my_nft".to_string();
     let validator = AlwaysTrueFakeValidator;
-    let val_address = validator.address(0).unwrap();
+    let network = Network::Testnet;
+    let val_address = validator.address(network).unwrap();
     let mut values = Values::default();
     let policy = PolicyId::NativeToken(nft_policy_id.clone(), None);
     values.add_one_value(&policy, 1);

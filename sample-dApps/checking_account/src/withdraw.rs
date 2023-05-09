@@ -14,11 +14,15 @@ pub async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     output_id: OutputId,
     amount: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let address = validator
-        .address(0)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let output = ledger_client
         .all_outputs_at_address(&address)

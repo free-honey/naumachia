@@ -2,15 +2,21 @@ use crate::{
     checking_account_validator, pull_validator, Account, AccountPuller, CheckingAccountDatums,
     CheckingAccountLookupResponses, CHECKING_ACCOUNT_NFT_ASSET_NAME,
 };
-use naumachia::address::PolicyId;
-use naumachia::ledger_client::LedgerClient;
-use naumachia::logic::{SCLogicError, SCLogicResult};
-use naumachia::scripts::context::pub_key_hash_from_address_if_available;
-use naumachia::scripts::ValidatorCode;
+use naumachia::{
+    address::PolicyId,
+    ledger_client::LedgerClient,
+    logic::{SCLogicError, SCLogicResult},
+    scripts::context::pub_key_hash_from_address_if_available,
+    scripts::ValidatorCode,
+};
 
 pub async fn get_my_accounts<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
 ) -> SCLogicResult<CheckingAccountLookupResponses> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let my_address = ledger_client
         .signer_base_address()
         .await
@@ -19,7 +25,7 @@ pub async fn get_my_accounts<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let checking_account_address = validator
-        .address(0)
+        .address(network)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let outputs = ledger_client
         .all_outputs_at_address(&checking_account_address)
@@ -79,9 +85,13 @@ async fn find_pullers_for_nft<LC: LedgerClient<CheckingAccountDatums, ()>>(
     nft_policy_id: &str,
     ledger_client: &LC,
 ) -> SCLogicResult<Vec<AccountPuller>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let address = pull_validator()
         .map_err(SCLogicError::ValidatorScript)?
-        .address(0)
+        .address(network)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let outputs = ledger_client
         .all_outputs_at_address(&address)

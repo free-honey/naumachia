@@ -15,9 +15,6 @@ pub mod script;
 #[cfg(test)]
 mod tests;
 
-// TODO: Pass through someplace, do not hardcode!
-const NETWORK: u8 = 0;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GameLogic;
 
@@ -53,7 +50,9 @@ impl SCLogic for GameLogic {
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
-            GameEndpoints::Lock { amount, secret } => impl_lock(amount, &secret),
+            GameEndpoints::Lock { amount, secret } => {
+                impl_lock(ledger_client, amount, &secret).await
+            }
             GameEndpoints::Guess { output_id, guess } => {
                 impl_guess(ledger_client, output_id, &guess).await
             }
@@ -72,12 +71,20 @@ impl SCLogic for GameLogic {
     }
 }
 
-fn impl_lock(amount: u64, secret: &str) -> SCLogicResult<TxActions<HashedString, ClearString>> {
+async fn impl_lock<LC: LedgerClient<HashedString, ClearString>>(
+    ledger_client: &LC,
+    amount: u64,
+    secret: &str,
+) -> SCLogicResult<TxActions<HashedString, ClearString>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, amount);
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let hashed_string = HashedString::new(secret);
     let tx_actions = TxActions::v2().with_script_init(hashed_string, values, address);
@@ -89,9 +96,13 @@ async fn impl_guess<LC: LedgerClient<HashedString, ClearString>>(
     output_id: OutputId,
     guess: &str,
 ) -> SCLogicResult<TxActions<HashedString, ClearString>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let output = ledger_client
         .all_outputs_at_address(&address)
@@ -111,9 +122,13 @@ async fn impl_list_active_contracts<LC: LedgerClient<HashedString, ClearString>>
     ledger_client: &LC,
     count: usize,
 ) -> SCLogicResult<GameLookupResponses> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let outputs = ledger_client
         .outputs_at_address(&address, count)

@@ -18,9 +18,13 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     checking_account_output_id: OutputId,
     amount: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let allow_pull_validator = pull_validator().map_err(SCLogicError::ValidatorScript)?;
     let allow_pull_address = allow_pull_validator
-        .address(0)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let allow_pull_output = ledger_client
         .all_outputs_at_address(&allow_pull_address)
@@ -36,7 +40,7 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let validator =
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let checking_account_address = validator
-        .address(0)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let checking_account_output = ledger_client
         .all_outputs_at_address(&checking_account_address)

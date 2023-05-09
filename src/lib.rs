@@ -3,7 +3,8 @@ use crate::{
     transaction::{TxActions, UnbuiltTransaction},
 };
 
-pub use pallas_addresses::Address;
+pub use pallas_addresses::{Address, Network};
+
 pub mod error;
 
 pub mod address;

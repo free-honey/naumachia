@@ -13,9 +13,6 @@ use thiserror::Error;
 
 pub mod script;
 
-// TODO: Pass through someplace, do not hardcode!
-const NETWORK: u8 = 0;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TimeLockedLogic;
 
@@ -51,7 +48,9 @@ impl SCLogic for TimeLockedLogic {
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
-            TimeLockedEndpoints::Lock { amount, timestamp } => impl_lock(amount, timestamp),
+            TimeLockedEndpoints::Lock { amount, timestamp } => {
+                impl_lock(ledger_client, amount, timestamp).await
+            }
             TimeLockedEndpoints::Claim { output_id } => impl_claim(ledger_client, output_id).await,
         }
     }
@@ -68,12 +67,20 @@ impl SCLogic for TimeLockedLogic {
     }
 }
 
-fn impl_lock(amount: u64, timestamp: i64) -> SCLogicResult<TxActions<i64, ()>> {
+async fn impl_lock<LC: LedgerClient<i64, ()>>(
+    ledger_client: &LC,
+    amount: u64,
+    timestamp: i64,
+) -> SCLogicResult<TxActions<i64, ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, amount);
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let tx_actions = TxActions::v2().with_script_init(timestamp, values, address);
     Ok(tx_actions)
@@ -83,9 +90,13 @@ async fn impl_claim<LC: LedgerClient<i64, ()>>(
     ledger_client: &LC,
     output_id: OutputId,
 ) -> SCLogicResult<TxActions<i64, ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let output = ledger_client
         .all_outputs_at_address(&address)
@@ -107,9 +118,13 @@ async fn impl_list_active_contracts<LC: LedgerClient<i64, ()>>(
     ledger_client: &LC,
     count: usize,
 ) -> SCLogicResult<TimeLockedLookupResponses> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let outputs = ledger_client
         .outputs_at_address(&address, count)

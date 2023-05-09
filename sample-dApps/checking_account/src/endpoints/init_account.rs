@@ -19,6 +19,10 @@ pub async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     starting_lovelace: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let owner = ledger_client
         .signer_base_address()
         .await
@@ -44,7 +48,7 @@ pub async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let spend_token_policy = spending_token_policy.id().unwrap();
     let address = validator
-        .address(0)
+        .address(network)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let spend_token_id = hex::decode(&spend_token_policy).unwrap();

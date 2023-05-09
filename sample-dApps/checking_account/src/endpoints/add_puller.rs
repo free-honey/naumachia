@@ -21,6 +21,10 @@ pub async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
     period: i64,
     next_pull: i64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let me = ledger_client
         .signer_base_address()
         .await
@@ -44,7 +48,7 @@ pub async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
 
     let address = pull_validator()
         .map_err(SCLogicError::ValidatorScript)?
-        .address(0)
+        .address(network)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
     let mut values = Values::default();

@@ -10,10 +10,8 @@ use naumachia::{
     scripts::context::pub_key_hash_from_address_if_available,
     scripts::{MintingPolicy, ValidatorCode},
     smart_contract::{SmartContract, SmartContractTrait},
-    Address,
+    Address, Network,
 };
-
-const NETWORK: u8 = 0;
 
 #[tokio::test]
 async fn init_creates_instance_with_correct_balance() {
@@ -37,7 +35,8 @@ async fn init_creates_instance_with_correct_balance() {
 
     // Then
     let script = checking_account_validator().unwrap();
-    let address = script.address(NETWORK).unwrap();
+    let network = Network::Testnet;
+    let address = script.address(network).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
         .all_outputs_at_address(&address)
@@ -75,7 +74,8 @@ async fn add_puller_creates_new_datum_for_puller() {
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     let script = pull_validator().unwrap();
-    let script_address = script.address(NETWORK).unwrap();
+    let network = Network::Testnet;
+    let script_address = script.address(network).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
         .all_outputs_at_address(&script_address)
@@ -125,7 +125,8 @@ async fn remove_puller__removes_the_allowed_puller() {
     let contract = SmartContract::new(&CheckingAccountLogic, &backend);
     contract.hit_endpoint(add_endpoint).await.unwrap();
     let script = pull_validator().unwrap();
-    let address = script.address(NETWORK).unwrap();
+    let network = Network::Testnet;
+    let address = script.address(network).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
         .all_outputs_at_address(&address)
@@ -166,7 +167,8 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
     contract.hit_endpoint(init_endpoint).await.unwrap();
 
     let script = checking_account_validator().unwrap();
-    let address = script.address(NETWORK).unwrap();
+    let network = Network::Testnet;
+    let address = script.address(network).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
         .all_outputs_at_address(&address)
@@ -210,7 +212,8 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
     contract.hit_endpoint(init_endpoint).await.unwrap();
 
     let script = checking_account_validator().unwrap();
-    let address = script.address(NETWORK).unwrap();
+    let network = Network::Testnet;
+    let address = script.address(network).unwrap();
     let mut outputs_at_address = backend
         .ledger_client
         .all_outputs_at_address(&address)
@@ -242,10 +245,11 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
 
     let allow_puller_script = pull_validator().unwrap();
-    let allow_puller_address = allow_puller_script.address(NETWORK).unwrap();
+    let network = Network::Testnet;
+    let allow_puller_address = allow_puller_script.address(network).unwrap();
     let account_script = checking_account_validator().unwrap();
     let spending_token_policy = vec![5, 5, 5, 5, 5];
-    let account_address = account_script.address(NETWORK).unwrap();
+    let account_address = account_script.address(network).unwrap();
 
     let account_amount = 100_000_000;
     let pull_amount = 15_000_000;
