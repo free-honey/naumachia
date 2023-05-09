@@ -18,7 +18,7 @@ use minicbor::{Decoder, Encoder};
 
 use crate::scripts::ExecutionCost;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
-use pallas_addresses::Address;
+use pallas_addresses::{Address, Network};
 use std::marker::PhantomData;
 use std::rc::Rc;
 use uplc::{
@@ -238,8 +238,14 @@ where
         Ok(cost.into())
     }
 
-    fn address(&self, network: u8) -> ScriptResult<Address> {
-        let cbor = self.script_hex().unwrap();
+    // TODO: Stop using CML
+    fn address(&self, network: Network) -> ScriptResult<Address> {
+        let network_index = match network {
+            Network::Testnet => 0,
+            Network::Mainnet => 1,
+            Network::Other(inner) => inner,
+        };
+        let cbor = self.script_hex().unwrap(); // TODO
         let script = match self.version {
             TransactionVersion::V1 => {
                 let script_bytes =
@@ -258,7 +264,7 @@ where
         };
         let script_hash = script.hash();
         let stake_cred = StakeCredential::from_scripthash(&script_hash);
-        let enterprise_addr = EnterpriseAddress::new(network, &stake_cred);
+        let enterprise_addr = EnterpriseAddress::new(network_index, &stake_cred);
         let cml_script_address = enterprise_addr.to_address();
         let script_address_str = cml_script_address
             .to_bech32(None)

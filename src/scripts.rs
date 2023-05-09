@@ -1,5 +1,5 @@
 use context::TxContext;
-use pallas_addresses::Address;
+use pallas_addresses::{Address, Network};
 use std::fmt::Debug;
 use thiserror::Error;
 
@@ -11,7 +11,7 @@ pub mod context;
 
 pub trait ValidatorCode<D, R>: Send + Sync {
     fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost>;
-    fn address(&self, network: u8) -> ScriptResult<Address>;
+    fn address(&self, network: Network) -> ScriptResult<Address>;
     fn script_hex(&self) -> ScriptResult<String>;
 }
 

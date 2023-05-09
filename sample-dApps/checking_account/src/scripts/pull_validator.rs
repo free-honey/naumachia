@@ -31,8 +31,7 @@ mod tests {
         pub_key_hash_from_address_if_available, ContextBuilder, PubKeyHash, TxContext,
     };
     use naumachia::scripts::ValidatorCode;
-
-    const NETWORK: u8 = 0;
+    use naumachia::Network;
 
     struct PullTestContext {
         pub signer_pkh: PubKeyHash,
@@ -86,7 +85,8 @@ mod tests {
             let account_input_tx_id = [9, 8, 7, 6];
             let input_tx_index = 0;
             let account_input_tx_index = 0;
-            let script_address = script.address(NETWORK).unwrap();
+            let network = Network::Testnet;
+            let script_address = script.address(network).unwrap();
             let spending_token = vec![5, 5, 5, 5];
             let original_balance = 10_000;
             let pull_amount = 10;

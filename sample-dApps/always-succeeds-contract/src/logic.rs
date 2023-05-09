@@ -15,9 +15,6 @@ pub mod script;
 #[cfg(test)]
 mod tests;
 
-// TODO: Pass through someplace, do not hardcode!
-const NETWORK: u8 = 0;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AlwaysSucceedsLogic;
 
@@ -53,7 +50,7 @@ impl SCLogic for AlwaysSucceedsLogic {
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
-            AlwaysSucceedsEndpoints::Lock { amount } => impl_lock(amount),
+            AlwaysSucceedsEndpoints::Lock { amount } => impl_lock(ledger_client, amount).await,
             AlwaysSucceedsEndpoints::Claim { output_id } => {
                 impl_claim(ledger_client, output_id).await
             }
@@ -72,12 +69,19 @@ impl SCLogic for AlwaysSucceedsLogic {
     }
 }
 
-fn impl_lock(amount: u64) -> SCLogicResult<TxActions<(), ()>> {
+async fn impl_lock<LC: LedgerClient<(), ()>>(
+    ledger_client: &LC,
+    amount: u64,
+) -> SCLogicResult<TxActions<(), ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, amount);
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let tx_actions = TxActions::v2().with_script_init((), values, address);
     Ok(tx_actions)
@@ -87,9 +91,13 @@ async fn impl_claim<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
     output_id: OutputId,
 ) -> SCLogicResult<TxActions<(), ()>> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let output = ledger_client
         .all_outputs_at_address(&address)
@@ -109,9 +117,13 @@ async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
     ledger_client: &LC,
     count: usize,
 ) -> SCLogicResult<AlwaysSucceedsLookupResponses> {
+    let network = ledger_client
+        .network()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let script = get_script().map_err(SCLogicError::ValidatorScript)?;
     let address = script
-        .address(NETWORK)
+        .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
     let outputs = ledger_client
         .outputs_at_address(&address, count)

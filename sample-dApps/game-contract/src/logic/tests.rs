@@ -1,7 +1,9 @@
 use super::*;
-use naumachia::ledger_client::test_ledger_client::TestBackendsBuilder;
-use naumachia::smart_contract::{SmartContract, SmartContractTrait};
-use naumachia::Address;
+use naumachia::{
+    ledger_client::test_ledger_client::TestBackendsBuilder,
+    smart_contract::{SmartContract, SmartContractTrait},
+    Address, Network,
+};
 
 // Ignore because the game script is funky with Aiken
 #[ignore]
@@ -23,12 +25,13 @@ async fn lock_and_claim() {
     };
     let script = get_script().unwrap();
     let contract = SmartContract::new(&GameLogic, &backend);
+    let network = Network::Testnet;
     contract.hit_endpoint(endpoint).await.unwrap();
     {
         let expected = amount;
         let actual = backend
             .ledger_client
-            .balance_at_address(&script.address(0).unwrap(), &PolicyId::Lovelace)
+            .balance_at_address(&script.address(network).unwrap(), &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(expected, actual);
@@ -45,7 +48,7 @@ async fn lock_and_claim() {
     }
     let instance = backend
         .ledger_client
-        .all_outputs_at_address(&script.address(0).unwrap())
+        .all_outputs_at_address(&script.address(network).unwrap())
         .await
         .unwrap()
         .pop()
@@ -67,7 +70,7 @@ async fn lock_and_claim() {
     {
         let script_balance = backend
             .ledger_client
-            .balance_at_address(&script.address(0).unwrap(), &PolicyId::Lovelace)
+            .balance_at_address(&script.address(network).unwrap(), &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(script_balance, 0);
