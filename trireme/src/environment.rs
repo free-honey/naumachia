@@ -271,6 +271,15 @@ pub async fn last_block_time_impl() -> Result<()> {
     Ok(())
 }
 
+pub async fn advance_blocks(count: i64) -> Result<()> {
+    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    ledger_client.advance_blocks(count).await?;
+    println!("Advancing blocks by: {}", count);
+    let block_time = ledger_client.last_block_time_ms().await?;
+    println!("New block time: {}", block_time);
+    Ok(())
+}
+
 const RAW_PHRASE_FILE: &str = "secret_phrase.toml";
 
 async fn write_secret_phrase(phrase: &str, sub_dir: &str) -> Result<PathBuf> {

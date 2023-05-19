@@ -1,6 +1,6 @@
 use crate::environment::{
-    active_signer_impl, get_address_impl, get_pubkey_hash_impl, last_block_time_impl,
-    switch_signer_impl,
+    active_signer_impl, advance_blocks, get_address_impl, get_pubkey_hash_impl,
+    last_block_time_impl, switch_signer_impl,
 };
 use crate::{
     balance::{ada_balance_impl, balance_impl},
@@ -46,6 +46,8 @@ enum ActionParams {
     SwitchSigner,
     /// Get Last Block Time 🕒
     LastBlockTime,
+    /// Advance time and block height by count 🧱
+    AdvanceBlocks { count: u16 },
 }
 
 #[derive(Debug, Error)]
@@ -69,6 +71,7 @@ async fn main() -> Result<()> {
         ActionParams::Signer => active_signer_impl().await?,
         ActionParams::SwitchSigner => switch_signer_impl().await?,
         ActionParams::LastBlockTime => last_block_time_impl().await?,
+        ActionParams::AdvanceBlocks { count } => advance_blocks(count as i64).await?,
     }
     Ok(())
 }
