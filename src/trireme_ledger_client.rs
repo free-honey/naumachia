@@ -366,6 +366,15 @@ where
             InnerClient::Mocked(test_client) => test_client.current_time().await,
         }
     }
+
+    pub async fn advance_blocks(&self, count: i64) -> LedgerClientResult<()> {
+        match &self.inner_client {
+            InnerClient::Cml(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
+                Error::Trireme("Not implemented for CML client".to_string()),
+            ))),
+            InnerClient::Mocked(test_client) => test_client.advance_time_n_blocks(count).await,
+        }
+    }
 }
 
 #[async_trait]

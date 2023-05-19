@@ -245,6 +245,14 @@ where
         let new_time = block_length + current_time;
         self.storage.set_current_time(new_time).await
     }
+
+    pub async fn advance_time_n_blocks(&self, n_blocks: i64) -> LedgerClientResult<()> {
+        let block_length = self.storage.get_block_length().await?;
+        let current_time = self.storage.current_time().await?;
+        let advanced_time = block_length * n_blocks;
+        let new_time = advanced_time + current_time;
+        self.storage.set_current_time(new_time).await
+    }
 }
 
 #[async_trait]
