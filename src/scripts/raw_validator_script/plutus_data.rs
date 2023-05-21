@@ -19,7 +19,7 @@ pub enum PlutusData {
 
 impl PlutusData {
     pub fn hash(&self) -> Vec<u8> {
-        // TODO: move this maybe
+        // TODO: I'd prefer not to be taking a dep on CML here
         use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 
         let cml_data = self.to_plutus_data();
@@ -27,7 +27,7 @@ impl PlutusData {
     }
 
     pub fn bytes(&self) -> Vec<u8> {
-        // TODO: move this maybe
+        // TODO: I'd prefer not to be taking a dep on CML here
         use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
 
         let cml_data = self.to_plutus_data();
