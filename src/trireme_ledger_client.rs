@@ -103,8 +103,13 @@ pub enum LedgerSource {
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum KeySource {
-    RawSecretPhrase { phrase_file: PathBuf },
-    TerminalPasswordUpfrontSecretPhrase { phrase_file: PathBuf },
+    RawSecretPhrase {
+        phrase_file: PathBuf,
+    },
+    TerminalPasswordUpfrontSecretPhrase {
+        phrase_file: PathBuf,
+        password_salt: Vec<u8>,
+    },
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -297,8 +302,11 @@ impl ClientConfig {
                         let keys = RawSecretPhraseKeys::new(phrase_file, network_index);
                         SecretPhraseKeys::RawSecretPhraseKeys(keys)
                     }
-                    KeySource::TerminalPasswordUpfrontSecretPhrase { phrase_file } => {
-                        let password = TerminalPasswordUpfront::init()?;
+                    KeySource::TerminalPasswordUpfrontSecretPhrase {
+                        phrase_file,
+                        password_salt,
+                    } => {
+                        let password = TerminalPasswordUpfront::init(&password_salt)?;
                         let keys =
                             PasswordProtectedPhraseKeys::new(password, phrase_file, network_index);
                         SecretPhraseKeys::PasswordProtectedPhraseKeys(keys)

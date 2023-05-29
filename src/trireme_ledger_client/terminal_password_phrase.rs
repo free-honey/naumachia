@@ -14,8 +14,6 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
 
-pub const SALT: &[u8] = b"brackish water";
-
 pub struct PasswordProtectedPhraseKeys<P: Password> {
     password: P,
     phrase_file_path: PathBuf,
@@ -39,6 +37,7 @@ impl<P: Password> PasswordProtectedPhraseKeys<P> {
     pub async fn read_phrase(&self) -> Result<String> {
         let text = fs::read_to_string(&self.phrase_file_path).await.unwrap();
         let encrypted: EncryptedSecretPhrase = toml::from_str(&text).unwrap();
+        dbg!(&encrypted);
         let password = self.password.get_password().unwrap();
         let phrase = decrypt_phrase(&encrypted, &password);
         Ok(phrase)
@@ -73,22 +72,23 @@ pub struct TerminalPasswordUpfront {
 
 impl TerminalPasswordUpfront {
     /// Reads the password from the terminal and hashes it with Argon2.
-    pub fn init() -> Result<Self> {
+    pub fn init(salt: &[u8]) -> Result<Self> {
         let password = InputPassword::new()
             .with_prompt("Enter password")
             .interact()
             .map_err(|e| Error::Trireme(e.to_string()))?;
 
-        let new = normalize_password(&password)?;
+        let new = normalize_password(&password, salt)?;
         let secret = Secret::new(new);
         let password_container = Self { password: secret };
         Ok(password_container)
     }
 }
 
-fn normalize_password(original: &str) -> Result<[u8; 32]> {
+fn normalize_password(original: &str, salt: &[u8]) -> Result<[u8; 32]> {
     // TODO: Upgrade config to be more secure?
     let config = argon2::Config::default();
+    // TODO: Return Salt with the password
     let hashed = argon2::hash_raw(original.as_bytes(), SALT, &config)
         .map_err(|e| Error::Trireme(e.to_string()))?;
     // TODO: Verify that the argon2 output is always long enough
@@ -109,6 +109,7 @@ impl Password for TerminalPasswordUpfront {
 
 fn encrypt_phrase(phrase: &str, password: &[u8; 32]) -> EncryptedSecretPhrase {
     let key = password;
+    // TODO: pass nonce in
     let nonce = [0u8; 12];
     let mut cipher = ChaCha20::new(key.into(), &nonce.into());
     let mut buffer: Vec<_> = phrase.bytes().collect();
@@ -120,6 +121,7 @@ fn encrypt_phrase(phrase: &str, password: &[u8; 32]) -> EncryptedSecretPhrase {
 
 fn decrypt_phrase(encrypted_phrase: &EncryptedSecretPhrase, password: &[u8; 32]) -> String {
     let key = password;
+    // TODO: pass nonce in
     let nonce = [0u8; 12];
     let mut cipher = ChaCha20::new(key.into(), &nonce.into());
     let mut buffer: Vec<_> = encrypted_phrase.inner.clone();
@@ -129,7 +131,7 @@ fn decrypt_phrase(encrypted_phrase: &EncryptedSecretPhrase, password: &[u8; 32])
     String::from_utf8(buffer).unwrap()
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct EncryptedSecretPhrase {
     inner: Vec<u8>,
 }
@@ -188,7 +190,10 @@ mod tests {
 
         let nonce = [0x24; 12];
 
-        let normalized = normalize_password("password").unwrap();
+        let password_raw = "password";
+        let password_salt = b"brackish water";
+
+        let normalized = normalize_password(password_raw, password_salt).unwrap();
 
         let password = InMemoryPassword::new(normalized);
 
