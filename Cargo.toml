@@ -22,7 +22,10 @@ members = [
 ]
 
 [dependencies]
+rust-argon2 = "1.0.0"
 bech32 = "0.9.1"
+chacha20 = "0.9.1"
+dialoguer = "0.10.2"
 serde = { version = "1.0.143", features = ["derive"] }
 serde_with = {version = "2.0.0", features = ["json"]}
 serde_json = "1.0"
@@ -41,6 +44,7 @@ tempfile = "3.3.0"
 minicbor = "0.19.0"
 rand = "0.8.5"
 pallas-addresses = "0.19.0-alpha.0"
+secrecy = "0.8.0"
 
 [dependencies.blockfrost-http-client]
 version = "0.0.11"

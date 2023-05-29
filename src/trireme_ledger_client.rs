@@ -1,34 +1,39 @@
 use crate::{
     error::*,
-    ledger_client::{LedgerClient, LedgerClientResult},
+    ledger_client::{
+        test_ledger_client::local_persisted_storage::LocalPersistedStorage,
+        test_ledger_client::TestLedgerClient, LedgerClient, LedgerClientError, LedgerClientResult,
+    },
     output::Output,
+    scripts::raw_validator_script::plutus_data::PlutusData,
     transaction::TxId,
+    trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey,
     trireme_ledger_client::raw_secret_phrase::RawSecretPhraseKeys,
     UnbuiltTransaction,
 };
 
-use crate::ledger_client::test_ledger_client::local_persisted_storage::LocalPersistedStorage;
-use crate::ledger_client::test_ledger_client::TestLedgerClient;
-use crate::ledger_client::LedgerClientError;
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
-use crate::trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey;
+use crate::trireme_ledger_client::cml_client::Keys;
+use crate::trireme_ledger_client::terminal_password_phrase::{
+    PasswordProtectedPhraseKeys, TerminalPasswordUpfront,
+};
 use async_trait::async_trait;
 use blockfrost_http_client::{MAINNET_URL, PREPROD_NETWORK_URL};
+use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress};
+use cardano_multiplatform_lib::crypto::PrivateKey;
 use cml_client::{
     blockfrost_ledger::BlockFrostLedger, plutus_data_interop::PlutusDataInterop, CMLLedgerCLient,
 };
 use dirs::home_dir;
 use pallas_addresses::Address;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::{marker::PhantomData, path::PathBuf};
+use std::{fmt::Debug, hash::Hash, marker::PhantomData, path::PathBuf};
 use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
 
 // pub mod blockfrost_ledger;
 pub mod cml_client;
 pub mod raw_secret_phrase;
+pub mod terminal_password_phrase;
 
 pub const TRIREME_CONFIG_FOLDER: &str = ".trireme";
 pub const TRIREME_CONFIG_FILE: &str = "config.toml";
@@ -98,7 +103,14 @@ pub enum LedgerSource {
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum KeySource {
-    RawSecretPhrase { phrase_file: PathBuf },
+    RawSecretPhrase {
+        phrase_file: PathBuf,
+    },
+    TerminalPasswordUpfrontSecretPhrase {
+        phrase_file: PathBuf,
+        password_salt: Vec<u8>,
+        encrpytion_nonce: [u8; 12],
+    },
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -288,12 +300,28 @@ impl ClientConfig {
                 let network_index = network.into();
                 let keys = match inner.key_source {
                     KeySource::RawSecretPhrase { phrase_file } => {
-                        RawSecretPhraseKeys::new(phrase_file, network_index)
+                        let keys = RawSecretPhraseKeys::new(phrase_file, network_index);
+                        SecretPhraseKeys::RawSecretPhraseKeys(keys)
+                    }
+                    KeySource::TerminalPasswordUpfrontSecretPhrase {
+                        phrase_file,
+                        password_salt,
+                        encrpytion_nonce,
+                    } => {
+                        let password = TerminalPasswordUpfront::init(&password_salt)?;
+                        let keys = PasswordProtectedPhraseKeys::new(
+                            password,
+                            phrase_file,
+                            network_index,
+                            encrpytion_nonce,
+                        );
+                        SecretPhraseKeys::PasswordProtectedPhraseKeys(keys)
                     }
                 };
 
                 let inner_client =
                     InnerClient::Cml(CMLLedgerCLient::new(ledger, keys, network_index));
+
                 let trireme_client = TriremeLedgerClient {
                     _datum: Default::default(),
                     _redeemer: Default::default(),
@@ -316,6 +344,37 @@ impl ClientConfig {
     }
 }
 
+pub enum SecretPhraseKeys {
+    RawSecretPhraseKeys(RawSecretPhraseKeys),
+    PasswordProtectedPhraseKeys(PasswordProtectedPhraseKeys<TerminalPasswordUpfront>),
+}
+
+#[async_trait]
+impl Keys for SecretPhraseKeys {
+    async fn base_addr(&self) -> cml_client::error::Result<BaseAddress> {
+        match self {
+            SecretPhraseKeys::RawSecretPhraseKeys(keys) => keys.base_addr().await,
+            SecretPhraseKeys::PasswordProtectedPhraseKeys(keys) => keys.base_addr().await,
+        }
+    }
+
+    async fn private_key(&self) -> cml_client::error::Result<PrivateKey> {
+        match self {
+            SecretPhraseKeys::RawSecretPhraseKeys(keys) => keys.private_key().await,
+            SecretPhraseKeys::PasswordProtectedPhraseKeys(keys) => keys.private_key().await,
+        }
+    }
+
+    async fn addr_from_bech_32(&self, addr: &str) -> cml_client::error::Result<CMLAddress> {
+        match self {
+            SecretPhraseKeys::RawSecretPhraseKeys(keys) => keys.addr_from_bech_32(addr).await,
+            SecretPhraseKeys::PasswordProtectedPhraseKeys(keys) => {
+                keys.addr_from_bech_32(addr).await
+            }
+        }
+    }
+}
+
 enum InnerClient<Datum, Redeemer>
 where
     Datum: PlutusDataInterop
@@ -327,7 +386,7 @@ where
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
-    Cml(CMLLedgerCLient<BlockFrostLedger, RawSecretPhraseKeys, Datum, Redeemer>),
+    Cml(CMLLedgerCLient<BlockFrostLedger, SecretPhraseKeys, Datum, Redeemer>),
     Mocked(TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<PathBuf, Datum>>),
 }
 

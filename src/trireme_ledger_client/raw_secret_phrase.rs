@@ -99,7 +99,7 @@ impl From<&SecretPhrase> for String {
 impl FromStr for SecretPhrase {
     type Err = RawSecretPhraseKeysError;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let inner = s.to_string();
         Ok(SecretPhrase { inner })
     }
