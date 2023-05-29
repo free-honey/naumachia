@@ -17,30 +17,37 @@ use tokio::fs;
 pub struct PasswordProtectedPhraseKeys<P: Password> {
     password: P,
     phrase_file_path: PathBuf,
-    nonce: [u8; 12],
+    encryption_nonce: [u8; 12],
     network: u8,
 }
 
 impl<P: Password> PasswordProtectedPhraseKeys<P> {
     // TODO: Add nonce
-    pub fn new(password: P, phrase_file_path: PathBuf, network_index: u8) -> Self {
-        let nonce = [0; 12];
-
+    pub fn new(
+        password: P,
+        phrase_file_path: PathBuf,
+        network_index: u8,
+        encryption_nonce: [u8; 12],
+    ) -> Self {
         Self {
             password,
             phrase_file_path,
-            nonce,
+            encryption_nonce,
             network: network_index,
         }
     }
 
     pub async fn read_phrase(&self) -> Result<String> {
-        let text = fs::read_to_string(&self.phrase_file_path).await.unwrap();
-        let encrypted: EncryptedSecretPhrase = toml::from_str(&text).unwrap();
-        dbg!(&encrypted);
-        let password = self.password.get_password().unwrap();
-        let phrase = decrypt_phrase(&encrypted, &password);
-        Ok(phrase)
+        let text = fs::read_to_string(&self.phrase_file_path)
+            .await
+            .map_err(|e| Error::Trireme(e.to_string()))?;
+        let encrypted: EncryptedSecretPhrase =
+            toml::from_str(&text).map_err(|e| Error::Trireme(e.to_string()))?;
+        let password = self
+            .password
+            .get_password()
+            .map_err(|e| Error::Trireme(e.to_string()))?;
+        decrypt_phrase(&encrypted, &password, &self.encryption_nonce)
     }
 }
 
@@ -88,8 +95,7 @@ impl TerminalPasswordUpfront {
 fn normalize_password(original: &str, salt: &[u8]) -> Result<[u8; 32]> {
     // TODO: Upgrade config to be more secure?
     let config = argon2::Config::default();
-    // TODO: Return Salt with the password
-    let hashed = argon2::hash_raw(original.as_bytes(), SALT, &config)
+    let hashed = argon2::hash_raw(original.as_bytes(), salt, &config)
         .map_err(|e| Error::Trireme(e.to_string()))?;
     // TODO: Verify that the argon2 output is always long enough
     let new = hashed[..32].try_into().expect("always correct length");
@@ -107,11 +113,13 @@ impl Password for TerminalPasswordUpfront {
     }
 }
 
-fn encrypt_phrase(phrase: &str, password: &[u8; 32]) -> EncryptedSecretPhrase {
+fn encrypt_phrase(
+    phrase: &str,
+    password: &[u8; 32],
+    encryption_nonce: &[u8; 12],
+) -> EncryptedSecretPhrase {
     let key = password;
-    // TODO: pass nonce in
-    let nonce = [0u8; 12];
-    let mut cipher = ChaCha20::new(key.into(), &nonce.into());
+    let mut cipher = ChaCha20::new(key.into(), encryption_nonce.into());
     let mut buffer: Vec<_> = phrase.bytes().collect();
 
     cipher.apply_keystream(&mut buffer);
@@ -119,16 +127,18 @@ fn encrypt_phrase(phrase: &str, password: &[u8; 32]) -> EncryptedSecretPhrase {
     EncryptedSecretPhrase { inner: buffer }
 }
 
-fn decrypt_phrase(encrypted_phrase: &EncryptedSecretPhrase, password: &[u8; 32]) -> String {
+fn decrypt_phrase(
+    encrypted_phrase: &EncryptedSecretPhrase,
+    password: &[u8; 32],
+    encryption_nonce: &[u8; 12],
+) -> Result<String> {
     let key = password;
-    // TODO: pass nonce in
-    let nonce = [0u8; 12];
-    let mut cipher = ChaCha20::new(key.into(), &nonce.into());
+    let mut cipher = ChaCha20::new(key.into(), encryption_nonce.into());
     let mut buffer: Vec<_> = encrypted_phrase.inner.clone();
 
     cipher.apply_keystream(&mut buffer);
 
-    String::from_utf8(buffer).unwrap()
+    String::from_utf8(buffer).map_err(|e| Error::Trireme(e.to_string()))
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -165,9 +175,13 @@ mod tests {
             Self { password }
         }
 
-        pub fn encrypt_phrase(&self, phrase: &str) -> EncryptedSecretPhrase {
+        pub fn encrypt_phrase(
+            &self,
+            phrase: &str,
+            encryption_nonce: &[u8; 12],
+        ) -> EncryptedSecretPhrase {
             let password = self.get_password().unwrap();
-            encrypt_phrase(phrase, &password)
+            encrypt_phrase(phrase, &password, encryption_nonce)
         }
     }
 
@@ -188,7 +202,7 @@ mod tests {
         abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon \
         abandon abandon abandon abandon";
 
-        let nonce = [0x24; 12];
+        let nonce = [2; 12];
 
         let password_raw = "password";
         let password_salt = b"brackish water";
@@ -197,16 +211,50 @@ mod tests {
 
         let password = InMemoryPassword::new(normalized);
 
-        let encrypted_phrase = password.encrypt_phrase(original_phrase);
+        let encrypted_phrase = password.encrypt_phrase(original_phrase, &nonce);
 
         write_toml_struct_to_file(&file_path, &encrypted_phrase)
             .await
             .unwrap();
 
-        let keys = PasswordProtectedPhraseKeys::new(password, file_path, 0);
+        let keys = PasswordProtectedPhraseKeys::new(password, file_path, 0, nonce);
 
         let new_phrase = keys.read_phrase().await.unwrap();
 
         assert_eq!(original_phrase, &new_phrase);
+    }
+
+    #[tokio::test]
+    async fn decryption_fails_with_wrong_nonce() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("my-temporary-note.txt");
+        let mut file = File::create(&file_path).unwrap();
+
+        let original_phrase =
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon \
+        abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon \
+        abandon abandon abandon abandon";
+
+        let true_nonce = [7; 12];
+        let false_nonce = [6; 12];
+
+        let password_raw = "password";
+        let password_salt = b"brackish water";
+
+        let normalized = normalize_password(password_raw, password_salt).unwrap();
+
+        let password = InMemoryPassword::new(normalized);
+
+        let encrypted_phrase = password.encrypt_phrase(original_phrase, &true_nonce);
+
+        write_toml_struct_to_file(&file_path, &encrypted_phrase)
+            .await
+            .unwrap();
+
+        let keys = PasswordProtectedPhraseKeys::new(password, file_path, 0, false_nonce);
+
+        let new_phrase = keys.read_phrase().await;
+
+        assert!(new_phrase.is_err());
     }
 }

@@ -109,6 +109,7 @@ pub enum KeySource {
     TerminalPasswordUpfrontSecretPhrase {
         phrase_file: PathBuf,
         password_salt: Vec<u8>,
+        encrpytion_nonce: [u8; 12],
     },
 }
 
@@ -305,10 +306,15 @@ impl ClientConfig {
                     KeySource::TerminalPasswordUpfrontSecretPhrase {
                         phrase_file,
                         password_salt,
+                        encrpytion_nonce,
                     } => {
                         let password = TerminalPasswordUpfront::init(&password_salt)?;
-                        let keys =
-                            PasswordProtectedPhraseKeys::new(password, phrase_file, network_index);
+                        let keys = PasswordProtectedPhraseKeys::new(
+                            password,
+                            phrase_file,
+                            network_index,
+                            encrpytion_nonce,
+                        );
                         SecretPhraseKeys::PasswordProtectedPhraseKeys(keys)
                     }
                 };
