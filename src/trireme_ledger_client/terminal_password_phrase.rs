@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress};
 use cardano_multiplatform_lib::crypto::PrivateKey;
 use chacha20::{
-    cipher::{KeyIvInit, StreamCipher, StreamCipherSeek},
+    cipher::{KeyIvInit, StreamCipher},
     ChaCha20,
 };
 use dialoguer::Password as InputPassword;
@@ -18,11 +18,10 @@ pub struct PasswordProtectedPhraseKeys<P: Password> {
     password: P,
     phrase_file_path: PathBuf,
     encryption_nonce: [u8; 12],
-    network: u8,
+    _network: u8,
 }
 
 impl<P: Password> PasswordProtectedPhraseKeys<P> {
-    // TODO: Add nonce
     pub fn new(
         password: P,
         phrase_file_path: PathBuf,
@@ -33,7 +32,7 @@ impl<P: Password> PasswordProtectedPhraseKeys<P> {
             password,
             phrase_file_path,
             encryption_nonce,
-            network: network_index,
+            _network: network_index,
         }
     }
 
@@ -67,7 +66,7 @@ impl<P: Password + Send + Sync> Keys for PasswordProtectedPhraseKeys<P> {
 
     async fn addr_from_bech_32(
         &self,
-        addr: &str,
+        _addr: &str,
     ) -> crate::trireme_ledger_client::cml_client::error::Result<CMLAddress> {
         todo!()
     }
@@ -113,20 +112,6 @@ impl Password for TerminalPasswordUpfront {
     }
 }
 
-fn encrypt_phrase(
-    phrase: &str,
-    password: &[u8; 32],
-    encryption_nonce: &[u8; 12],
-) -> EncryptedSecretPhrase {
-    let key = password;
-    let mut cipher = ChaCha20::new(key.into(), encryption_nonce.into());
-    let mut buffer: Vec<_> = phrase.bytes().collect();
-
-    cipher.apply_keystream(&mut buffer);
-
-    EncryptedSecretPhrase { inner: buffer }
-}
-
 fn decrypt_phrase(
     encrypted_phrase: &EncryptedSecretPhrase,
     password: &[u8; 32],
@@ -163,7 +148,6 @@ mod tests {
     use super::*;
     use crate::trireme_ledger_client::write_toml_struct_to_file;
     use std::fs::File;
-    use std::io::Write;
     use tempfile::tempdir;
 
     struct InMemoryPassword {
@@ -187,15 +171,29 @@ mod tests {
 
     impl Password for InMemoryPassword {
         fn get_password(&self) -> Result<[u8; 32]> {
-            Ok(self.password.clone())
+            Ok(self.password)
         }
+    }
+
+    fn encrypt_phrase(
+        phrase: &str,
+        password: &[u8; 32],
+        encryption_nonce: &[u8; 12],
+    ) -> EncryptedSecretPhrase {
+        let key = password;
+        let mut cipher = ChaCha20::new(key.into(), encryption_nonce.into());
+        let mut buffer: Vec<_> = phrase.bytes().collect();
+
+        cipher.apply_keystream(&mut buffer);
+
+        EncryptedSecretPhrase { inner: buffer }
     }
 
     #[tokio::test]
     async fn roundtrip_phrase() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("my-temporary-note.txt");
-        let mut file = File::create(&file_path).unwrap();
+        let _file = File::create(&file_path).unwrap();
 
         let original_phrase =
             "abandon abandon abandon abandon abandon abandon abandon abandon abandon \
@@ -228,7 +226,7 @@ mod tests {
     async fn decryption_fails_with_wrong_nonce() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("my-temporary-note.txt");
-        let mut file = File::create(&file_path).unwrap();
+        let _file = File::create(&file_path).unwrap();
 
         let original_phrase =
             "abandon abandon abandon abandon abandon abandon abandon abandon abandon \
