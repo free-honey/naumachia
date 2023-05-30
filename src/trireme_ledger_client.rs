@@ -18,7 +18,7 @@ use crate::trireme_ledger_client::terminal_password_phrase::{
 };
 use async_trait::async_trait;
 use blockfrost_http_client::{MAINNET_URL, PREPROD_NETWORK_URL};
-use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress};
+use cardano_multiplatform_lib::address::BaseAddress;
 use cardano_multiplatform_lib::crypto::PrivateKey;
 use cml_client::{
     blockfrost_ledger::BlockFrostLedger, plutus_data_interop::PlutusDataInterop, CMLLedgerCLient,
@@ -33,6 +33,7 @@ use tokio::{fs, io::AsyncWriteExt};
 // pub mod blockfrost_ledger;
 pub mod cml_client;
 pub mod raw_secret_phrase;
+pub mod secret_phrase;
 pub mod terminal_password_phrase;
 
 pub const TRIREME_CONFIG_FOLDER: &str = ".trireme";
@@ -362,15 +363,6 @@ impl Keys for SecretPhraseKeys {
         match self {
             SecretPhraseKeys::RawSecretPhraseKeys(keys) => keys.private_key().await,
             SecretPhraseKeys::PasswordProtectedPhraseKeys(keys) => keys.private_key().await,
-        }
-    }
-
-    async fn addr_from_bech_32(&self, addr: &str) -> cml_client::error::Result<CMLAddress> {
-        match self {
-            SecretPhraseKeys::RawSecretPhraseKeys(keys) => keys.addr_from_bech_32(addr).await,
-            SecretPhraseKeys::PasswordProtectedPhraseKeys(keys) => {
-                keys.addr_from_bech_32(addr).await
-            }
         }
     }
 }
