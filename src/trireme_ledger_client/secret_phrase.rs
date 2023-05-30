@@ -9,7 +9,7 @@ use cardano_multiplatform_lib::{
 };
 
 pub fn secret_phrase_to_account_key(phrase: &str) -> CMLLCResult<Bip32PrivateKey> {
-    let mnemonic = Mnemonic::from_phrase(&phrase, Language::English)
+    let mnemonic = Mnemonic::from_phrase(phrase, Language::English)
         .map_err(|e| RawSecretPhraseKeysError::Bip39(e.to_string()))
         .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
     let entropy = mnemonic.entropy();
@@ -28,8 +28,7 @@ pub fn private_key_to_base_address(account_key: &Bip32PrivateKey, network: u8) -
     let stake_key = account_key.derive(2).derive(0).to_public();
     let pub_key_creds = StakeCredential::from_keyhash(&pub_key.to_raw_key().hash());
     let stake_key_creds = StakeCredential::from_keyhash(&stake_key.to_raw_key().hash());
-    let base_addr = BaseAddress::new(network, &pub_key_creds, &stake_key_creds);
-    base_addr
+    BaseAddress::new(network, &pub_key_creds, &stake_key_creds)
 }
 
 fn harden(index: u32) -> u32 {
