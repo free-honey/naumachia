@@ -69,7 +69,12 @@ where
 pub trait Keys {
     async fn base_addr(&self) -> Result<BaseAddress>;
     async fn private_key(&self) -> Result<PrivateKey>;
-    async fn addr_from_bech_32(&self, addr: &str) -> Result<CMLAddress>;
+}
+
+fn addr_from_bech_32(addr: &str) -> Result<CMLAddress> {
+    let cml_address =
+        CMLAddress::from_bech32(addr).map_err(|e| CMLLCError::JsError(e.to_string()))?;
+    Ok(cml_address)
 }
 
 #[derive(Debug)]
@@ -193,11 +198,8 @@ where
                 .try_into()
                 .map_err(as_failed_to_issue_tx)?;
             let recipient = unbuilt_output.owner();
-            let recp_addr = self
-                .keys
-                .addr_from_bech_32(&recipient.to_string())
-                .await
-                .map_err(as_failed_to_issue_tx)?;
+            let recp_addr =
+                addr_from_bech_32(&recipient.to_string()).map_err(as_failed_to_issue_tx)?;
             let mut output = TransactionOutput::new(&recp_addr, &cml_values);
             let res = if let UnbuiltOutput::Validator { datum, .. } = unbuilt_output {
                 let data = datum.to_plutus_data();
@@ -526,10 +528,7 @@ where
             let transaction_id = input_tx_hash(specific_input).await?;
             let index = specific_input.id().index().into();
             let input = TransactionInput::new(&transaction_id, &index);
-            let address = self
-                .keys
-                .addr_from_bech_32(&specific_input.owner().to_string())
-                .await
+            let address = addr_from_bech_32(&specific_input.owner().to_string())
                 .map_err(|e| CMLLCError::JsError(e.to_string()))
                 .map_err(as_failed_to_issue_tx)?;
             let amount = specific_input
@@ -584,11 +583,8 @@ where
         let addr_string = address
             .to_bech32()
             .map_err(|e| LedgerClientError::BadAddress(Box::new(e)))?;
-        let cml_addr = self
-            .keys
-            .addr_from_bech_32(&addr_string)
-            .await
-            .map_err(as_failed_to_retrieve_by_address(address))?;
+        let cml_addr =
+            addr_from_bech_32(&addr_string).map_err(as_failed_to_retrieve_by_address(address))?;
 
         let bf_utxos = self
             .ledger
@@ -609,11 +605,8 @@ where
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let addr_string = address.to_bech32().expect("Already Validated");
-        let cml_addr = self
-            .keys
-            .addr_from_bech_32(&addr_string)
-            .await
-            .map_err(as_failed_to_retrieve_by_address(address))?;
+        let cml_addr =
+            addr_from_bech_32(&addr_string).map_err(as_failed_to_retrieve_by_address(address))?;
 
         let bf_utxos = self
             .ledger

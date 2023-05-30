@@ -2,7 +2,7 @@ use super::{error::*, Keys};
 use async_trait::async_trait;
 use bip39::{Language, Mnemonic};
 use cardano_multiplatform_lib::{
-    address::{Address as CMLAddress, BaseAddress, StakeCredential},
+    address::{BaseAddress, StakeCredential},
     crypto::{Bip32PrivateKey, PrivateKey},
 };
 use std::{fs, path::Path};
@@ -42,12 +42,6 @@ impl Keys for KeyManager {
         let account_key = self.get_account_key()?;
         let priv_key = account_key.derive(0).derive(0).to_raw_key();
         Ok(priv_key)
-    }
-
-    async fn addr_from_bech_32(&self, addr: &str) -> Result<CMLAddress> {
-        let cml_address =
-            CMLAddress::from_bech32(addr).map_err(|e| CMLLCError::JsError(e.to_string()))?;
-        Ok(cml_address)
     }
 }
 

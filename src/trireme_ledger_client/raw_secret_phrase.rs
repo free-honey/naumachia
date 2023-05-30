@@ -4,8 +4,7 @@ use crate::trireme_ledger_client::secret_phrase::{
     private_key_to_base_address, secret_phrase_to_private_key,
 };
 use async_trait::async_trait;
-use bip39::{Language, Mnemonic};
-use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress};
+use cardano_multiplatform_lib::address::BaseAddress;
 use cardano_multiplatform_lib::crypto::{Bip32PrivateKey, PrivateKey};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -60,12 +59,6 @@ impl Keys for RawSecretPhraseKeys {
         let account_key = self.get_account_key().await?;
         let priv_key = account_key.derive(0).derive(0).to_raw_key();
         Ok(priv_key)
-    }
-
-    async fn addr_from_bech_32(&self, addr: &str) -> CMLLCResult<CMLAddress> {
-        let cml_address =
-            CMLAddress::from_bech32(addr).map_err(|e| CMLLCError::JsError(e.to_string()))?;
-        Ok(cml_address)
     }
 }
 

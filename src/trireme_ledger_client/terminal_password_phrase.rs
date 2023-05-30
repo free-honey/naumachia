@@ -1,9 +1,6 @@
 use crate::{error::Error, error::Result, trireme_ledger_client::cml_client::Keys};
 use async_trait::async_trait;
-use cardano_multiplatform_lib::{
-    address::{Address as CMLAddress, BaseAddress},
-    crypto::PrivateKey,
-};
+use cardano_multiplatform_lib::{address::BaseAddress, crypto::PrivateKey};
 use chacha20::{
     cipher::{KeyIvInit, StreamCipher},
     ChaCha20,
@@ -61,13 +58,6 @@ impl<P: Password + Send + Sync> Keys for PasswordProtectedPhraseKeys<P> {
     async fn private_key(
         &self,
     ) -> crate::trireme_ledger_client::cml_client::error::Result<PrivateKey> {
-        todo!()
-    }
-
-    async fn addr_from_bech_32(
-        &self,
-        _addr: &str,
-    ) -> crate::trireme_ledger_client::cml_client::error::Result<CMLAddress> {
         todo!()
     }
 }
