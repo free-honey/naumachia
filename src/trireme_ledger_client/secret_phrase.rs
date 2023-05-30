@@ -8,7 +8,7 @@ use cardano_multiplatform_lib::{
     crypto::Bip32PrivateKey,
 };
 
-pub fn secret_phrase_to_private_key(phrase: &str) -> CMLLCResult<Bip32PrivateKey> {
+pub fn secret_phrase_to_account_key(phrase: &str) -> CMLLCResult<Bip32PrivateKey> {
     let mnemonic = Mnemonic::from_phrase(&phrase, Language::English)
         .map_err(|e| RawSecretPhraseKeysError::Bip39(e.to_string()))
         .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;

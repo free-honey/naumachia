@@ -1,3 +1,6 @@
+use crate::trireme_ledger_client::secret_phrase::{
+    private_key_to_base_address, secret_phrase_to_account_key,
+};
 use crate::{error::Error, error::Result, trireme_ledger_client::cml_client::Keys};
 use async_trait::async_trait;
 use cardano_multiplatform_lib::{address::BaseAddress, crypto::PrivateKey};
@@ -11,11 +14,13 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
 
+use crate::trireme_ledger_client::cml_client::error::{CMLLCError, Result as CMLResult};
+
 pub struct PasswordProtectedPhraseKeys<P: Password> {
     password: P,
     phrase_file_path: PathBuf,
     encryption_nonce: [u8; 12],
-    _network: u8,
+    network: u8,
 }
 
 impl<P: Password> PasswordProtectedPhraseKeys<P> {
@@ -29,36 +34,38 @@ impl<P: Password> PasswordProtectedPhraseKeys<P> {
             password,
             phrase_file_path,
             encryption_nonce,
-            _network: network_index,
+            network: network_index,
         }
     }
 
-    pub async fn read_phrase(&self) -> Result<String> {
+    async fn read_phrase(&self) -> CMLResult<String> {
         let text = fs::read_to_string(&self.phrase_file_path)
             .await
-            .map_err(|e| Error::Trireme(e.to_string()))?;
+            .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
         let encrypted: EncryptedSecretPhrase =
-            toml::from_str(&text).map_err(|e| Error::Trireme(e.to_string()))?;
+            toml::from_str(&text).map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
         let password = self
             .password
             .get_password()
-            .map_err(|e| Error::Trireme(e.to_string()))?;
+            .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
         decrypt_phrase(&encrypted, &password, &self.encryption_nonce)
     }
 }
 
 #[async_trait]
 impl<P: Password + Send + Sync> Keys for PasswordProtectedPhraseKeys<P> {
-    async fn base_addr(
-        &self,
-    ) -> crate::trireme_ledger_client::cml_client::error::Result<BaseAddress> {
-        todo!()
+    async fn base_addr(&self) -> CMLResult<BaseAddress> {
+        let phrase = self.read_phrase().await?;
+        let account_key = secret_phrase_to_account_key(&phrase)?;
+        let base_addr = private_key_to_base_address(&account_key, self.network);
+        Ok(base_addr)
     }
 
-    async fn private_key(
-        &self,
-    ) -> crate::trireme_ledger_client::cml_client::error::Result<PrivateKey> {
-        todo!()
+    async fn private_key(&self) -> CMLResult<PrivateKey> {
+        let phrase = self.read_phrase().await?;
+        let account_key = secret_phrase_to_account_key(&phrase)?;
+        let priv_key = account_key.derive(0).derive(0).to_raw_key();
+        Ok(priv_key)
     }
 }
 
@@ -106,14 +113,14 @@ fn decrypt_phrase(
     encrypted_phrase: &EncryptedSecretPhrase,
     password: &[u8; 32],
     encryption_nonce: &[u8; 12],
-) -> Result<String> {
+) -> CMLResult<String> {
     let key = password;
     let mut cipher = ChaCha20::new(key.into(), encryption_nonce.into());
     let mut buffer: Vec<_> = encrypted_phrase.inner.clone();
 
     cipher.apply_keystream(&mut buffer);
 
-    String::from_utf8(buffer).map_err(|e| Error::Trireme(e.to_string()))
+    String::from_utf8(buffer).map_err(|e| CMLLCError::KeyError(Box::new(e)))
 }
 
 #[derive(Serialize, Deserialize, Debug)]

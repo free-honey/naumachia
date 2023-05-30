@@ -1,7 +1,7 @@
 use crate::trireme_ledger_client::cml_client::error::{CMLLCError, Result as CMLLCResult};
 use crate::trireme_ledger_client::cml_client::Keys;
 use crate::trireme_ledger_client::secret_phrase::{
-    private_key_to_base_address, secret_phrase_to_private_key,
+    private_key_to_base_address, secret_phrase_to_account_key,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::address::BaseAddress;
@@ -37,7 +37,7 @@ pub enum RawSecretPhraseKeysError {
 impl RawSecretPhraseKeys {
     async fn get_account_key(&self) -> CMLLCResult<Bip32PrivateKey> {
         let phrase: String = read_secret_phrase(&self.phrase_file_path).await?.into();
-        let account_key = secret_phrase_to_private_key(&phrase)?;
+        let account_key = secret_phrase_to_account_key(&phrase)?;
         Ok(account_key)
     }
 
