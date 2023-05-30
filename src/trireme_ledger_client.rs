@@ -33,6 +33,7 @@ use tokio::{fs, io::AsyncWriteExt};
 // pub mod blockfrost_ledger;
 pub mod cml_client;
 pub mod raw_secret_phrase;
+pub mod secret_phrase;
 pub mod terminal_password_phrase;
 
 pub const TRIREME_CONFIG_FOLDER: &str = ".trireme";

@@ -1,8 +1,11 @@
 use crate::trireme_ledger_client::cml_client::error::{CMLLCError, Result as CMLLCResult};
 use crate::trireme_ledger_client::cml_client::Keys;
+use crate::trireme_ledger_client::secret_phrase::{
+    private_key_to_base_address, secret_phrase_to_private_key,
+};
 use async_trait::async_trait;
 use bip39::{Language, Mnemonic};
-use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress, StakeCredential};
+use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress};
 use cardano_multiplatform_lib::crypto::{Bip32PrivateKey, PrivateKey};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -35,26 +38,13 @@ pub enum RawSecretPhraseKeysError {
 impl RawSecretPhraseKeys {
     async fn get_account_key(&self) -> CMLLCResult<Bip32PrivateKey> {
         let phrase: String = read_secret_phrase(&self.phrase_file_path).await?.into();
-        let mnemonic = Mnemonic::from_phrase(&phrase, Language::English)
-            .map_err(|e| RawSecretPhraseKeysError::Bip39(e.to_string()))
-            .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
-        let entropy = mnemonic.entropy();
-        let root_key = Bip32PrivateKey::from_bip39_entropy(entropy, &[]);
-
-        let account_key = root_key
-            .derive(harden(1852))
-            .derive(harden(1815))
-            .derive(harden(0));
+        let account_key = secret_phrase_to_private_key(&phrase)?;
         Ok(account_key)
     }
 
     async fn get_base_address(&self) -> CMLLCResult<BaseAddress> {
         let account_key = self.get_account_key().await?;
-        let pub_key = account_key.derive(0).derive(0).to_public();
-        let stake_key = account_key.derive(2).derive(0).to_public();
-        let pub_key_creds = StakeCredential::from_keyhash(&pub_key.to_raw_key().hash());
-        let stake_key_creds = StakeCredential::from_keyhash(&stake_key.to_raw_key().hash());
-        let base_addr = BaseAddress::new(self.network, &pub_key_creds, &stake_key_creds);
+        let base_addr = private_key_to_base_address(&account_key, self.network);
         Ok(base_addr)
     }
 }
@@ -110,8 +100,4 @@ pub async fn read_secret_phrase(config_path: &PathBuf) -> CMLLCResult<SecretPhra
         .await
         .map_err(|e| CMLLCError::KeyError(Box::new(e)))?;
     toml::from_str(&text).map_err(|e| CMLLCError::KeyError(Box::new(e)))
-}
-
-fn harden(index: u32) -> u32 {
-    index | 0x80_00_00_00
 }

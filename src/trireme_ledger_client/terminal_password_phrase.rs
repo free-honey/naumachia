@@ -1,9 +1,9 @@
-use crate::error::Error;
-use crate::error::Result;
-use crate::trireme_ledger_client::cml_client::Keys;
+use crate::{error::Error, error::Result, trireme_ledger_client::cml_client::Keys};
 use async_trait::async_trait;
-use cardano_multiplatform_lib::address::{Address as CMLAddress, BaseAddress};
-use cardano_multiplatform_lib::crypto::PrivateKey;
+use cardano_multiplatform_lib::{
+    address::{Address as CMLAddress, BaseAddress},
+    crypto::PrivateKey,
+};
 use chacha20::{
     cipher::{KeyIvInit, StreamCipher},
     ChaCha20,
