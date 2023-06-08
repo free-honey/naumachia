@@ -1,8 +1,11 @@
 use crate::Error;
 use anyhow::Result;
-use dialoguer::{Input, Select};
+use dialoguer::{Input, Password as InputPassword, Select};
 use hex;
 use naumachia::scripts::context::pub_key_hash_from_address_if_available;
+use naumachia::trireme_ledger_client::terminal_password_phrase::{
+    encrypt_phrase, normalize_password,
+};
 use naumachia::{
     ledger_client::{
         test_ledger_client::local_persisted_storage::LocalPersistedStorage, LedgerClient,
@@ -16,10 +19,13 @@ use naumachia::{
     },
     Address,
 };
+use rand::Rng;
 use std::{path::PathBuf, str::FromStr};
 use tokio::fs;
 
+#[derive(Clone, Copy)]
 pub enum EnvironmentType {
+    UnsafeBlockfrost,
     Blockfrost,
     LocalMocked,
 }
@@ -27,7 +33,10 @@ pub enum EnvironmentType {
 impl ToString for EnvironmentType {
     fn to_string(&self) -> String {
         match self {
-            EnvironmentType::Blockfrost => "Blockfrost API".to_string(),
+            EnvironmentType::UnsafeBlockfrost => {
+                "(dangerous) Plaintext Phrase + Blockfrost API".to_string()
+            }
+            EnvironmentType::Blockfrost => "Password Protected Phrase + Blockfrost API".to_string(),
             EnvironmentType::LocalMocked => "Local Mocked".to_string(),
         }
     }
@@ -41,7 +50,6 @@ pub async fn new_env_impl() -> Result<()> {
     let name: String = Input::new()
         .with_prompt("Please name your environment")
         .interact_text()?;
-    let sub_dir = name.clone();
 
     let trireme_config = match get_trireme_config_from_file().await? {
         Some(mut config) => {
@@ -51,70 +59,10 @@ pub async fn new_env_impl() -> Result<()> {
         None => TriremeConfig::new(&name),
     };
 
-    let items = vec![EnvironmentType::Blockfrost, EnvironmentType::LocalMocked];
-    let item_index = Select::new()
-        .with_prompt("What kind of environment?")
-        .items(&items)
-        .interact()?;
-    let env_variant = items
-        .get(item_index)
-        .expect("Should always be a valid index");
-
-    match env_variant {
-        EnvironmentType::Blockfrost => {
-            let api_key: String = Input::new()
-                .with_prompt("Insert blockfrost testnet api key")
-                .interact_text()?;
-            let secret_phrase: String = Input::new()
-                .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
-                .interact_text()?;
-            let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, &sub_dir).await?;
-            let secret_phrase_path = write_secret_phrase(&secret_phrase, &sub_dir).await?;
-            // TODO: Do a prompt or derive network from api key
-            let network = Network::Preprod;
-            write_cml_client_config(
-                &name,
-                &sub_dir,
-                blockfrost_api_key_path,
-                secret_phrase_path,
-                network,
-            )
-            .await?;
-        }
-        EnvironmentType::LocalMocked => {
-            let block_length: i64 = Input::new()
-                .with_prompt("What is the block length in ms?")
-                .default(1000)
-                .interact_text()?;
-
-            let alice_name = "Alice";
-            let alice_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr")?;
-            let bob_name = "Bob";
-            let bob_address = Address::from_bech32("addr_test1qzulfkd06qm7t2nwe44nnuxh57k4h3p8zdrqukrjcekwn3kcra4ulhfn3g7j9gmnvmefjwzfsd55fq5ndecwlhgcw4zq07drdr")?;
-            let charlotte_name = "Charlotte";
-            let charlotte_address = Address::from_bech32("addr_test1qryc5tck5kqqs3arcqnl4lplvw5yg2ujsdnhx5eawn9lyzzvpmpraw365fayhrtpzpl4nulq6f9hhdkh4cdyh0tgnjxsg03qnh")?;
-            let dick_name = "Dick";
-            let dick_address = Address::from_bech32("addr_test1qr25qu9uu2putyngq38p04suc7w4lsgq5ylvt5q8hf3d9jh8gqwn858xkeuq7dlg5zycefeztfps6dmh62zpvac5wqxqvtgh4x")?;
-
-            let start_balance = 100_000_000_000; // Lovelace
-            let dir = path_to_client_config_file(&sub_dir)?;
-            let parent_dir = dir.parent().ok_or(Error::CLI(
-                "Could not find parent directory for config".to_string(),
-            ))?;
-            fs::create_dir_all(&parent_dir).await?;
-            let storage = LocalPersistedStorage::<PathBuf, ()>::init(
-                parent_dir.into(),
-                alice_name,
-                &alice_address,
-                start_balance,
-                block_length,
-            );
-            storage.add_new_signer(bob_name, &bob_address, start_balance);
-            storage.add_new_signer(charlotte_name, &charlotte_address, start_balance);
-            storage.add_new_signer(dick_name, &dick_address, start_balance);
-            let client_config = ClientConfig::new_test(&name, &(parent_dir.into()));
-            write_toml_struct_to_file(&dir, &client_config).await?;
-        }
+    match get_env_type()? {
+        EnvironmentType::UnsafeBlockfrost => setup_unsafe_blockfrost_env(&name).await?,
+        EnvironmentType::Blockfrost => setup_password_protected_blockfrost_env(&name).await?,
+        EnvironmentType::LocalMocked => setup_local_mocked_env(&name).await?,
     }
 
     write_trireme_config(&trireme_config).await?;
@@ -123,6 +71,133 @@ pub async fn new_env_impl() -> Result<()> {
     println!("Initialized successfully!");
     println!();
     println!("🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊🌊");
+    Ok(())
+}
+
+fn get_env_type() -> Result<EnvironmentType> {
+    let items = vec![
+        EnvironmentType::LocalMocked,
+        EnvironmentType::Blockfrost,
+        EnvironmentType::UnsafeBlockfrost,
+    ];
+    let item_index = Select::new()
+        .with_prompt("What kind of environment?")
+        .items(&items)
+        .interact()?;
+    let env_type = items
+        .get(item_index)
+        .expect("Should always be a valid index")
+        .to_owned();
+    Ok(env_type)
+}
+
+async fn setup_unsafe_blockfrost_env(name: &str) -> Result<()> {
+    let api_key: String = Input::new()
+        .with_prompt("Insert blockfrost testnet api key")
+        .interact_text()?;
+    let secret_phrase: String = Input::new()
+        .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
+        .interact_text()?;
+    let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, name).await?;
+    let secret_phrase_path = write_secret_phrase(&secret_phrase, name).await?;
+    // TODO: Do a prompt or derive network from api key
+    let network = Network::Preprod;
+    write_cml_client_config_with_raw_secret(
+        &name,
+        &name,
+        blockfrost_api_key_path,
+        secret_phrase_path,
+        network,
+    )
+    .await?;
+    Ok(())
+}
+
+async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
+    let api_key: String = Input::new()
+        .with_prompt("Insert blockfrost testnet api key")
+        .interact_text()?;
+    let secret_phrase: String = Input::new()
+        .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
+        .interact_text()?;
+
+    let password = get_password_with_prompt("Enter password")?;
+    let mut confirmed_password = get_password_with_prompt("Confirm password")?;
+
+    while password != confirmed_password {
+        println!("Try again");
+        confirmed_password = get_password_with_prompt("Confirm password")?;
+    }
+
+    // TODO: Is `rand` good enough for salt?
+    let salt = rand::thread_rng().gen::<[u8; 32]>();
+
+    let normalized_password = normalize_password(&password, &salt)?;
+
+    let encryption_nonce = rand::thread_rng().gen::<[u8; 12]>();
+
+    let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, name).await?;
+    let secret_phrase_path = write_secret_phrase_with_password(
+        &secret_phrase,
+        name,
+        &normalized_password,
+        &encryption_nonce,
+    )
+    .await?;
+    // TODO: Do a prompt or derive network from api key
+    let network = Network::Preprod;
+
+    write_cml_client_config_with_password_protection(
+        &name,
+        &name,
+        blockfrost_api_key_path,
+        secret_phrase_path,
+        salt.to_vec(),
+        encryption_nonce,
+        network,
+    )
+    .await?;
+    Ok(())
+}
+
+fn get_password_with_prompt(prompt: &str) -> Result<String> {
+    let password = InputPassword::new().with_prompt(prompt).interact()?;
+    Ok(password)
+}
+
+async fn setup_local_mocked_env(name: &str) -> Result<()> {
+    let block_length: i64 = Input::new()
+        .with_prompt("What is the block length in ms?")
+        .default(1000)
+        .interact_text()?;
+
+    let alice_name = "Alice";
+    let alice_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr")?;
+    let bob_name = "Bob";
+    let bob_address = Address::from_bech32("addr_test1qzulfkd06qm7t2nwe44nnuxh57k4h3p8zdrqukrjcekwn3kcra4ulhfn3g7j9gmnvmefjwzfsd55fq5ndecwlhgcw4zq07drdr")?;
+    let charlotte_name = "Charlotte";
+    let charlotte_address = Address::from_bech32("addr_test1qryc5tck5kqqs3arcqnl4lplvw5yg2ujsdnhx5eawn9lyzzvpmpraw365fayhrtpzpl4nulq6f9hhdkh4cdyh0tgnjxsg03qnh")?;
+    let dick_name = "Dick";
+    let dick_address = Address::from_bech32("addr_test1qr25qu9uu2putyngq38p04suc7w4lsgq5ylvt5q8hf3d9jh8gqwn858xkeuq7dlg5zycefeztfps6dmh62zpvac5wqxqvtgh4x")?;
+
+    let start_balance = 100_000_000_000; // Lovelace
+    let dir = path_to_client_config_file(name)?;
+    let parent_dir = dir.parent().ok_or(Error::CLI(
+        "Could not find parent directory for config".to_string(),
+    ))?;
+    fs::create_dir_all(&parent_dir).await?;
+    let storage = LocalPersistedStorage::<PathBuf, ()>::init(
+        parent_dir.into(),
+        alice_name,
+        &alice_address,
+        start_balance,
+        block_length,
+    );
+    storage.add_new_signer(bob_name, &bob_address, start_balance);
+    storage.add_new_signer(charlotte_name, &charlotte_address, start_balance);
+    storage.add_new_signer(dick_name, &dick_address, start_balance);
+    let client_config = ClientConfig::new_test(&name, &(parent_dir.into()));
+    write_toml_struct_to_file(&dir, &client_config).await?;
     Ok(())
 }
 
@@ -291,6 +366,20 @@ async fn write_secret_phrase(phrase: &str, sub_dir: &str) -> Result<PathBuf> {
     Ok(file_path)
 }
 
+async fn write_secret_phrase_with_password(
+    phrase: &str,
+    sub_dir: &str,
+    password: &[u8; 32],
+    encryption_nonce: &[u8; 12],
+) -> Result<PathBuf> {
+    let mut file_path = path_to_trireme_config_dir()?;
+    file_path.push(sub_dir);
+    file_path.push(RAW_PHRASE_FILE);
+    let phrase_struct = encrypt_phrase(phrase, password, encryption_nonce);
+    write_toml_struct_to_file(&file_path, &phrase_struct).await?;
+    Ok(file_path)
+}
+
 const BLOCKFROST_API_KEY_FILE: &str = "blockfrost_api_key.toml";
 
 async fn write_blockfrost_api_key(api_key: &str, sub_dir: &str) -> Result<PathBuf> {
@@ -308,7 +397,7 @@ async fn write_trireme_config(trireme_config: &TriremeConfig) -> Result<()> {
     Ok(())
 }
 
-async fn write_cml_client_config(
+async fn write_cml_client_config_with_raw_secret(
     name: &str,
     sub_dir: &str,
     api_key_file: PathBuf,
@@ -317,6 +406,27 @@ async fn write_cml_client_config(
 ) -> Result<()> {
     let ledger_source = LedgerSource::BlockFrost { api_key_file };
     let key_source = KeySource::RawSecretPhrase { phrase_file };
+    let client_config = ClientConfig::new_cml(name, ledger_source, key_source, network);
+    let file_path = path_to_client_config_file(sub_dir)?;
+    write_toml_struct_to_file(&file_path, &client_config).await?;
+    Ok(())
+}
+
+async fn write_cml_client_config_with_password_protection(
+    name: &str,
+    sub_dir: &str,
+    api_key_file: PathBuf,
+    phrase_file: PathBuf,
+    password_salt: Vec<u8>,
+    encrpytion_nonce: [u8; 12],
+    network: Network,
+) -> Result<()> {
+    let ledger_source = LedgerSource::BlockFrost { api_key_file };
+    let key_source = KeySource::TerminalPasswordUpfrontSecretPhrase {
+        phrase_file,
+        password_salt,
+        encrpytion_nonce,
+    };
     let client_config = ClientConfig::new_cml(name, ledger_source, key_source, network);
     let file_path = path_to_client_config_file(sub_dir)?;
     write_toml_struct_to_file(&file_path, &client_config).await?;
