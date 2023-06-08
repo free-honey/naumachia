@@ -76,8 +76,9 @@ pub async fn new_env_impl() -> Result<()> {
 
 fn get_env_type() -> Result<EnvironmentType> {
     let items = vec![
-        EnvironmentType::UnsafeBlockfrost,
         EnvironmentType::LocalMocked,
+        EnvironmentType::Blockfrost,
+        EnvironmentType::UnsafeBlockfrost,
     ];
     let item_index = Select::new()
         .with_prompt("What kind of environment?")
