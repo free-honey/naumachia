@@ -121,15 +121,12 @@ async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
         .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
         .interact_text()?;
 
-    let password = InputPassword::new()
-        .with_prompt("Enter password")
-        .interact()?;
-    let confirmed_password = InputPassword::new()
-        .with_prompt("Confirm password")
-        .interact()?;
+    let password = get_password_with_prompt("Enter password")?;
+    let mut confirmed_password = get_password_with_prompt("Confirm password")?;
 
-    if password != confirmed_password {
-        return Err(Error::Password("Passwords do not match".to_string()).into());
+    while password != confirmed_password {
+        println!("Try again");
+        confirmed_password = get_password_with_prompt("Confirm password")?;
     }
 
     // TODO: Is `rand` good enough for salt?
@@ -161,6 +158,11 @@ async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
     )
     .await?;
     Ok(())
+}
+
+fn get_password_with_prompt(prompt: &str) -> Result<String> {
+    let password = InputPassword::new().with_prompt(prompt).interact()?;
+    Ok(password)
 }
 
 async fn setup_local_mocked_env(name: &str) -> Result<()> {
