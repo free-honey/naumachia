@@ -14,5 +14,6 @@ clap = { version = "3.2.16", features = ["derive"] }
 dialoguer = "0.10.2"
 hex = "0.4.3"
 naumachia = {path = "..", version = "0.2.0"}
+rand = "0.8.5"
 thiserror = "1.0.40"
 tokio = { version = "1.20.1", features = ["full"] }

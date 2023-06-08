@@ -54,6 +54,8 @@ enum ActionParams {
 pub enum Error {
     #[error("Error within the CLI Logic: {0}")]
     CLI(String),
+    #[error("Error with Password: {0}")]
+    Password(String),
 }
 
 #[tokio::main]

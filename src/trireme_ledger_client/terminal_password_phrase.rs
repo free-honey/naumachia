@@ -88,7 +88,7 @@ impl TerminalPasswordUpfront {
     }
 }
 
-fn normalize_password(original: &str, salt: &[u8]) -> Result<[u8; 32]> {
+pub fn normalize_password(original: &str, salt: &[u8]) -> Result<[u8; 32]> {
     // TODO: Upgrade config to be more secure?
     let config = argon2::Config::default();
     let hashed = argon2::hash_raw(original.as_bytes(), salt, &config)
@@ -121,6 +121,20 @@ fn decrypt_phrase(
     cipher.apply_keystream(&mut buffer);
 
     String::from_utf8(buffer).map_err(|e| CMLLCError::KeyError(Box::new(e)))
+}
+
+pub fn encrypt_phrase(
+    phrase: &str,
+    password: &[u8; 32],
+    encryption_nonce: &[u8; 12],
+) -> EncryptedSecretPhrase {
+    let key = password;
+    let mut cipher = ChaCha20::new(key.into(), encryption_nonce.into());
+    let mut buffer: Vec<_> = phrase.bytes().collect();
+
+    cipher.apply_keystream(&mut buffer);
+
+    EncryptedSecretPhrase { inner: buffer }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -170,20 +184,6 @@ mod tests {
         fn get_password(&self) -> Result<[u8; 32]> {
             Ok(self.password)
         }
-    }
-
-    fn encrypt_phrase(
-        phrase: &str,
-        password: &[u8; 32],
-        encryption_nonce: &[u8; 12],
-    ) -> EncryptedSecretPhrase {
-        let key = password;
-        let mut cipher = ChaCha20::new(key.into(), encryption_nonce.into());
-        let mut buffer: Vec<_> = phrase.bytes().collect();
-
-        cipher.apply_keystream(&mut buffer);
-
-        EncryptedSecretPhrase { inner: buffer }
     }
 
     #[tokio::test]
