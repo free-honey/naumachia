@@ -16,7 +16,7 @@ You're good to go!
 ## Environments
 
 Environments represent the Cardano network you want to interact with. You can manage multiple environments and switch
-between them easily. Test your contract on your filesystem with a local mocked environment, then switch to a live
+between them easily. You can test your contract with a local mocked environment stored in your filesystem, then switch to a live
 environment to deploy your contract to the blockchain.
 
 Create a new environment with the command:
@@ -36,7 +36,7 @@ it will give you 3 options:
 ### Local Mocked
 
 A mocked network environment which is just stored in your local file system. 
-This is useful for testing your contracts locally without having to pay for transactions.
+This is useful for testing your contracts locally without having to pay for transactions and waiting for finality.
 
 Local Mocked includes some additional features to the live enviroments.
 ```shell
@@ -56,8 +56,8 @@ Many contracts have time-based logic, so this is helpful for testing those.
 **NOTE**: Only the **PREPROD** testnet is supported at the moment.
 
 This is for interacting with an actual blockchain, using Blockfrost API to query UTxOs and submit transactions.
-Uses Argon2 + ChaCha20 to encrypt your secret phrase and store it to file. You must provide a password to 
-encrypt/decrypt your secret phrase.
+Uses Argon2 + ChaCha20 to password encrypt your secret phrase and store it to file. You must provide a password on 
+environment creation and on each use.
 
 ### (dangerous) Plaintext Phrase + Blockfrost API
 
