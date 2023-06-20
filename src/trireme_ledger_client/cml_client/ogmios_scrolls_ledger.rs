@@ -3,12 +3,10 @@ use crate::trireme_ledger_client::cml_client::{
     ExecutionCost, Ledger, UTxO,
 };
 use async_trait::async_trait;
-use cardano_multiplatform_lib::crypto::TransactionHash;
-use cardano_multiplatform_lib::ledger::common::value::BigNum;
-use cardano_multiplatform_lib::plutus::PlutusData;
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress, ledger::common::value::Value as CMLValue, AssetName, Assets,
-    MultiAsset, PolicyID, Transaction as CMLTransaction,
+    address::Address as CMLAddress, crypto::TransactionHash,
+    ledger::common::value::Value as CMLValue, plutus::PlutusData, AssetName, Assets, MultiAsset,
+    PolicyID, Transaction as CMLTransaction,
 };
 use pallas_addresses::Address;
 use scrolls_client::{
@@ -52,7 +50,7 @@ fn cml_value_from_scroll_amount(amount: &Vec<ScrollClientAmount>) -> CMLValue {
     cml_value
 }
 
-fn plutus_data_from_scroll_datum(datum: &str) -> Option<PlutusData> {
+fn plutus_data_from_scroll_datum(_datum: &str) -> Option<PlutusData> {
     todo!()
 }
 

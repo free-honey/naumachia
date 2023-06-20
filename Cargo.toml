@@ -44,7 +44,7 @@ tempfile = "3.3.0"
 minicbor = "0.19.0"
 rand = "0.8.5"
 pallas-addresses = "0.19.0-alpha.0"
-scrolls-client = { path = "../../FreeHoney/scrolls-client" }
+scrolls-client = { version = "0.1.0", git = "https://github.com/free-honey/scrolls-client.git" }
 secrecy = "0.8.0"
 
 [dependencies.blockfrost-http-client]
