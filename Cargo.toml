@@ -22,6 +22,7 @@ members = [
 ]
 
 [dependencies]
+async-trait = "0.1.57"
 rust-argon2 = "1.0.0"
 bech32 = "0.9.1"
 chacha20 = "0.9.1"
@@ -36,7 +37,6 @@ url = "2.2.2"
 toml = "0.5.9"
 tiny-bip39 = "1.0.0"
 futures = "0.3.23"
-async-trait = "0.1.57"
 hex = "0.4.3"
 dirs = "4.0.0"
 uplc = "1.0.3-alpha"
@@ -44,6 +44,7 @@ tempfile = "3.3.0"
 minicbor = "0.19.0"
 rand = "0.8.5"
 pallas-addresses = "0.19.0-alpha.0"
+scrolls-client = { path = "../../FreeHoney/scrolls-client" }
 secrecy = "0.8.0"
 
 [dependencies.blockfrost-http-client]

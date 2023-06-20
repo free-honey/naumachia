@@ -45,6 +45,7 @@ pub mod blockfrost_ledger;
 pub mod error;
 pub mod issuance_helpers;
 pub mod key_manager;
+pub mod ogmios_scrolls_ledger;
 pub mod plutus_data_interop;
 
 #[cfg(test)]

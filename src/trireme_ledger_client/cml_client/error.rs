@@ -6,6 +6,10 @@ use thiserror::Error;
 pub enum CMLLCError {
     #[error("CML JsError: {0:?}")]
     JsError(String),
+    #[error("Address Error: {0:?}")]
+    Address(#[from] pallas_addresses::Error),
+    #[error("Scrolls Client: {0:?}")]
+    ScrollsClient(#[from] scrolls_client::error::Error),
     #[error("Not a valid BaseAddress")]
     InvalidBaseAddr,
     #[error("Error from ledger implementation: {0:?}")]
