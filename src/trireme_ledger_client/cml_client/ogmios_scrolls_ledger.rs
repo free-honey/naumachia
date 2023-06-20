@@ -3,15 +3,57 @@ use crate::trireme_ledger_client::cml_client::{
     ExecutionCost, Ledger, UTxO,
 };
 use async_trait::async_trait;
-use cardano_multiplatform_lib::{address::Address as CMLAddress, Transaction as CMLTransaction};
+use cardano_multiplatform_lib::crypto::TransactionHash;
+use cardano_multiplatform_lib::ledger::common::value::BigNum;
+use cardano_multiplatform_lib::plutus::PlutusData;
+use cardano_multiplatform_lib::{
+    address::Address as CMLAddress, ledger::common::value::Value as CMLValue, AssetName, Assets,
+    MultiAsset, PolicyID, Transaction as CMLTransaction,
+};
 use pallas_addresses::Address;
-use scrolls_client::{ScrollsClient, UTxO as ScrollsClientUTxO, UTxOsByAddress};
+use scrolls_client::{
+    Amount as ScrollClientAmount, ScrollsClient, UTxO as ScrollsClientUTxO, UTxOsByAddress,
+};
 use std::collections::HashMap;
 
-impl From<ScrollsClientUTxO> for UTxO {
-    fn from(value: ScrollsClientUTxO) -> Self {
-        todo!()
+fn utxo_from_scrolls_utxo(utxo: &ScrollsClientUTxO) -> Result<UTxO> {
+    let tx_hash = TransactionHash::from_hex(utxo.tx_hash())
+        .map_err(|e| CMLLCError::JsError(e.to_string()))?;
+    let output_index = utxo.output_index().into();
+    let scroll_amount = utxo.amount();
+    let amount = cml_value_from_scroll_amount(&scroll_amount);
+    let datum = utxo.datum().and_then(plutus_data_from_scroll_datum);
+
+    Ok(UTxO::new(tx_hash, output_index, amount, datum))
+}
+
+fn cml_value_from_scroll_amount(amount: &Vec<ScrollClientAmount>) -> CMLValue {
+    let mut cml_value = CMLValue::zero();
+    for value in amount.iter() {
+        let unit = value.unit();
+        let quantity = value.quantity();
+        let add_value = match unit {
+            "lovelace" => CMLValue::new(&quantity.into()),
+            _ => {
+                let policy_id_hex = &unit[..56];
+                let policy_id = PolicyID::from_hex(policy_id_hex).unwrap();
+                let asset_name_hex = &unit[56..];
+                let asset_name_bytes = hex::decode(asset_name_hex).unwrap();
+                let asset_name = AssetName::new(asset_name_bytes).unwrap();
+                let mut assets = Assets::new();
+                assets.insert(&asset_name, &quantity.into());
+                let mut multi_assets = MultiAsset::new();
+                multi_assets.insert(&policy_id, &assets);
+                CMLValue::new_from_assets(&multi_assets)
+            }
+        };
+        cml_value = cml_value.checked_add(&add_value).unwrap();
     }
+    cml_value
+}
+
+fn plutus_data_from_scroll_datum(datum: &str) -> Option<PlutusData> {
+    todo!()
 }
 
 pub struct OgmiosScrollsLedger {
@@ -25,14 +67,12 @@ impl OgmiosScrollsLedger {
             .to_bech32(None)
             .map_err(|e| CMLLCError::JsError(e.to_string()))?;
         let address = Address::from_bech32(&address_str)?;
-        let outputs = self
-            .scrolls_client
+        self.scrolls_client
             .get_utxos_for_address(&address)
             .await?
-            .into_iter()
-            .map(Into::into)
-            .collect();
-        Ok(outputs)
+            .iter()
+            .map(utxo_from_scrolls_utxo)
+            .collect()
     }
 }
 
