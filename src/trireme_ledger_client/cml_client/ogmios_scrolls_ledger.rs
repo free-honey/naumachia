@@ -19,13 +19,13 @@ fn utxo_from_scrolls_utxo(utxo: &ScrollsClientUTxO) -> Result<UTxO> {
         .map_err(|e| CMLLCError::JsError(e.to_string()))?;
     let output_index = utxo.output_index().into();
     let scroll_amount = utxo.amount();
-    let amount = cml_value_from_scroll_amount(&scroll_amount);
+    let amount = cml_value_from_scroll_amount(scroll_amount);
     let datum = utxo.datum().and_then(plutus_data_from_scroll_datum);
 
     Ok(UTxO::new(tx_hash, output_index, amount, datum))
 }
 
-fn cml_value_from_scroll_amount(amount: &Vec<ScrollClientAmount>) -> CMLValue {
+fn cml_value_from_scroll_amount(amount: &[ScrollClientAmount]) -> CMLValue {
     let mut cml_value = CMLValue::zero();
     for value in amount.iter() {
         let unit = value.unit();
