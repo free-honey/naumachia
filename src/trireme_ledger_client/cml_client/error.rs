@@ -22,6 +22,8 @@ pub enum CMLLCError {
     Deserialize(String),
     #[error("Failed to parse Hex")]
     Hex(Box<dyn std::error::Error + Send + Sync>),
+    #[error("Invalid Policy Id: {0:?}")]
+    InvalidPolicyId(String),
 }
 
 pub fn as_failed_to_retrieve_by_address(

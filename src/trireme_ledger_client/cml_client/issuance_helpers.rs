@@ -10,9 +10,6 @@ use crate::{
     values::Values,
     PolicyId,
 };
-use blockfrost_http_client::models::Value as BFValue;
-use cardano_multiplatform_lib::crypto::ScriptHash;
-use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::{
@@ -22,16 +19,18 @@ use cardano_multiplatform_lib::{
         tx_builder::{TransactionBuilder, TransactionBuilderConfigBuilder},
         witness_builder::{PartialPlutusWitness, PlutusScriptWitness},
     },
+    crypto::ScriptHash,
     crypto::{PrivateKey, TransactionHash},
     ledger::{
         alonzo::fees::LinearFee,
         common::hash::hash_transaction,
-        common::value::{BigNum, Int, Value as CMLValue},
+        common::value::{Int, Value as CMLValue},
         shelley::witness::make_vkey_witness,
     },
+    plutus::PlutusV2Script,
     plutus::{CostModel, Costmdls, ExUnitPrices, Language},
     plutus::{PlutusScript, PlutusV1Script},
-    AssetName, Assets, MultiAsset, PolicyID, Transaction as CMLTransaction, TransactionInput,
+    AssetName, Assets, MultiAsset, Transaction as CMLTransaction, TransactionInput,
     TransactionOutput, UnitInterval,
 };
 use pallas_addresses::Address;
@@ -335,31 +334,6 @@ pub(crate) fn input_from_utxo(
         .map_err(|e| CMLLCError::JsError(e.to_string()))
         .map_err(as_failed_to_issue_tx)?;
     Ok(res)
-}
-
-pub fn cmlvalue_from_bfvalues(values: &[BFValue]) -> CMLValue {
-    let mut cml_value = CMLValue::zero();
-    for value in values.iter() {
-        let unit = value.unit();
-        let quantity = value.quantity();
-        let add_value = match unit {
-            "lovelace" => CMLValue::new(&BigNum::from_str(quantity).unwrap()),
-            _ => {
-                let policy_id_hex = &unit[..56];
-                let policy_id = PolicyID::from_hex(policy_id_hex).unwrap();
-                let asset_name_hex = &unit[56..];
-                let asset_name_bytes = hex::decode(asset_name_hex).unwrap();
-                let asset_name = AssetName::new(asset_name_bytes).unwrap();
-                let mut assets = Assets::new();
-                assets.insert(&asset_name, &BigNum::from_str(quantity).unwrap());
-                let mut multi_assets = MultiAsset::new();
-                multi_assets.insert(&policy_id, &assets);
-                CMLValue::new_from_assets(&multi_assets)
-            }
-        };
-        cml_value = cml_value.checked_add(&add_value).unwrap();
-    }
-    cml_value
 }
 
 impl TryFrom<Values> for CMLValue {
