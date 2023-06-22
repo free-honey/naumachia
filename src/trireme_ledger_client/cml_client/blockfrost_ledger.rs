@@ -1,20 +1,19 @@
 use super::error::*;
-use crate::trireme_ledger_client::cml_client::{
-    error::CMLLCError::JsError, issuance_helpers::cmlvalue_from_bfvalues, ExecutionCost, Ledger,
-    UTxO,
-};
+use crate::trireme_ledger_client::cml_client::{error::CMLLCError, ExecutionCost, Ledger, UTxO};
 use async_trait::async_trait;
-use blockfrost_http_client::models::ExecutionType;
-use blockfrost_http_client::{models::UTxO as BFUTxO, BlockFrostHttp, BlockFrostHttpTrait};
-use cardano_multiplatform_lib::plutus::encode_json_str_to_plutus_datum;
+use blockfrost_http_client::{
+    models::ExecutionType, models::UTxO as BFUTxO, models::Value as BFValue, BlockFrostHttp,
+    BlockFrostHttpTrait,
+};
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress, crypto::TransactionHash, plutus::PlutusDatumSchema,
+    address::Address as CMLAddress, crypto::TransactionHash, ledger::common::value::BigNum,
+    ledger::common::value::Value as CMLValue, plutus::encode_json_str_to_plutus_datum,
+    plutus::PlutusDatumSchema, AssetName, Assets, MultiAsset, PolicyID,
     Transaction as CMLTransaction,
 };
 use futures::future;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
 
 pub struct BlockFrostLedger {
@@ -29,10 +28,10 @@ impl BlockFrostLedger {
 
     // TODO: Handle V2 outputs (with inline datums)
     async fn bfutxo_to_utxo(&self, bf_utxo: &BFUTxO) -> Result<UTxO> {
-        let tx_hash =
-            TransactionHash::from_hex(bf_utxo.tx_hash()).map_err(|e| JsError(e.to_string()))?;
+        let tx_hash = TransactionHash::from_hex(bf_utxo.tx_hash())
+            .map_err(|e| CMLLCError::JsError(e.to_string()))?;
         let output_index = bf_utxo.output_index().into();
-        let amount = cmlvalue_from_bfvalues(bf_utxo.amount());
+        let amount = cmlvalue_from_bfvalues(bf_utxo.amount())?;
         let datum = if let Some(data_hash) = bf_utxo.data_hash() {
             let json_datum = self
                 .client
@@ -46,7 +45,7 @@ impl BlockFrostLedger {
                         &ser, // TODO: Make this safer!
                         PlutusDatumSchema::DetailedSchema,
                     )
-                    .map_err(|e| JsError(e.to_string()))?;
+                    .map_err(|e| CMLLCError::JsError(e.to_string()))?;
                     Some(plutus_data)
                 } else {
                     None // TODO: Add debug msg
@@ -63,10 +62,46 @@ impl BlockFrostLedger {
     }
 }
 
+pub fn cmlvalue_from_bfvalues(values: &[BFValue]) -> Result<CMLValue> {
+    let mut cml_value = CMLValue::zero();
+    for value in values.iter() {
+        let unit = value.unit();
+        let quantity = value.quantity();
+        let add_value = match unit {
+            "lovelace" => CMLValue::new(&BigNum::from_str(quantity).unwrap()),
+            _ => {
+                let policy_id_hex = &unit
+                    .get(..56)
+                    .ok_or(CMLLCError::InvalidPolicyId(unit.to_string()))?;
+                let policy_id = PolicyID::from_hex(policy_id_hex)
+                    .map_err(|e| CMLLCError::JsError(e.to_string()))?;
+                let asset_name_hex = &unit
+                    .get(56..)
+                    .ok_or(CMLLCError::InvalidPolicyId(unit.to_string()))?;
+                let asset_name_bytes =
+                    hex::decode(asset_name_hex).map_err(|e| CMLLCError::JsError(e.to_string()))?;
+                let asset_name = AssetName::new(asset_name_bytes)
+                    .map_err(|e| CMLLCError::JsError(e.to_string()))?;
+                let mut assets = Assets::new();
+                let big_number =
+                    BigNum::from_str(quantity).map_err(|e| CMLLCError::JsError(e.to_string()))?;
+                assets.insert(&asset_name, &big_number);
+                let mut multi_assets = MultiAsset::new();
+                multi_assets.insert(&policy_id, &assets);
+                CMLValue::new_from_assets(&multi_assets)
+            }
+        };
+        cml_value = cml_value.checked_add(&add_value).unwrap();
+    }
+    Ok(cml_value)
+}
+
 #[async_trait]
 impl Ledger for BlockFrostLedger {
     async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>> {
-        let addr_string = addr.to_bech32(None).map_err(|e| JsError(e.to_string()))?;
+        let addr_string = addr
+            .to_bech32(None)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))?;
         let bf_utxos = self
             .client
             .utxos(&addr_string, Some(count))
@@ -84,7 +119,9 @@ impl Ledger for BlockFrostLedger {
     }
 
     async fn get_all_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>> {
-        let addr_string = addr.to_bech32(None).map_err(|e| JsError(e.to_string()))?;
+        let addr_string = addr
+            .to_bech32(None)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))?;
         let bf_utxos = self
             .client
             .utxos(&addr_string, None)

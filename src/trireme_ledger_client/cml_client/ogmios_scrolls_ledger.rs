@@ -19,13 +19,13 @@ fn utxo_from_scrolls_utxo(utxo: &ScrollsClientUTxO) -> Result<UTxO> {
         .map_err(|e| CMLLCError::JsError(e.to_string()))?;
     let output_index = utxo.output_index().into();
     let scroll_amount = utxo.amount();
-    let amount = cml_value_from_scroll_amount(scroll_amount);
+    let amount = cml_value_from_scroll_amount(scroll_amount)?;
     let datum = utxo.datum().and_then(plutus_data_from_scroll_datum);
 
     Ok(UTxO::new(tx_hash, output_index, amount, datum))
 }
 
-fn cml_value_from_scroll_amount(amount: &[ScrollClientAmount]) -> CMLValue {
+fn cml_value_from_scroll_amount(amount: &[ScrollClientAmount]) -> Result<CMLValue> {
     let mut cml_value = CMLValue::zero();
     for value in amount.iter() {
         let unit = value.unit();
@@ -33,11 +33,18 @@ fn cml_value_from_scroll_amount(amount: &[ScrollClientAmount]) -> CMLValue {
         let add_value = match unit {
             "lovelace" => CMLValue::new(&quantity.into()),
             _ => {
-                let policy_id_hex = &unit[..56];
-                let policy_id = PolicyID::from_hex(policy_id_hex).unwrap();
-                let asset_name_hex = &unit[56..];
-                let asset_name_bytes = hex::decode(asset_name_hex).unwrap();
-                let asset_name = AssetName::new(asset_name_bytes).unwrap();
+                let policy_id_hex = &unit
+                    .get(..56)
+                    .ok_or(CMLLCError::InvalidPolicyId(unit.to_string()))?;
+                let policy_id = PolicyID::from_hex(policy_id_hex)
+                    .map_err(|e| CMLLCError::JsError(e.to_string()))?;
+                let asset_name_hex = &unit
+                    .get(56..)
+                    .ok_or(CMLLCError::InvalidPolicyId(unit.to_string()))?;
+                let asset_name_bytes =
+                    hex::decode(asset_name_hex).map_err(|e| CMLLCError::JsError(e.to_string()))?;
+                let asset_name = AssetName::new(asset_name_bytes)
+                    .map_err(|e| CMLLCError::JsError(e.to_string()))?;
                 let mut assets = Assets::new();
                 assets.insert(&asset_name, &quantity.into());
                 let mut multi_assets = MultiAsset::new();
@@ -45,9 +52,11 @@ fn cml_value_from_scroll_amount(amount: &[ScrollClientAmount]) -> CMLValue {
                 CMLValue::new_from_assets(&multi_assets)
             }
         };
-        cml_value = cml_value.checked_add(&add_value).unwrap();
+        cml_value = cml_value
+            .checked_add(&add_value)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))?;
     }
-    cml_value
+    Ok(cml_value)
 }
 
 fn plutus_data_from_scroll_datum(_datum: &str) -> Option<PlutusData> {
@@ -60,6 +69,10 @@ pub struct OgmiosScrollsLedger {
 }
 
 impl OgmiosScrollsLedger {
+    pub fn new(scrolls_client: ScrollsClient) -> Self {
+        Self { scrolls_client }
+    }
+
     pub async fn get_utxos(&self, addr: &CMLAddress) -> Result<Vec<UTxO>> {
         let address_str = addr
             .to_bech32(None)

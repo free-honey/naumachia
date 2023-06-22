@@ -33,7 +33,7 @@ it will give you 3 options:
   (dangerous) Plaintext Phrase + Blockfrost API
 ```
 
-### Local Mocked
+### Local Mocked Environment
 
 A mocked network environment which is just stored in your local file system. 
 This is useful for testing your contracts locally without having to pay for transactions and waiting for finality.
@@ -51,17 +51,13 @@ trireme advance-blocks
 allows you to advance the block height of your mocked chain. 
 Many contracts have time-based logic, so this is helpful for testing those.
 
-### Password Protected Phrase + Blockfrost API
+### Real Network Environment
 
 **NOTE**: Only the **PREPROD** testnet is supported at the moment.
 
 This is for interacting with an actual blockchain, using Blockfrost API to query UTxOs and submit transactions.
 Uses Argon2 + ChaCha20 to password encrypt your secret phrase and store it to file. You must provide a password on 
 environment creation and on each use.
-
-### (dangerous) Plaintext Phrase + Blockfrost API
-
-Just don't use this.
 
 ## How do I integrate with my Naumachia dApp?
 
