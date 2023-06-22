@@ -12,6 +12,7 @@ use crate::{
     UnbuiltTransaction,
 };
 
+use crate::trireme_ledger_client::cml_client::ogmios_scrolls_ledger::OgmiosScrollsLedger;
 use crate::trireme_ledger_client::cml_client::Keys;
 use crate::trireme_ledger_client::terminal_password_phrase::{
     PasswordProtectedPhraseKeys, TerminalPasswordUpfront,
@@ -25,6 +26,7 @@ use cml_client::{
 };
 use dirs::home_dir;
 use pallas_addresses::Address;
+use scrolls_client::ScrollsClient;
 use serde::{de::DeserializeOwned, ser, Deserialize, Serialize};
 use std::{fmt::Debug, hash::Hash, marker::PhantomData, path::PathBuf};
 use thiserror::Error;
@@ -98,7 +100,13 @@ pub async fn get_trireme_config_from_file() -> Result<Option<TriremeConfig>> {
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum LedgerSource {
-    BlockFrost { api_key_file: PathBuf },
+    BlockFrost {
+        api_key_file: PathBuf,
+    },
+    OgmiosAndScrolls {
+        scrolls_ip: String,
+        scrolls_port: String,
+    },
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -279,26 +287,7 @@ impl ClientConfig {
         match self.variant {
             ClientVariant::CML(inner) => {
                 let network = inner.network;
-                let ledger = match inner.ledger_source {
-                    LedgerSource::BlockFrost { api_key_file } => {
-                        let blockfrost_key =
-                            read_toml_struct_from_file::<BlockfrostApiKey>(&api_key_file)
-                                .await?
-                                .ok_or_else(|| {
-                                    Error::Trireme(
-                                "Couldn't find blockfrost config, please try reinitialize Trireme"
-                                    .to_string(),
-                            )
-                                })?;
-                        let key: String = blockfrost_key.into();
-                        let url = match network {
-                            Network::Preprod => PREPROD_NETWORK_URL,
-                            Network::Mainnet => MAINNET_URL,
-                        };
-                        BlockFrostLedger::new(url, &key)
-                    }
-                };
-                let network_index = network.into();
+                let network_index = network.clone().into();
                 let keys = match inner.key_source {
                     KeySource::RawSecretPhrase { phrase_file } => {
                         let keys = RawSecretPhraseKeys::new(phrase_file, network_index);
@@ -319,9 +308,38 @@ impl ClientConfig {
                         SecretPhraseKeys::PasswordProtectedPhraseKeys(keys)
                     }
                 };
-
-                let inner_client =
-                    InnerClient::Cml(CMLLedgerCLient::new(ledger, keys, network_index));
+                let inner_client = match inner.ledger_source {
+                    LedgerSource::BlockFrost { api_key_file } => {
+                        let blockfrost_key =
+                            read_toml_struct_from_file::<BlockfrostApiKey>(&api_key_file)
+                                .await?
+                                .ok_or_else(|| {
+                                    Error::Trireme(
+                                "Couldn't find blockfrost config, please try reinitialize Trireme"
+                                    .to_string(),
+                            )
+                                })?;
+                        let key: String = blockfrost_key.into();
+                        let url = match network {
+                            Network::Preprod => PREPROD_NETWORK_URL,
+                            Network::Mainnet => MAINNET_URL,
+                        };
+                        let ledger = BlockFrostLedger::new(url, &key);
+                        InnerClient::BlockFrost(CMLLedgerCLient::new(ledger, keys, network_index))
+                    }
+                    LedgerSource::OgmiosAndScrolls {
+                        scrolls_ip,
+                        scrolls_port,
+                    } => {
+                        let scrolls_client = ScrollsClient::new_redis(scrolls_ip, scrolls_port);
+                        let ledger = OgmiosScrollsLedger::new(scrolls_client);
+                        InnerClient::OgmiosScrolls(CMLLedgerCLient::new(
+                            ledger,
+                            keys,
+                            network_index,
+                        ))
+                    }
+                };
 
                 let trireme_client = TriremeLedgerClient {
                     _datum: Default::default(),
@@ -378,7 +396,8 @@ where
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
-    Cml(CMLLedgerCLient<BlockFrostLedger, SecretPhraseKeys, Datum, Redeemer>),
+    BlockFrost(CMLLedgerCLient<BlockFrostLedger, SecretPhraseKeys, Datum, Redeemer>),
+    OgmiosScrolls(CMLLedgerCLient<OgmiosScrollsLedger, SecretPhraseKeys, Datum, Redeemer>),
     Mocked(TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<PathBuf, Datum>>),
 }
 
@@ -411,19 +430,25 @@ where
 {
     pub async fn last_block_time_ms(&self) -> LedgerClientResult<i64> {
         match &self.inner_client {
-            InnerClient::Cml(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
-                Error::Trireme("Not implemented for CML client".to_string()),
+            InnerClient::BlockFrost(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
+                Error::Trireme("Not implemented for Blockfrost client".to_string()),
             ))),
             InnerClient::Mocked(test_client) => test_client.current_time().await,
+            InnerClient::OgmiosScrolls(_) => Err(LedgerClientError::CurrentTime(Box::new(
+                Error::Trireme("Not implemented for Ogmios/Scrolls client".to_string()),
+            ))),
         }
     }
 
     pub async fn advance_blocks(&self, count: i64) -> LedgerClientResult<()> {
         match &self.inner_client {
-            InnerClient::Cml(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
-                Error::Trireme("Not implemented for CML client".to_string()),
+            InnerClient::BlockFrost(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
+                Error::Trireme("Not implemented for Blockfrost client".to_string()),
             ))),
             InnerClient::Mocked(test_client) => test_client.advance_time_n_blocks(count).await,
+            InnerClient::OgmiosScrolls(_) => Err(LedgerClientError::CurrentTime(Box::new(
+                Error::Trireme("Not implemented for Ogmios/Scrolls client".to_string()),
+            ))),
         }
     }
 }
@@ -443,8 +468,9 @@ where
 {
     async fn signer_base_address(&self) -> LedgerClientResult<Address> {
         match &self.inner_client {
-            InnerClient::Cml(cml_client) => cml_client.signer_base_address(),
+            InnerClient::BlockFrost(cml_client) => cml_client.signer_base_address(),
             InnerClient::Mocked(test_client) => test_client.signer_base_address(),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.signer_base_address(),
         }
         .await
     }
@@ -455,8 +481,9 @@ where
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         match &self.inner_client {
-            InnerClient::Cml(cml_client) => cml_client.outputs_at_address(address, count),
+            InnerClient::BlockFrost(cml_client) => cml_client.outputs_at_address(address, count),
             InnerClient::Mocked(test_client) => test_client.outputs_at_address(address, count),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.outputs_at_address(address, count),
         }
         .await
     }
@@ -466,24 +493,27 @@ where
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         match &self.inner_client {
-            InnerClient::Cml(cml_client) => cml_client.all_outputs_at_address(address),
+            InnerClient::BlockFrost(cml_client) => cml_client.all_outputs_at_address(address),
             InnerClient::Mocked(test_client) => test_client.all_outputs_at_address(address),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.all_outputs_at_address(address),
         }
         .await
     }
 
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         match &self.inner_client {
-            InnerClient::Cml(cml_client) => cml_client.issue(tx),
+            InnerClient::BlockFrost(cml_client) => cml_client.issue(tx),
             InnerClient::Mocked(test_client) => test_client.issue(tx),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.issue(tx),
         }
         .await
     }
 
     async fn network(&self) -> LedgerClientResult<pallas_addresses::Network> {
         match &self.inner_client {
-            InnerClient::Cml(cml_client) => cml_client.network(),
+            InnerClient::BlockFrost(cml_client) => cml_client.network(),
             InnerClient::Mocked(test_client) => test_client.network(),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.network(),
         }
         .await
     }

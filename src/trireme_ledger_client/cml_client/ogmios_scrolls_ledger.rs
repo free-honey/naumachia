@@ -69,6 +69,10 @@ pub struct OgmiosScrollsLedger {
 }
 
 impl OgmiosScrollsLedger {
+    pub fn new(scrolls_client: ScrollsClient) -> Self {
+        Self { scrolls_client }
+    }
+
     pub async fn get_utxos(&self, addr: &CMLAddress) -> Result<Vec<UTxO>> {
         let address_str = addr
             .to_bech32(None)
