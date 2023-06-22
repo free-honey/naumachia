@@ -13,9 +13,9 @@ use naumachia::{
     trireme_ledger_client::{
         cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
         get_trireme_ledger_client_from_file, path_to_client_config_file,
-        path_to_trireme_config_dir, path_to_trireme_config_file, raw_secret_phrase::SecretPhrase,
-        read_toml_struct_from_file, write_toml_struct_to_file, ClientConfig, ClientVariant,
-        KeySource, LedgerSource, Network, TriremeConfig, TriremeLedgerClient,
+        path_to_trireme_config_dir, path_to_trireme_config_file, read_toml_struct_from_file,
+        write_toml_struct_to_file, ClientConfig, ClientVariant, KeySource, LedgerSource, Network,
+        TriremeConfig, TriremeLedgerClient,
     },
     Address,
 };
@@ -25,19 +25,15 @@ use tokio::fs;
 
 #[derive(Clone, Copy)]
 pub enum EnvironmentType {
-    UnsafeBlockfrost,
-    Blockfrost,
-    LocalMocked,
+    Real,
+    Mocked,
 }
 
 impl ToString for EnvironmentType {
     fn to_string(&self) -> String {
         match self {
-            EnvironmentType::UnsafeBlockfrost => {
-                "(dangerous) Plaintext Phrase + Blockfrost API".to_string()
-            }
-            EnvironmentType::Blockfrost => "Password Protected Phrase + Blockfrost API".to_string(),
-            EnvironmentType::LocalMocked => "Local Mocked".to_string(),
+            EnvironmentType::Real => "Real Chain".to_string(),
+            EnvironmentType::Mocked => "Local Mocked".to_string(),
         }
     }
 }
@@ -60,9 +56,8 @@ pub async fn new_env_impl() -> Result<()> {
     };
 
     match get_env_type()? {
-        EnvironmentType::UnsafeBlockfrost => setup_unsafe_blockfrost_env(&name).await?,
-        EnvironmentType::Blockfrost => setup_password_protected_blockfrost_env(&name).await?,
-        EnvironmentType::LocalMocked => setup_local_mocked_env(&name).await?,
+        EnvironmentType::Real => setup_password_protected_blockfrost_env(&name).await?,
+        EnvironmentType::Mocked => setup_local_mocked_env(&name).await?,
     }
 
     write_trireme_config(&trireme_config).await?;
@@ -75,11 +70,7 @@ pub async fn new_env_impl() -> Result<()> {
 }
 
 fn get_env_type() -> Result<EnvironmentType> {
-    let items = vec![
-        EnvironmentType::LocalMocked,
-        EnvironmentType::Blockfrost,
-        EnvironmentType::UnsafeBlockfrost,
-    ];
+    let items = vec![EnvironmentType::Mocked, EnvironmentType::Real];
     let item_index = Select::new()
         .with_prompt("What kind of environment?")
         .items(&items)
@@ -89,28 +80,6 @@ fn get_env_type() -> Result<EnvironmentType> {
         .expect("Should always be a valid index")
         .to_owned();
     Ok(env_type)
-}
-
-async fn setup_unsafe_blockfrost_env(name: &str) -> Result<()> {
-    let api_key: String = Input::new()
-        .with_prompt("Insert blockfrost testnet api key")
-        .interact_text()?;
-    let secret_phrase: String = Input::new()
-        .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
-        .interact_text()?;
-    let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, name).await?;
-    let secret_phrase_path = write_secret_phrase(&secret_phrase, name).await?;
-    // TODO: Do a prompt or derive network from api key
-    let network = Network::Preprod;
-    write_cml_client_config_with_raw_secret(
-        &name,
-        &name,
-        blockfrost_api_key_path,
-        secret_phrase_path,
-        network,
-    )
-    .await?;
-    Ok(())
 }
 
 async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
@@ -158,13 +127,61 @@ async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug)]
+enum LedgerTypes {
+    BlockFrost,
+    OgmiosAndScrolls,
+}
+
+impl ToString for LedgerTypes {
+    fn to_string(&self) -> String {
+        match self {
+            LedgerTypes::BlockFrost => "Blockfrost API".to_string(),
+            LedgerTypes::OgmiosAndScrolls => "Ogmios and Scrolls".to_string(),
+        }
+    }
+}
+
 async fn get_ledger_source(env_name: &str) -> Result<LedgerSource> {
+    let items = vec![LedgerTypes::BlockFrost, LedgerTypes::OgmiosAndScrolls];
+    let item_index = Select::new()
+        .with_prompt("What is your ledger data provider?")
+        .items(&items)
+        .interact()?;
+    let ledger_type = items
+        .get(item_index)
+        .expect("Should always be a valid index")
+        .to_owned();
+
+    match ledger_type {
+        LedgerTypes::BlockFrost => setup_blockfrost_ledger(env_name).await,
+        LedgerTypes::OgmiosAndScrolls => setup_ogmios_and_scrolls_ledger(),
+    }
+}
+
+async fn setup_blockfrost_ledger(env_name: &str) -> Result<LedgerSource> {
     let api_key: String = Input::new()
         .with_prompt("Insert blockfrost testnet api key")
         .interact_text()?;
     let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, env_name).await?;
     let ledger_source = LedgerSource::BlockFrost {
         api_key_file: blockfrost_api_key_path,
+    };
+    Ok(ledger_source)
+}
+
+fn setup_ogmios_and_scrolls_ledger() -> Result<LedgerSource> {
+    let scrolls_ip: String = Input::new()
+        .with_prompt("Ip address of Scrolls Redis server")
+        .default("127.0.0.1".to_string())
+        .interact_text()?;
+    let scrolls_port: String = Input::new()
+        .with_prompt("Port of Scrolls Redis server")
+        .default("6379".to_string())
+        .interact_text()?;
+    let ledger_source = LedgerSource::OgmiosAndScrolls {
+        scrolls_ip,
+        scrolls_port,
     };
     Ok(ledger_source)
 }
@@ -366,15 +383,6 @@ pub async fn advance_blocks(count: i64) -> Result<()> {
 
 const RAW_PHRASE_FILE: &str = "secret_phrase.toml";
 
-async fn write_secret_phrase(phrase: &str, sub_dir: &str) -> Result<PathBuf> {
-    let mut file_path = path_to_trireme_config_dir()?;
-    file_path.push(sub_dir);
-    file_path.push(RAW_PHRASE_FILE);
-    let phrase_struct = SecretPhrase::from_str(&phrase)?;
-    write_toml_struct_to_file(&file_path, &phrase_struct).await?;
-    Ok(file_path)
-}
-
 async fn write_secret_phrase_with_password(
     phrase: &str,
     sub_dir: &str,
@@ -406,25 +414,9 @@ async fn write_trireme_config(trireme_config: &TriremeConfig) -> Result<()> {
     Ok(())
 }
 
-async fn write_cml_client_config_with_raw_secret(
-    name: &str,
-    sub_dir: &str,
-    api_key_file: PathBuf,
-    phrase_file: PathBuf,
-    network: Network,
-) -> Result<()> {
-    let ledger_source = LedgerSource::BlockFrost { api_key_file };
-    let key_source = KeySource::RawSecretPhrase { phrase_file };
-    let client_config = ClientConfig::new_cml(name, ledger_source, key_source, network);
-    let file_path = path_to_client_config_file(sub_dir)?;
-    write_toml_struct_to_file(&file_path, &client_config).await?;
-    Ok(())
-}
-
 async fn write_cml_client_config_with_password_protection(
     name: &str,
     sub_dir: &str,
-    // api_key_file: PathBuf,
     ledger_source: LedgerSource,
     phrase_file: PathBuf,
     password_salt: Vec<u8>,
