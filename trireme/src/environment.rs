@@ -114,9 +114,8 @@ async fn setup_unsafe_blockfrost_env(name: &str) -> Result<()> {
 }
 
 async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
-    let api_key: String = Input::new()
-        .with_prompt("Insert blockfrost testnet api key")
-        .interact_text()?;
+    let ledger_source = get_ledger_source(name).await?;
+
     let secret_phrase: String = Input::new()
         .with_prompt("⚠️  Insert testnet secret phrase ⚠️  ")
         .interact_text()?;
@@ -136,7 +135,6 @@ async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
 
     let encryption_nonce = rand::thread_rng().gen::<[u8; 12]>();
 
-    let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, name).await?;
     let secret_phrase_path = write_secret_phrase_with_password(
         &secret_phrase,
         name,
@@ -150,7 +148,7 @@ async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
     write_cml_client_config_with_password_protection(
         &name,
         &name,
-        blockfrost_api_key_path,
+        ledger_source,
         secret_phrase_path,
         salt.to_vec(),
         encryption_nonce,
@@ -158,6 +156,17 @@ async fn setup_password_protected_blockfrost_env(name: &str) -> Result<()> {
     )
     .await?;
     Ok(())
+}
+
+async fn get_ledger_source(env_name: &str) -> Result<LedgerSource> {
+    let api_key: String = Input::new()
+        .with_prompt("Insert blockfrost testnet api key")
+        .interact_text()?;
+    let blockfrost_api_key_path = write_blockfrost_api_key(&api_key, env_name).await?;
+    let ledger_source = LedgerSource::BlockFrost {
+        api_key_file: blockfrost_api_key_path,
+    };
+    Ok(ledger_source)
 }
 
 fn get_password_with_prompt(prompt: &str) -> Result<String> {
@@ -415,13 +424,13 @@ async fn write_cml_client_config_with_raw_secret(
 async fn write_cml_client_config_with_password_protection(
     name: &str,
     sub_dir: &str,
-    api_key_file: PathBuf,
+    // api_key_file: PathBuf,
+    ledger_source: LedgerSource,
     phrase_file: PathBuf,
     password_salt: Vec<u8>,
     encrpytion_nonce: [u8; 12],
     network: Network,
 ) -> Result<()> {
-    let ledger_source = LedgerSource::BlockFrost { api_key_file };
     let key_source = KeySource::TerminalPasswordUpfrontSecretPhrase {
         phrase_file,
         password_salt,
