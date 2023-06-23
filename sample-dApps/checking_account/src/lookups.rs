@@ -27,6 +27,10 @@ pub async fn get_my_accounts<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let checking_account_address = validator
         .address(network)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    println!(
+        "Checking account address: {}",
+        checking_account_address.to_bech32().unwrap()
+    );
     let outputs = ledger_client
         .all_outputs_at_address(&checking_account_address)
         .await
@@ -55,7 +59,8 @@ pub async fn get_my_accounts<LC: LedgerClient<CheckingAccountDatums, ()>>(
                 .find(|(policy_id, amt)| {
                     if let Some(asset_name) = policy_id.asset_name() {
                         amt == &&1 && asset_name == CHECKING_ACCOUNT_NFT_ASSET_NAME
-                    // This is kinda fragile
+                    // TODO: This is kinda fragile since in theory you could have
+                    //   other assets with the same name
                     } else {
                         false
                     }
