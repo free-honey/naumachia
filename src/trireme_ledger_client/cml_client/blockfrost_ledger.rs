@@ -1,6 +1,7 @@
 use super::error::*;
 use crate::trireme_ledger_client::cml_client::{error::CMLLCError, ExecutionCost, Ledger, UTxO};
 use async_trait::async_trait;
+use blockfrost_http_client::error::Error;
 use blockfrost_http_client::{
     models::ExecutionType, models::UTxO as BFUTxO, models::Value as BFValue, BlockFrostHttp,
     BlockFrostHttpTrait,
@@ -102,11 +103,20 @@ impl Ledger for BlockFrostLedger {
         let addr_string = addr
             .to_bech32(None)
             .map_err(|e| CMLLCError::JsError(e.to_string()))?;
-        let bf_utxos = self
-            .client
-            .utxos(&addr_string, Some(count))
-            .await
-            .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
+        let bf_utxos_res = self.client.utxos(&addr_string, Some(count)).await;
+        let bf_utxos = match bf_utxos_res {
+            Ok(bf_utxos) => Ok(bf_utxos),
+            Err(e) => match e {
+                Error::HttpError { status_code, .. } => {
+                    if status_code == 404 {
+                        Ok(Vec::new())
+                    } else {
+                        Err(CMLLCError::LedgerError(Box::new(e)))
+                    }
+                }
+                _ => Err(CMLLCError::LedgerError(Box::new(e))),
+            },
+        }?;
         let utxos = future::join_all(
             bf_utxos
                 .iter()
@@ -122,11 +132,20 @@ impl Ledger for BlockFrostLedger {
         let addr_string = addr
             .to_bech32(None)
             .map_err(|e| CMLLCError::JsError(e.to_string()))?;
-        let bf_utxos = self
-            .client
-            .utxos(&addr_string, None)
-            .await
-            .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
+        let bf_utxos_res = self.client.utxos(&addr_string, None).await;
+        let bf_utxos = match bf_utxos_res {
+            Ok(bf_utxos) => Ok(bf_utxos),
+            Err(e) => match e {
+                Error::HttpError { status_code, .. } => {
+                    if status_code == 404 {
+                        Ok(Vec::new())
+                    } else {
+                        Err(CMLLCError::LedgerError(Box::new(e)))
+                    }
+                }
+                _ => Err(CMLLCError::LedgerError(Box::new(e))),
+            },
+        }?;
         let utxos = future::join_all(
             bf_utxos
                 .iter()

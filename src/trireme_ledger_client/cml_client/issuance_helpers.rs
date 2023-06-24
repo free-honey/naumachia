@@ -256,13 +256,11 @@ fn as_nau_values(cml_value: &CMLValue) -> LedgerClientResult<Values> {
                 for i in 0..len {
                     let asset = assets_names.get(i);
                     if let Some(amt) = assets.get(&asset) {
-                        let asset_bytes = asset.to_bytes();
+                        let asset_bytes = asset.name();
                         let asset_text =
                             std::str::from_utf8(&asset_bytes).map_err(as_failed_to_issue_tx)?;
-                        let policy_id = PolicyId::native_token(
-                            &id.to_string(),
-                            &Some(asset_text.to_string()), // TODO: What if there is no assetname?
-                        );
+                        let policy_id =
+                            PolicyId::native_token(&id.to_string(), &Some(asset_text.to_string()));
                         values.add_one_value(&policy_id, amt.into());
                     }
                 }
