@@ -20,7 +20,12 @@ fn utxo_from_scrolls_utxo(utxo: &ScrollsClientUTxO) -> Result<UTxO> {
     let output_index = utxo.output_index().into();
     let scroll_amount = utxo.amount();
     let amount = cml_value_from_scroll_amount(scroll_amount)?;
-    let datum = utxo.datum().and_then(plutus_data_from_scroll_datum);
+    let maybe_datum = utxo.datum();
+    let datum = if let Some(datum) = maybe_datum {
+        plutus_data_from_scroll_datum(datum)?
+    } else {
+        None
+    };
 
     Ok(UTxO::new(tx_hash, output_index, amount, datum))
 }
@@ -59,8 +64,9 @@ fn cml_value_from_scroll_amount(amount: &[ScrollClientAmount]) -> Result<CMLValu
     Ok(cml_value)
 }
 
-fn plutus_data_from_scroll_datum(_datum: &str) -> Option<PlutusData> {
-    todo!()
+fn plutus_data_from_scroll_datum(datum: &str) -> Result<Option<PlutusData>> {
+    let bytes = hex::decode(datum)?;
+    Ok(PlutusData::from_bytes(bytes).ok())
 }
 
 pub struct OgmiosScrollsLedger {

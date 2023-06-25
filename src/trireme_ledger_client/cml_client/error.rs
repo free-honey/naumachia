@@ -21,7 +21,8 @@ pub enum CMLLCError {
     #[error("Error while deserializing: {0:?}")]
     Deserialize(String),
     #[error("Failed to parse Hex")]
-    Hex(Box<dyn std::error::Error + Send + Sync>),
+    // Hex(Box<dyn std::error::Error + Send + Sync>),
+    Hex(#[from] hex::FromHexError),
     #[error("Invalid Policy Id: {0:?}")]
     InvalidPolicyId(String),
 }
