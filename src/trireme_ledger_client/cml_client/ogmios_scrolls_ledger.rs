@@ -1,6 +1,6 @@
 use crate::trireme_ledger_client::cml_client::{
     error::{CMLLCError, Result},
-    ExecutionCost, Ledger, UTxO,
+    ExecutionCost, ExecutionType, Ledger, UTxO,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::{
@@ -8,6 +8,7 @@ use cardano_multiplatform_lib::{
     ledger::common::value::Value as CMLValue, plutus::PlutusData, AssetName, Assets, MultiAsset,
     PolicyID, Transaction as CMLTransaction,
 };
+use ogmios_client::{EvaluationResult, OgmiosClient, OgmiosLocalTxSubmission, OgmiosResponse};
 use pallas_addresses::Address;
 use scrolls_client::{
     Amount as ScrollClientAmount, ScrollsClient, UTxO as ScrollsClientUTxO, UTxOsByAddress,
@@ -71,12 +72,16 @@ fn plutus_data_from_scroll_datum(datum: &str) -> Result<Option<PlutusData>> {
 
 pub struct OgmiosScrollsLedger {
     scrolls_client: ScrollsClient,
+    ogmios_client: OgmiosClient,
     // TODO: WS Client for Ogmios data
 }
 
 impl OgmiosScrollsLedger {
-    pub fn new(scrolls_client: ScrollsClient) -> Self {
-        Self { scrolls_client }
+    pub fn new(scrolls_client: ScrollsClient, ogmios_client: OgmiosClient) -> Self {
+        Self {
+            scrolls_client,
+            ogmios_client,
+        }
     }
 
     pub async fn get_utxos(&self, addr: &CMLAddress) -> Result<Vec<UTxO>> {
@@ -109,14 +114,66 @@ impl Ledger for OgmiosScrollsLedger {
         self.get_utxos(addr).await
     }
 
-    async fn calculate_ex_units(
-        &self,
-        _tx: &CMLTransaction,
-    ) -> Result<HashMap<u64, ExecutionCost>> {
-        todo!()
+    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, ExecutionCost>> {
+        let bytes = tx.to_bytes();
+        let res = self.ogmios_client.evaluate_tx(&bytes, vec![]).await?;
+        check_for_error(&res)?;
+        parse_evaluation_results(&res)
     }
 
-    async fn submit_transaction(&self, _tx: &CMLTransaction) -> Result<String> {
+    async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String> {
+        let bytes = tx.to_bytes();
+        let encoded = hex::encode(&bytes);
+        println!("tx hex: {:?}", encoded);
         todo!()
     }
+}
+
+fn check_for_error(res: &OgmiosResponse<EvaluationResult>) -> Result<()> {
+    if let Some(err) = res.fault() {
+        Err(CMLLCError::OgmiosResponse(err.to_string()))
+    } else {
+        Ok(())
+    }
+}
+
+fn parse_evaluation_results(
+    res: &OgmiosResponse<EvaluationResult>,
+) -> Result<HashMap<u64, ExecutionCost>> {
+    let eval_res = if let Some(eval_res) = res.result() {
+        Ok(eval_res)
+    } else {
+        Err(CMLLCError::OgmiosResponse(
+            "No evaluation result".to_string(),
+        ))
+    }?;
+    let json = eval_res.value();
+    let map = json
+        .as_object()
+        .and_then(|inner| inner.get("EvaluationResult"))
+        .and_then(|inner| inner.as_object())
+        .ok_or(CMLLCError::OgmiosResponse(
+            "Evaluation result is not a JSON object".to_string(),
+        ))?
+        .iter()
+        .filter_map(|(k, v)| parse_pair(k, v))
+        .collect();
+    Ok(map)
+}
+
+fn parse_pair(key: &str, value: &serde_json::Value) -> Option<(u64, ExecutionCost)> {
+    let split_key = key.split(":").collect::<Vec<_>>();
+    let index = split_key.get(1).and_then(|s| s.parse::<u64>().ok())?;
+    let type_str = split_key.get(0)?;
+    let value_obj = value.as_object()?;
+    let memory = value_obj.get("memory")?.as_u64()?;
+    let steps = value_obj.get("steps")?.as_u64()?;
+    let ex_cost = match *type_str {
+        "spend" => Some(ExecutionCost::new_spend(memory, steps)),
+        "mint" => Some(ExecutionCost::new_mint(memory, steps)),
+        "withdrawal" => Some(ExecutionCost::new_withdrawal(memory, steps)),
+        "certificate" => Some(ExecutionCost::new_certificate(memory, steps)),
+        _ => None,
+    }?;
+    Some((index, ex_cost))
 }

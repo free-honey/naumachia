@@ -171,6 +171,8 @@ impl Ledger for BlockFrostLedger {
             .iter()
             .map(|(index, bf_spend)| (*index, spend_from_bf_spend(bf_spend)))
             .collect();
+        // dbg!(spends);
+        // todo!();
         Ok(spends)
     }
 
