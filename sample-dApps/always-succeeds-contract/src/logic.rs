@@ -125,6 +125,7 @@ async fn impl_list_active_contracts<LC: LedgerClient<(), ()>>(
     let address = script
         .address(network)
         .map_err(SCLogicError::ValidatorScript)?;
+    println!("address: {}", address.to_bech32().unwrap());
     let outputs = ledger_client
         .outputs_at_address(&address, count)
         .await

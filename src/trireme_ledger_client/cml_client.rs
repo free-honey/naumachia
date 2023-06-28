@@ -126,6 +126,8 @@ pub struct ExecutionCost {
 pub enum ExecutionType {
     Spend,
     Mint,
+    Certificate,
+    Withdrawal,
 }
 
 impl ExecutionCost {
@@ -140,6 +142,24 @@ impl ExecutionCost {
 
     pub fn new_mint(memory: u64, steps: u64) -> Self {
         let execution_type = ExecutionType::Mint;
+        ExecutionCost {
+            execution_type,
+            memory,
+            steps,
+        }
+    }
+
+    pub fn new_certificate(memory: u64, steps: u64) -> Self {
+        let execution_type = ExecutionType::Certificate;
+        ExecutionCost {
+            execution_type,
+            memory,
+            steps,
+        }
+    }
+
+    pub fn new_withdrawal(memory: u64, steps: u64) -> Self {
+        let execution_type = ExecutionType::Withdrawal;
         ExecutionCost {
             execution_type,
             memory,
@@ -426,6 +446,8 @@ where
             let tag = match spend.execution_type {
                 ExecutionType::Spend => RedeemerTag::new_spend(),
                 ExecutionType::Mint => RedeemerTag::new_mint(),
+                ExecutionType::Withdrawal => RedeemerTag::new_reward(),
+                ExecutionType::Certificate => RedeemerTag::new_cert(),
             };
             tx_builder.set_exunits(
                 &RedeemerWitnessKey::new(&tag, &BigNum::from(*index)),

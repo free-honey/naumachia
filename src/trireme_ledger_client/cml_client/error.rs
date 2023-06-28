@@ -10,6 +10,10 @@ pub enum CMLLCError {
     Address(#[from] pallas_addresses::Error),
     #[error("Scrolls Client: {0:?}")]
     ScrollsClient(#[from] scrolls_client::error::Error),
+    #[error("Ogmios Client: {0:?}")]
+    OgmiosClient(#[from] ogmios_client::Error),
+    #[error("Ogmios Response: {0:?}")]
+    OgmiosResponse(String),
     #[error("Not a valid BaseAddress")]
     InvalidBaseAddr,
     #[error("Error from ledger implementation: {0:?}")]
