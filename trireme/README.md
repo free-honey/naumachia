@@ -55,9 +55,41 @@ Many contracts have time-based logic, so this is helpful for testing those.
 
 **NOTE**: Only the **PREPROD** testnet is supported at the moment.
 
-This is for interacting with an actual blockchain, using Blockfrost API to query UTxOs and submit transactions.
+This is for interacting with an actual blockchain. Currently Trireme supports the follow methods for interacting with 
+the chain
+
+- Blockfrost API
+- Ogmios + Scrolls
+
 Uses Argon2 + ChaCha20 to password encrypt your secret phrase and store it to file. You must provide a password on 
 environment creation and on each use.
+
+#### Blockfrost API
+
+You must provide a Blockfrost API key. You can get one here: https://blockfrost.io/
+
+#### Ogmios + Scrolls
+
+You will need to provide the IP and Port for both the Ogmios and Scrolls instance. 
+
+Scrolls will also need to be setup with the correct reducers for your contract. Specifically, you will need to include
+the address for each of the scripts and the address for the wallet that will be issuing the transactions.
+
+For example, the `daemon.toml` would include something like:
+```toml
+...
+
+[[reducers]]
+type = "FullUtxosByAddress"
+filter = [
+"addr_test1qp7dqz7g6nyg0y08np42aj8magcwdgr8ea6mysa7e9f6qg8hdg3rkwaqkqysqnwqsfl2spx4yreqywa6t5mgftv6x3fsckw6qg",
+"addr_test1wq6t9y9k20wp545s2snkt5222vhhwt40p8mqt8pad6xtdnsq95tm0",
+"addr_test1wzg9jffqkv5luz8sayu5dmx5qhjfkayq090z0jmp3uqzmzq480snu",
+]
+address_as_key = true
+
+...
+```
 
 ## How do I integrate with my Naumachia dApp?
 
