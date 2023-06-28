@@ -176,12 +176,22 @@ fn setup_ogmios_and_scrolls_ledger() -> Result<LedgerSource> {
         .default("127.0.0.1".to_string())
         .interact_text()?;
     let scrolls_port: String = Input::new()
-        .with_prompt("Port of Scrolls Redis server")
+        .with_prompt("Port for Scrolls Redis server")
         .default("6379".to_string())
+        .interact_text()?;
+    let ogmios_ip: String = Input::new()
+        .with_prompt("Ip address of Ogmios")
+        .default("127.0.0.1".to_string())
+        .interact_text()?;
+    let ogmios_port: String = Input::new()
+        .with_prompt("Port for Ogmios")
+        .default("1337".to_string())
         .interact_text()?;
     let ledger_source = LedgerSource::OgmiosAndScrolls {
         scrolls_ip,
         scrolls_port,
+        ogmios_ip,
+        ogmios_port,
     };
     Ok(ledger_source)
 }

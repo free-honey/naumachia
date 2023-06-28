@@ -107,6 +107,8 @@ pub enum LedgerSource {
     OgmiosAndScrolls {
         scrolls_ip: String,
         scrolls_port: String,
+        ogmios_ip: String,
+        ogmios_port: String,
     },
 }
 
@@ -331,11 +333,10 @@ impl ClientConfig {
                     LedgerSource::OgmiosAndScrolls {
                         scrolls_ip,
                         scrolls_port,
+                        ogmios_ip,
+                        ogmios_port,
                     } => {
                         let scrolls_client = ScrollsClient::new_redis(scrolls_ip, scrolls_port);
-                        // TODO: don't hardcode this
-                        let ogmios_ip = "192.168.0.143".to_string();
-                        let ogmios_port = "1337".to_string();
                         let ogmios_client = OgmiosClient::new(ogmios_ip, ogmios_port);
                         let ledger = OgmiosScrollsLedger::new(scrolls_client, ogmios_client);
                         InnerClient::OgmiosScrolls(CMLLedgerCLient::new(
