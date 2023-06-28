@@ -91,5 +91,5 @@ pallas-crypto = { version = "0.19.0-alpha.0", git = "https://github.com/txpipe/p
 #[patch."https://github.com/dcSpark/cardano-multiplatform-lib.git"]
 #cardano-multiplatform-lib = { version = "3.1.1", path = "../forks/cardano-multiplatform-lib/rust"}
 
-[patch."https://github.com/free-honey/ogmios-client.git"]
-ogmios-client = { version = "0.1.0", path = "../../FreeHoney/ogmios-client"}
+#[patch."https://github.com/free-honey/ogmios-client.git"]
+#ogmios-client = { version = "0.1.0", path = "../../FreeHoney/ogmios-client"}

@@ -123,9 +123,15 @@ impl Ledger for OgmiosScrollsLedger {
 
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String> {
         let bytes = tx.to_bytes();
-        let encoded = hex::encode(&bytes);
-        println!("tx hex: {:?}", encoded);
-        todo!()
+        let res = self.ogmios_client.submit_tx(&bytes).await?;
+        let tx_hash = res
+            .result()
+            .ok_or(CMLLCError::OgmiosResponse(
+                "No transaction hash in response".to_string(),
+            ))?
+            .tx_id()
+            .to_string();
+        Ok(tx_hash)
     }
 }
 
