@@ -1,6 +1,6 @@
 use crate::trireme_ledger_client::cml_client::{
     error::{CMLLCError, Result},
-    ExecutionCost, ExecutionType, Ledger, UTxO,
+    ExecutionCost, Ledger, UTxO,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::{
@@ -168,9 +168,9 @@ fn parse_evaluation_results(
 }
 
 fn parse_pair(key: &str, value: &serde_json::Value) -> Option<(u64, ExecutionCost)> {
-    let split_key = key.split(":").collect::<Vec<_>>();
+    let split_key = key.split(':').collect::<Vec<_>>();
     let index = split_key.get(1).and_then(|s| s.parse::<u64>().ok())?;
-    let type_str = split_key.get(0)?;
+    let type_str = split_key.first()?;
     let value_obj = value.as_object()?;
     let memory = value_obj.get("memory")?.as_u64()?;
     let steps = value_obj.get("steps")?.as_u64()?;
