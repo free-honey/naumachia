@@ -52,7 +52,7 @@ where
         TestBackendsBuilder {
             signer: signer.clone(),
             outputs: Vec::new(),
-            _redeemer: PhantomData::default(),
+            _redeemer: PhantomData,
         }
     }
 
@@ -79,8 +79,8 @@ where
             block_length,
         );
         Backend {
-            _datum: PhantomData::default(),
-            _redeemer: PhantomData::default(),
+            _datum: PhantomData,
+            _redeemer: PhantomData,
             ledger_client,
         }
     }

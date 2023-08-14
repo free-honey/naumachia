@@ -34,8 +34,8 @@ where
 {
     pub fn new(txo_record: LC) -> Self {
         Backend {
-            _datum: PhantomData::default(),
-            _redeemer: PhantomData::default(),
+            _datum: PhantomData,
+            _redeemer: PhantomData,
             ledger_client: txo_record,
         }
     }
