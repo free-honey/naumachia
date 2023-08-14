@@ -11,10 +11,10 @@ name = "checking"
 path = "src/main.rs"
 
 [build-dependencies]
-aiken = "1.0.3-alpha"
-aiken-project = "1.0.3-alpha"
-aiken-lang = "1.0.3-alpha"
-uplc = "1.0.3-alpha"
+aiken = "1.0.13-alpha"
+aiken-project = "1.0.13-alpha"
+aiken-lang = "1.0.13-alpha"
+uplc = "1.0.13-alpha"
 
 [dependencies]
 anyhow = "1.0.65"
