@@ -222,11 +222,14 @@ async fn setup_local_mocked_env(name: &str) -> Result<()> {
         "Could not find parent directory for config".to_string(),
     ))?;
     fs::create_dir_all(&parent_dir).await?;
+
+    let starting_time = 0;
     let storage = LocalPersistedStorage::<PathBuf, ()>::init(
         parent_dir.into(),
         alice_name,
         &alice_address,
         start_balance,
+        starting_time,
         block_length,
     );
     storage.add_new_signer(bob_name, &bob_address, start_balance);

@@ -339,6 +339,7 @@ mod tests {
             signer_name,
             &signer,
             starting_amount,
+            0,
             BLOCK_LENGTH,
         );
         let mut outputs = storage.all_outputs(&signer).await.unwrap();
@@ -360,6 +361,7 @@ mod tests {
             signer_name,
             &signer,
             starting_amount,
+            0,
             BLOCK_LENGTH,
         );
         let current_time = storage.current_time().await.unwrap();
@@ -382,6 +384,7 @@ mod tests {
             alice,
             &alice_address,
             starting_amount,
+            0,
             BLOCK_LENGTH,
         );
         let bob = "Bob";
