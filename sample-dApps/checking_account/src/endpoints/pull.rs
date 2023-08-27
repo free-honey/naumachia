@@ -65,14 +65,14 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let allow_pull_value = allow_pull_output.values().clone();
 
     #[allow(unused_assignments)]
-    let mut next_pull_date = None;
+    let old_pull_time;
     let new_allow_pull_datum = match old_allow_pull_datum {
         CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
             let AllowedPuller {
                 next_pull, period, ..
             } = old_allowed_puller;
-            let next_pull = next_pull + period;
-            next_pull_date = Some(next_pull);
+            old_pull_time = next_pull;
+            let next_pull = old_pull_time + period;
             AllowedPuller {
                 next_pull,
                 ..old_allowed_puller
@@ -83,6 +83,19 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
             unimplemented!()
         }
     };
+
+    let current_time = ledger_client
+        .current_time_posix_milliseconds()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    if current_time < old_pull_time {
+        let err = CheckingAccountError::TooEarlyToPull {
+            next_pull: old_pull_time,
+            current_time,
+        };
+        return Err(SCLogicError::Endpoint(Box::new(err)));
+    }
 
     let new_checking_account_datum = checking_account_output
         .typed_datum()
@@ -118,6 +131,6 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
             new_account_value,
             checking_account_address,
         )
-        .with_valid_range(next_pull_date, None);
+        .with_valid_range(current_time.into(), None);
     Ok(actions)
 }

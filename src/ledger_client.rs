@@ -53,6 +53,8 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId>; // TODO: Move to other trait
 
     async fn network(&self) -> LedgerClientResult<Network>;
+
+    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64>;
 }
 
 #[derive(Debug, Error)]

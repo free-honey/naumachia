@@ -1,3 +1,4 @@
+use crate::datum::CheckingAccountDatums;
 use crate::{
     checking_account_validator, scripts::pull_validator::pull_validator, spend_token_policy,
     AllowedPuller, CheckingAccount, CheckingAccountEndpoints, CheckingAccountLogic,
@@ -5,8 +6,10 @@ use crate::{
 };
 use naumachia::{
     address::PolicyId,
+    error::Error,
     ledger_client::test_ledger_client::TestBackendsBuilder,
     ledger_client::LedgerClient,
+    logic::SCLogicError,
     scripts::context::pub_key_hash_from_address_if_available,
     scripts::{MintingPolicy, ValidatorCode},
     smart_contract::{SmartContract, SmartContractTrait},
@@ -239,7 +242,7 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
 }
 
 #[tokio::test]
-async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
+async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_updates_datum() {
     let owner_address = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
     let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner_address).unwrap();
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
@@ -260,17 +263,20 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
     .into();
     let checking_account_nft_id = vec![1, 2, 3, 4, 5];
     let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
+    let next_pull = 10_000;
+    let period = 1000;
     let allow_puller_datum = AllowedPuller {
         owner: owner_pubkey_hash,
         puller: puller_pubkey_hash,
         amount_lovelace: pull_amount,
-        next_pull: 0,
-        period: 0,
+        next_pull,
+        period,
         spending_token: spending_token_policy.clone(),
         checking_account_nft: checking_account_nft_id.clone(),
     }
     .into();
     let backend = TestBackendsBuilder::new(&puller)
+        .with_starting_time(next_pull)
         .start_output(&account_address)
         .with_datum(account_datum)
         .with_value(PolicyId::Lovelace, account_amount)
@@ -332,4 +338,101 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts() {
     let script_output = outputs_at_puller_address.pop().unwrap();
     let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, pull_amount);
+
+    let mut outputs_at_account_address = backend
+        .ledger_client
+        .all_outputs_at_address(&allow_puller_address)
+        .await
+        .unwrap();
+    let script_output = outputs_at_account_address.pop().unwrap();
+    let datum = script_output.datum().clone().unwrap_typed();
+    match datum {
+        CheckingAccountDatums::AllowedPuller(AllowedPuller {
+            next_pull: datum_next_pull,
+            ..
+        }) => {
+            assert_eq!(datum_next_pull, next_pull + period);
+        }
+        _ => panic!("Unexpected datum type"),
+    }
+}
+
+#[tokio::test]
+async fn pull_from_account__fails_if_time_not_past_next_pull_time() {
+    let owner_address = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
+    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner_address).unwrap();
+    let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
+
+    let allow_puller_script = pull_validator().unwrap();
+    let network = Network::Testnet;
+    let allow_puller_address = allow_puller_script.address(network).unwrap();
+    let account_script = checking_account_validator().unwrap();
+    let spending_token_policy = vec![5, 5, 5, 5, 5];
+    let account_address = account_script.address(network).unwrap();
+
+    let account_amount = 100_000_000;
+    let pull_amount = 15_000_000;
+    let account_datum = CheckingAccount {
+        owner: owner_pubkey_hash.clone(),
+        spend_token_policy: spending_token_policy.clone(),
+    }
+    .into();
+    let checking_account_nft_id = vec![1, 2, 3, 4, 5];
+    let puller_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
+    let next_pull = 10_000;
+    let allow_puller_datum = AllowedPuller {
+        owner: owner_pubkey_hash,
+        puller: puller_pubkey_hash,
+        amount_lovelace: pull_amount,
+        next_pull,
+        period: 0,
+        spending_token: spending_token_policy.clone(),
+        checking_account_nft: checking_account_nft_id.clone(),
+    }
+    .into();
+    let backend = TestBackendsBuilder::new(&puller)
+        .start_output(&account_address)
+        .with_datum(account_datum)
+        .with_value(PolicyId::Lovelace, account_amount)
+        .with_value(
+            PolicyId::NativeToken(hex::encode(&checking_account_nft_id), None),
+            1,
+        )
+        .finish_output()
+        .start_output(&allow_puller_address)
+        .with_datum(allow_puller_datum)
+        .with_value(
+            PolicyId::NativeToken(hex::encode(spending_token_policy), None),
+            1,
+        )
+        .finish_output()
+        .build_in_memory();
+
+    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+
+    let mut outputs_at_address = backend
+        .ledger_client
+        .all_outputs_at_address(&account_address)
+        .await
+        .unwrap();
+    let script_output = outputs_at_address.pop().unwrap();
+    let checking_account_output_id = script_output.id().to_owned();
+
+    let mut outputs_at_address = backend
+        .ledger_client
+        .all_outputs_at_address(&allow_puller_address)
+        .await
+        .unwrap();
+    let script_output = outputs_at_address.pop().unwrap();
+    let allow_pull_output_id = script_output.id().to_owned();
+
+    // When
+    let pull_endpoint = CheckingAccountEndpoints::PullFromCheckingAccount {
+        allow_pull_output_id,
+        checking_account_output_id,
+        amount: pull_amount,
+    };
+    let err = contract.hit_endpoint(pull_endpoint).await.unwrap_err();
+
+    assert!(matches!(err, Error::SCLogic(SCLogicError::Endpoint(_))));
 }

@@ -68,6 +68,22 @@ pub enum DatumKind<Datum> {
     None,
 }
 
+impl<Datum> DatumKind<Datum> {
+    pub fn unwrap_typed(self) -> Datum {
+        match self {
+            DatumKind::Typed(datum) => datum,
+            _ => panic!("Expected Typed Datum"),
+        }
+    }
+
+    pub fn unwrap_untyped(self) -> PlutusData {
+        match self {
+            DatumKind::UnTyped(datum) => datum,
+            _ => panic!("Expected Untyped Datum"),
+        }
+    }
+}
+
 impl<Datum> From<DatumKind<Datum>> for Option<Datum> {
     fn from(value: DatumKind<Datum>) -> Self {
         match value {

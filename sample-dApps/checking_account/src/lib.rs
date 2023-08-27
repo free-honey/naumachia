@@ -106,6 +106,8 @@ pub enum CheckingAccountError {
     CannotWithdrawSpecifiedAmount,
     #[error("Address isn't valid: {0:?}")]
     InvalidAddress(Address),
+    #[error("Too early to pull: next_pull: {next_pull}, current_time: {current_time}")]
+    TooEarlyToPull { next_pull: i64, current_time: i64 },
 }
 
 #[async_trait]
