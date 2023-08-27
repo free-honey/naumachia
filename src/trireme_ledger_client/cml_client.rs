@@ -36,6 +36,7 @@ use cardano_multiplatform_lib::{
 };
 use error::*;
 use pallas_addresses::{Address, Network};
+use std::time::UNIX_EPOCH;
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, ops::Deref};
 
 pub mod blockfrost_ledger;
@@ -674,5 +675,15 @@ where
             _ => Network::Other(self.network),
         };
         Ok(network)
+    }
+
+    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64> {
+        let now = std::time::SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| LedgerClientError::CurrentTime(Box::new(e)))?
+            .as_millis()
+            .try_into()
+            .expect("This should never be bigger than i64 in our lifetimes :)");
+        Ok(now)
     }
 }

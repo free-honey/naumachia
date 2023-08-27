@@ -40,6 +40,7 @@ pub struct TestBackendsBuilder<Datum, Redeemer> {
     signer: Address,
     // TODO: Remove owner
     outputs: Vec<(Address, Output<Datum>)>,
+    starting_time: i64,
     _redeemer: PhantomData<Redeemer>,
 }
 
@@ -52,6 +53,7 @@ where
         TestBackendsBuilder {
             signer: signer.clone(),
             outputs: Vec::new(),
+            starting_time: 0,
             _redeemer: PhantomData,
         }
     }
@@ -69,6 +71,11 @@ where
         self.outputs.push((address.clone(), output))
     }
 
+    pub fn with_starting_time(mut self, starting_time: i64) -> Self {
+        self.starting_time = starting_time;
+        self
+    }
+
     pub fn build_in_memory(
         &self,
     ) -> Backend<Datum, Redeemer, TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>> {
@@ -77,6 +84,7 @@ where
             self.signer.clone(),
             self.outputs.clone(),
             block_length,
+            self.starting_time,
         );
         Backend {
             _datum: PhantomData,
@@ -183,11 +191,12 @@ where
         signer: Address,
         outputs: Vec<(Address, Output<Datum>)>,
         block_length: i64,
+        starting_time: i64,
     ) -> Self {
         let storage = InMemoryStorage {
             signer,
             outputs: Arc::new(Mutex::new(outputs)),
-            current_posix_time: Arc::new(Mutex::new(0)),
+            current_posix_time: Arc::new(Mutex::new(starting_time)),
             block_length,
         };
         TestLedgerClient {
@@ -205,8 +214,15 @@ where
     pub fn new_local_persisted(dir: T, signer: &Address, starting_amount: u64) -> Self {
         let signer_name = "Alice";
         let block_length = 1000;
-        let storage =
-            LocalPersistedStorage::init(dir, signer_name, signer, starting_amount, block_length);
+        let starting_time = 0;
+        let storage = LocalPersistedStorage::init(
+            dir,
+            signer_name,
+            signer,
+            starting_amount,
+            starting_time,
+            block_length,
+        );
         let _ = storage.get_data();
         TestLedgerClient {
             storage,
@@ -240,10 +256,7 @@ where
     }
 
     pub async fn advance_time_one_block(&self) -> LedgerClientResult<()> {
-        let block_length = self.storage.get_block_length().await?;
-        let current_time = self.storage.current_time().await?;
-        let new_time = block_length + current_time;
-        self.storage.set_current_time(new_time).await
+        self.advance_time_n_blocks(1).await
     }
 
     pub async fn advance_time_n_blocks(&self, n_blocks: i64) -> LedgerClientResult<()> {
@@ -385,6 +398,10 @@ where
 
     async fn network(&self) -> LedgerClientResult<Network> {
         self.storage.network().await
+    }
+
+    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64> {
+        self.current_time().await
     }
 }
 

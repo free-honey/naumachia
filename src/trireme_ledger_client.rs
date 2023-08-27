@@ -523,6 +523,15 @@ where
         }
         .await
     }
+
+    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64> {
+        match &self.inner_client {
+            InnerClient::BlockFrost(cml_client) => cml_client.current_time_posix_milliseconds(),
+            InnerClient::Mocked(test_client) => test_client.current_time_posix_milliseconds(),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.current_time_posix_milliseconds(),
+        }
+        .await
+    }
 }
 
 #[derive(Debug, Error)]

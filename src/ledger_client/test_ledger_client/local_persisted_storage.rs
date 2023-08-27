@@ -141,12 +141,14 @@ where
         signer_name: &str,
         signer: &Address,
         starting_amount: u64,
+        starting_time: i64,
         block_length: i64,
     ) -> Self {
         let path_ref: &Path = dir.as_ref();
         let path = path_ref.to_owned().join(DATA);
         if !path.exists() {
             let mut data = LedgerData::new(signer_name, signer, block_length);
+            data.current_time = starting_time;
             let output: Output<Datum> = starting_output(signer, starting_amount);
             data.add_output(output); // TODO: Parameterize
             let serialized = serde_json::to_string(&data).unwrap();
@@ -337,6 +339,7 @@ mod tests {
             signer_name,
             &signer,
             starting_amount,
+            0,
             BLOCK_LENGTH,
         );
         let mut outputs = storage.all_outputs(&signer).await.unwrap();
@@ -358,6 +361,7 @@ mod tests {
             signer_name,
             &signer,
             starting_amount,
+            0,
             BLOCK_LENGTH,
         );
         let current_time = storage.current_time().await.unwrap();
@@ -380,6 +384,7 @@ mod tests {
             alice,
             &alice_address,
             starting_amount,
+            0,
             BLOCK_LENGTH,
         );
         let bob = "Bob";
