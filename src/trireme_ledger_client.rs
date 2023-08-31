@@ -13,7 +13,7 @@ use crate::{
 };
 
 use crate::trireme_ledger_client::cml_client::ogmios_scrolls_ledger::OgmiosScrollsLedger;
-use crate::trireme_ledger_client::cml_client::{network_settings::NetworkSettings, Keys};
+use crate::trireme_ledger_client::cml_client::Keys;
 use crate::trireme_ledger_client::terminal_password_phrase::{
     PasswordProtectedPhraseKeys, TerminalPasswordUpfront,
 };
@@ -129,14 +129,16 @@ pub enum KeySource {
 #[serde(tag = "type")]
 pub enum Network {
     Preprod,
+    Preview,
     Mainnet,
+    Testnet,
 }
 
 impl From<Network> for u8 {
     fn from(network: Network) -> Self {
         match network {
-            Network::Preprod => 0,
             Network::Mainnet => 1,
+            Network::Preprod | Network::Preview | Network::Testnet => 0,
         }
     }
 }
@@ -325,6 +327,16 @@ impl ClientConfig {
                         let url = match &network {
                             Network::Preprod => PREPROD_NETWORK_URL,
                             Network::Mainnet => MAINNET_URL,
+                            Network::Preview => {
+                                return Err(Error::Trireme(
+                                    "Preview network not supported yet".to_string(),
+                                ))
+                            }
+                            Network::Testnet => {
+                                return Err(Error::Trireme(
+                                    "Testnet network is no longer supported".to_string(),
+                                ))
+                            }
                         };
                         let ledger = BlockFrostLedger::new(url, &key);
                         let network_settings = network.clone().into();

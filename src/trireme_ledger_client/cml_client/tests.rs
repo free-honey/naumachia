@@ -2,6 +2,7 @@ use super::*;
 use crate::trireme_ledger_client::cml_client::{
     blockfrost_ledger::BlockFrostLedger, key_manager::KeyManager,
 };
+use crate::trireme_ledger_client::Network;
 use crate::PolicyId;
 use blockfrost_http_client::{load_key_from_file, PREPROD_NETWORK_URL};
 use cardano_multiplatform_lib::address::BaseAddress;

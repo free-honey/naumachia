@@ -57,6 +57,16 @@ impl From<Network> for NetworkSettings {
                 MAINNET_SLOT_LENGTH,
                 MAINNET_FIRST_SLOT_TIME,
             ),
+            Network::Preview => NetworkSettings::new(
+                PREVIEW_NETWORK,
+                PREVIEW_SLOT_LENGTH,
+                PREVIEW_FIRST_SLOT_TIME,
+            ),
+            Network::Testnet => NetworkSettings::new(
+                TESTNET_NETWORK,
+                TESTNET_SLOT_LENGTH,
+                TESTNET_FIRST_SLOT_TIME,
+            ),
         }
     }
 }

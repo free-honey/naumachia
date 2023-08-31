@@ -1,5 +1,4 @@
 use crate::trireme_ledger_client::cml_client::network_settings::NetworkSettings;
-use crate::trireme_ledger_client::Network;
 use crate::{
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::{Output, UnbuiltOutput},
