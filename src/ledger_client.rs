@@ -79,6 +79,8 @@ pub enum LedgerClientError {
     ConfigError(String),
     #[error("While getting current time: {0:?}")]
     CurrentTime(Box<dyn error::Error + Send + Sync>),
+    #[error("While setting validity range: {0:?}")]
+    ValidityRange(String),
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

@@ -8,9 +8,6 @@ use cardano_multiplatform_lib::{
 use std::{fs, path::Path};
 use thiserror::Error;
 
-pub const TESTNET: u8 = 0;
-pub const MAINNET: u8 = 1;
-
 pub struct KeyManager {
     config_path: String,
     network: u8,

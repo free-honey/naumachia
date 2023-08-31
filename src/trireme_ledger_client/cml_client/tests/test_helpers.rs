@@ -1,7 +1,7 @@
 use crate::scripts::raw_script::PlutusScriptFile;
 use crate::scripts::raw_validator_script::RawPlutusValidator;
 use crate::transaction::TransactionVersion;
-use crate::trireme_ledger_client::cml_client::key_manager::TESTNET;
+use crate::trireme_ledger_client::Network;
 use crate::{
     output::{Output, UnbuiltOutput},
     scripts::ValidatorCode,
@@ -30,7 +30,7 @@ pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()
 }
 
 pub fn lock_at_always_succeeds_tx(amount: u64) -> UnbuiltTransaction<(), ()> {
-    let script_address = always_succeeds_script_address(TESTNET);
+    let script_address = always_succeeds_script_address(Network::Preprod.into());
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, amount);
     let output = UnbuiltOutput::new_validator(script_address, values, ());

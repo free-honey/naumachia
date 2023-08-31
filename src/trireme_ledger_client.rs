@@ -13,7 +13,7 @@ use crate::{
 };
 
 use crate::trireme_ledger_client::cml_client::ogmios_scrolls_ledger::OgmiosScrollsLedger;
-use crate::trireme_ledger_client::cml_client::Keys;
+use crate::trireme_ledger_client::cml_client::{network_settings::NetworkSettings, Keys};
 use crate::trireme_ledger_client::terminal_password_phrase::{
     PasswordProtectedPhraseKeys, TerminalPasswordUpfront,
 };
@@ -290,10 +290,9 @@ impl ClientConfig {
         match self.variant {
             ClientVariant::CML(inner) => {
                 let network = inner.network;
-                let network_index = network.clone().into();
                 let keys = match inner.key_source {
                     KeySource::RawSecretPhrase { phrase_file } => {
-                        let keys = RawSecretPhraseKeys::new(phrase_file, network_index);
+                        let keys = RawSecretPhraseKeys::new(phrase_file, network.clone().into());
                         SecretPhraseKeys::RawSecretPhraseKeys(keys)
                     }
                     KeySource::TerminalPasswordUpfrontSecretPhrase {
@@ -305,7 +304,7 @@ impl ClientConfig {
                         let keys = PasswordProtectedPhraseKeys::new(
                             password,
                             phrase_file,
-                            network_index,
+                            network.clone().into(),
                             encrpytion_nonce,
                         );
                         SecretPhraseKeys::PasswordProtectedPhraseKeys(keys)
@@ -323,12 +322,17 @@ impl ClientConfig {
                             )
                                 })?;
                         let key: String = blockfrost_key.into();
-                        let url = match network {
+                        let url = match &network {
                             Network::Preprod => PREPROD_NETWORK_URL,
                             Network::Mainnet => MAINNET_URL,
                         };
                         let ledger = BlockFrostLedger::new(url, &key);
-                        InnerClient::BlockFrost(CMLLedgerCLient::new(ledger, keys, network_index))
+                        let network_settings = network.clone().into();
+                        InnerClient::BlockFrost(CMLLedgerCLient::new(
+                            ledger,
+                            keys,
+                            network_settings,
+                        ))
                     }
                     LedgerSource::OgmiosAndScrolls {
                         scrolls_ip,
@@ -342,7 +346,7 @@ impl ClientConfig {
                         InnerClient::OgmiosScrolls(CMLLedgerCLient::new(
                             ledger,
                             keys,
-                            network_index,
+                            network.into(),
                         ))
                     }
                 };
