@@ -54,7 +54,8 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 
     async fn network(&self) -> LedgerClientResult<Network>;
 
-    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64>;
+    /// Get the current time in seconds since the UNIX epoch.
+    async fn current_time_secs(&self) -> LedgerClientResult<i64>;
 }
 
 #[derive(Debug, Error)]

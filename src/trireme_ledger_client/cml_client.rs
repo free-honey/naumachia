@@ -679,7 +679,7 @@ where
         Ok(network)
     }
 
-    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64> {
+    async fn current_time_secs(&self) -> LedgerClientResult<i64> {
         let now = std::time::SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| LedgerClientError::CurrentTime(Box::new(e)))?

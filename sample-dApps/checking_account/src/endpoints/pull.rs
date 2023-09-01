@@ -85,7 +85,7 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     };
 
     let current_time = ledger_client
-        .current_time_posix_milliseconds()
+        .current_time_secs()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 

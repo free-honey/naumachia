@@ -400,7 +400,7 @@ where
         self.storage.network().await
     }
 
-    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64> {
+    async fn current_time_secs(&self) -> LedgerClientResult<i64> {
         self.current_time().await
     }
 }

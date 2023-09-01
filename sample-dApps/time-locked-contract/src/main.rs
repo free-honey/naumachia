@@ -41,7 +41,7 @@ async fn main() {
             .hit_endpoint(TimeLockedEndpoints::Lock {
                 amount: (amount * 1_000_000.) as u64,
                 // TODO
-                timestamp: 0,
+                after_secs: 0,
             })
             .await
             .unwrap(),
