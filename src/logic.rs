@@ -1,4 +1,4 @@
-use crate::ledger_client::LedgerClient;
+use crate::ledger_client::{LedgerClient, LedgerClientError};
 use crate::{error::Result, TxActions};
 
 use thiserror::Error;
@@ -38,6 +38,10 @@ pub enum SCLogicError {
     ValidatorScript(ScriptError),
     #[error("Error from Policy Script: {0:?}")]
     PolicyScript(ScriptError),
+    #[error("From LedgerClient: {0:?}")]
+    LedgerClient(#[from] LedgerClientError),
+    #[error("Error from Script: {0:?}")]
+    ScriptError(#[from] ScriptError),
 }
 
 pub type SCLogicResult<T> = Result<T, SCLogicError>;

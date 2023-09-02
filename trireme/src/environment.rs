@@ -3,6 +3,7 @@ use anyhow::Result;
 use dialoguer::{Input, Password as InputPassword, Select};
 use hex;
 use naumachia::scripts::context::pub_key_hash_from_address_if_available;
+use naumachia::trireme_ledger_client::get_current_client_config_from_file;
 use naumachia::trireme_ledger_client::terminal_password_phrase::{
     encrypt_phrase, normalize_password,
 };
@@ -378,10 +379,31 @@ pub async fn switch_signer_impl() -> Result<()> {
     Ok(())
 }
 
-pub async fn last_block_time_impl() -> Result<()> {
-    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
-    let block_time = ledger_client.last_block_time_ms().await?;
-    println!("Last block time: {}", block_time);
+pub async fn current_time_impl() -> Result<()> {
+    let maybe_config = get_current_client_config_from_file().await?;
+    if let Some(config) = maybe_config {
+        match config.variant() {
+            ClientVariant::CML(_) => {
+                let current_system_time = std::time::SystemTime::now();
+                let time_from_unix_epoch = current_system_time
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .expect("Time went backwards");
+                println!(
+                    "System time from UNIX epoch: {:?} secs",
+                    time_from_unix_epoch.as_secs()
+                );
+            }
+            ClientVariant::Test(_) => {
+                let ledger_client: TriremeLedgerClient<(), ()> =
+                    get_trireme_ledger_client_from_file().await?;
+                let current_time = ledger_client.current_time().await?;
+                println!(
+                    "Current time according to your environment: {:?} secs",
+                    current_time
+                );
+            }
+        }
+    }
     Ok(())
 }
 
@@ -389,7 +411,7 @@ pub async fn advance_blocks(count: i64) -> Result<()> {
     let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
     ledger_client.advance_blocks(count).await?;
     println!("Advancing blocks by: {}", count);
-    let block_time = ledger_client.last_block_time_ms().await?;
+    let block_time = ledger_client.current_time().await?;
     println!("New block time: {}", block_time);
     Ok(())
 }

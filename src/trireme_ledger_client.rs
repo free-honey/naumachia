@@ -63,6 +63,18 @@ pub fn path_to_client_config_file(sub_dir: &str) -> Result<PathBuf> {
     Ok(dir)
 }
 
+pub async fn get_current_client_config_from_file() -> Result<Option<ClientConfig>> {
+    let trireme_config = get_trireme_config_from_file().await?;
+    let current_env = trireme_config
+        .ok_or(Error::Trireme(
+            "Trireme not initialized (config not found)".to_string(),
+        ))?
+        .get_current_env_subdir()
+        .ok_or(Error::Trireme("No environment initialized".to_string()))?;
+    let client_config_path = path_to_client_config_file(&current_env)?;
+    read_toml_struct_from_file::<ClientConfig>(&client_config_path).await
+}
+
 // TODO: PlutusDataInterop is prolly overconstraining for the Redeemer
 pub async fn get_trireme_ledger_client_from_file<
     Datum: PlutusDataInterop
@@ -77,20 +89,11 @@ pub async fn get_trireme_ledger_client_from_file<
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop + Clone + Eq + Debug + Hash + Send + Sync + DeserializeOwned,
 >() -> Result<TriremeLedgerClient<Datum, Redeemer>> {
-    let trireme_config = get_trireme_config_from_file().await?.ok_or(Error::Trireme(
-        "Trireme not initialized (config not found)".to_string(),
-    ))?;
-    let sub_dir = trireme_config
-        .get_current_env_subdir()
-        .ok_or(Error::Trireme("No environment initialized".to_string()))?;
-    let client_config_path = path_to_client_config_file(&sub_dir)?;
-    read_toml_struct_from_file::<ClientConfig>(&client_config_path)
-        .await?
-        .ok_or(Error::Trireme(
-            "Environment config doesn't exist".to_string(),
-        ))?
-        .to_client()
-        .await
+    if let Some(config) = get_current_client_config_from_file().await? {
+        config.to_client().await
+    } else {
+        Err(Error::Trireme("Config could not be read".to_string()))
+    }
 }
 
 pub async fn get_trireme_config_from_file() -> Result<Option<TriremeConfig>> {
@@ -129,14 +132,16 @@ pub enum KeySource {
 #[serde(tag = "type")]
 pub enum Network {
     Preprod,
+    Preview,
     Mainnet,
+    Testnet,
 }
 
 impl From<Network> for u8 {
     fn from(network: Network) -> Self {
         match network {
-            Network::Preprod => 0,
             Network::Mainnet => 1,
+            Network::Preprod | Network::Preview | Network::Testnet => 0,
         }
     }
 }
@@ -290,10 +295,9 @@ impl ClientConfig {
         match self.variant {
             ClientVariant::CML(inner) => {
                 let network = inner.network;
-                let network_index = network.clone().into();
                 let keys = match inner.key_source {
                     KeySource::RawSecretPhrase { phrase_file } => {
-                        let keys = RawSecretPhraseKeys::new(phrase_file, network_index);
+                        let keys = RawSecretPhraseKeys::new(phrase_file, network.clone().into());
                         SecretPhraseKeys::RawSecretPhraseKeys(keys)
                     }
                     KeySource::TerminalPasswordUpfrontSecretPhrase {
@@ -305,7 +309,7 @@ impl ClientConfig {
                         let keys = PasswordProtectedPhraseKeys::new(
                             password,
                             phrase_file,
-                            network_index,
+                            network.clone().into(),
                             encrpytion_nonce,
                         );
                         SecretPhraseKeys::PasswordProtectedPhraseKeys(keys)
@@ -323,12 +327,27 @@ impl ClientConfig {
                             )
                                 })?;
                         let key: String = blockfrost_key.into();
-                        let url = match network {
+                        let url = match &network {
                             Network::Preprod => PREPROD_NETWORK_URL,
                             Network::Mainnet => MAINNET_URL,
+                            Network::Preview => {
+                                return Err(Error::Trireme(
+                                    "Preview network not supported yet".to_string(),
+                                ))
+                            }
+                            Network::Testnet => {
+                                return Err(Error::Trireme(
+                                    "Testnet network is no longer supported".to_string(),
+                                ))
+                            }
                         };
                         let ledger = BlockFrostLedger::new(url, &key);
-                        InnerClient::BlockFrost(CMLLedgerCLient::new(ledger, keys, network_index))
+                        let network_settings = network.clone().into();
+                        InnerClient::BlockFrost(CMLLedgerCLient::new(
+                            ledger,
+                            keys,
+                            network_settings,
+                        ))
                     }
                     LedgerSource::OgmiosAndScrolls {
                         scrolls_ip,
@@ -342,7 +361,7 @@ impl ClientConfig {
                         InnerClient::OgmiosScrolls(CMLLedgerCLient::new(
                             ledger,
                             keys,
-                            network_index,
+                            network.into(),
                         ))
                     }
                 };
@@ -434,12 +453,12 @@ where
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
-    pub async fn last_block_time_ms(&self) -> LedgerClientResult<i64> {
+    pub async fn current_time(&self) -> LedgerClientResult<i64> {
         match &self.inner_client {
             InnerClient::BlockFrost(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
                 Error::Trireme("Not implemented for Blockfrost client".to_string()),
             ))),
-            InnerClient::Mocked(test_client) => test_client.current_time().await,
+            InnerClient::Mocked(test_client) => test_client.current_time_millis().await,
             InnerClient::OgmiosScrolls(_) => Err(LedgerClientError::CurrentTime(Box::new(
                 Error::Trireme("Not implemented for Ogmios/Scrolls client".to_string()),
             ))),
@@ -524,11 +543,11 @@ where
         .await
     }
 
-    async fn current_time_posix_milliseconds(&self) -> LedgerClientResult<i64> {
+    async fn current_time_secs(&self) -> LedgerClientResult<i64> {
         match &self.inner_client {
-            InnerClient::BlockFrost(cml_client) => cml_client.current_time_posix_milliseconds(),
-            InnerClient::Mocked(test_client) => test_client.current_time_posix_milliseconds(),
-            InnerClient::OgmiosScrolls(cml_client) => cml_client.current_time_posix_milliseconds(),
+            InnerClient::BlockFrost(cml_client) => cml_client.current_time_secs(),
+            InnerClient::Mocked(test_client) => test_client.current_time_secs(),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.current_time_secs(),
         }
         .await
     }

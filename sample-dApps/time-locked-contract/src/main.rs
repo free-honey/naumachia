@@ -19,8 +19,7 @@ struct Args {
 #[derive(clap::Subcommand, Debug)]
 enum ActionParams {
     /// Lock amount at script address
-    // TODO: Add time stamp
-    Lock { amount: f64 },
+    Lock { amount: f64, after_secs: i64 },
     /// Claim locked Output at script address
     Claim { tx_hash: String, index: u64 },
     /// List all outputs locked at script address
@@ -37,11 +36,10 @@ async fn main() {
     let contract = SmartContract::new(&logic, &backend);
 
     match args.action {
-        ActionParams::Lock { amount } => contract
+        ActionParams::Lock { amount, after_secs } => contract
             .hit_endpoint(TimeLockedEndpoints::Lock {
                 amount: (amount * 1_000_000.) as u64,
-                // TODO
-                timestamp: 0,
+                after_secs,
             })
             .await
             .unwrap(),
@@ -49,7 +47,10 @@ async fn main() {
             let tx_hash_bytes = hex::decode(tx_hash).unwrap();
             let output_id = OutputId::new(tx_hash_bytes, index);
             let endpoint = TimeLockedEndpoints::Claim { output_id };
-            contract.hit_endpoint(endpoint).await.unwrap()
+            match contract.hit_endpoint(endpoint).await {
+                Ok(_) => println!("Claimed output :)"),
+                Err(e) => println!("Error claiming output: {:?}", e),
+            }
         }
         ActionParams::List { count } => {
             let res = contract
@@ -61,7 +62,11 @@ async fn main() {
                     println!("Active contracts:");
                     for output in outputs {
                         println!("-------------------------------------");
-                        println!("{:?}", output.id());
+                        println!(
+                            "hash: {:?}, index: {:?}",
+                            hex::encode(output.id().tx_hash()),
+                            output.id().index()
+                        );
                         println!("{:?}", output.values());
                         println!("{:?}", output.datum());
                     }

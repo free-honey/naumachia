@@ -1,10 +1,10 @@
 use super::*;
 use crate::trireme_ledger_client::cml_client::{
-    blockfrost_ledger::BlockFrostLedger,
-    key_manager::{KeyManager, TESTNET},
+    blockfrost_ledger::BlockFrostLedger, key_manager::KeyManager,
 };
+use crate::trireme_ledger_client::Network;
 use crate::PolicyId;
-use blockfrost_http_client::load_key_from_file;
+use blockfrost_http_client::{load_key_from_file, PREPROD_NETWORK_URL};
 use cardano_multiplatform_lib::address::BaseAddress;
 use std::time::Duration;
 use test_helpers::{
@@ -15,8 +15,6 @@ use tokio::time::sleep;
 
 mod test_helpers;
 
-// const MAINNET_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
-const TEST_URL: &str = "https://cardano-testnet.blockfrost.io/api/v0/";
 // Must include a TOML file at your project root with the field:
 //   project_id = <INSERT API KEY HERE>
 const CONFIG_PATH: &str = ".blockfrost.toml";
@@ -26,10 +24,13 @@ async fn get_test_client<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
     BaseAddress,
 ) {
     let api_key = load_key_from_file(CONFIG_PATH).unwrap();
-    let ledger = BlockFrostLedger::new(TEST_URL, &api_key);
-    let keys = KeyManager::new(CONFIG_PATH.to_string(), TESTNET);
+    let ledger = BlockFrostLedger::new(PREPROD_NETWORK_URL, &api_key);
+    let keys = KeyManager::new(CONFIG_PATH.to_string(), Network::Preprod.into());
     let base_addr = keys.base_addr().await.unwrap();
-    (CMLLedgerCLient::new(ledger, keys, TESTNET), base_addr)
+    (
+        CMLLedgerCLient::new(ledger, keys, Network::Preprod.into()),
+        base_addr,
+    )
 }
 
 #[ignore]
@@ -94,7 +95,7 @@ async fn create_datum_wait_and_then_redeem_same_datum() {
     let (client, _) = get_test_client::<(), ()>().await;
     let tx_id = client.issue(unbuilt_tx).await.unwrap();
     println!("{:?}", &tx_id);
-    let script_addr = always_succeeds_script_address(TESTNET);
+    let script_addr = always_succeeds_script_address(Network::Preprod.into());
 
     let mut tries = 30;
     println!("Attempting to find and spend datum from {:?}", &tx_id);
