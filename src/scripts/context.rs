@@ -68,6 +68,7 @@ pub fn pub_key_hash_from_address_if_available(address: &Address) -> Option<PubKe
     }
 }
 
+/// valid range of tx in milliseconds
 #[derive(Clone, Debug)]
 pub struct ValidRange {
     pub lower: Option<(i64, bool)>,

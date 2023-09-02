@@ -11,7 +11,7 @@ pub enum Error {
     #[error("Error with Address")]
     Address(String),
     #[error("TxORecord Error: {0}")]
-    TxORecord(#[from] LedgerClientError),
+    LedgerClient(#[from] LedgerClientError),
     #[error("ValidatorCode Error: {0}")]
     Script(#[from] ScriptError),
     #[error("Smart Contract Logic Error: {0:?}")]

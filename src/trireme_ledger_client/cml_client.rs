@@ -441,10 +441,18 @@ where
         my_address: &CMLAddress,
     ) -> LedgerClientResult<()> {
         let algo = ChangeSelectionAlgo::Default;
-        let tx_redeemer_builder = tx_builder.build_for_evaluation(algo, my_address).unwrap(); // TODO: unwrap
+        let tx_redeemer_builder = tx_builder
+            .build_for_evaluation(algo, my_address)
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
         let transaction = tx_redeemer_builder.draft_tx();
         println!("{}", &transaction.to_json().unwrap());
-        let res = self.ledger.calculate_ex_units(&transaction).await.unwrap(); // TODO: unwrap
+        let res = self
+            .ledger
+            .calculate_ex_units(&transaction)
+            .await
+            .map_err(|e| CMLLCError::JsError(e.to_string()))
+            .map_err(as_failed_to_issue_tx)?;
         for (index, spend) in res.iter() {
             let tag = match spend.execution_type {
                 ExecutionType::Spend => RedeemerTag::new_spend(),
@@ -522,24 +530,24 @@ where
     ) -> LedgerClientResult<()> {
         let (lower, upper) = tx.valid_range;
         if let Some(posix) = lower {
-            let slot = self.slot_from_posix(posix)?;
+            let slot = self.network_settings.slot_from_posix(posix).ok_or(
+                LedgerClientError::ValidityRange(format!(
+                    "Invalid lower bounds; Must be after starting slot time: {:?}",
+                    self.network_settings.starting_slot_time()
+                )),
+            )?;
             tx_builder.set_validity_start_interval(&slot);
         }
         if let Some(posix) = upper {
-            let slot = self.slot_from_posix(posix)?;
+            let slot = self.network_settings.slot_from_posix(posix).ok_or(
+                LedgerClientError::ValidityRange(format!(
+                    "Invalid upper bounds; Must be after starting slot time: {:?}",
+                    self.network_settings.starting_slot_time()
+                )),
+            )?;
             tx_builder.set_ttl(&slot);
         }
         Ok(())
-    }
-
-    fn slot_from_posix(&self, posix: i64) -> LedgerClientResult<BigNum> {
-        let time_ms = posix
-            .checked_sub(self.network_settings.first_slot_time())
-            .ok_or(LedgerClientError::ValidityRange(
-                "Validity range must be after genesis".to_string(),
-            ))?;
-        let slot = time_ms / self.network_settings.slot_length();
-        Ok((slot as u64).into())
     }
 
     async fn add_specific_inputs<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
@@ -683,7 +691,7 @@ where
         let now = std::time::SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| LedgerClientError::CurrentTime(Box::new(e)))?
-            .as_millis()
+            .as_secs()
             .try_into()
             .expect("This should never be bigger than i64 in our lifetimes :)");
         Ok(now)

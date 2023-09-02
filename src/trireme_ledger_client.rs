@@ -63,6 +63,18 @@ pub fn path_to_client_config_file(sub_dir: &str) -> Result<PathBuf> {
     Ok(dir)
 }
 
+pub async fn get_current_client_config_from_file() -> Result<Option<ClientConfig>> {
+    let trireme_config = get_trireme_config_from_file().await?;
+    let current_env = trireme_config
+        .ok_or(Error::Trireme(
+            "Trireme not initialized (config not found)".to_string(),
+        ))?
+        .get_current_env_subdir()
+        .ok_or(Error::Trireme("No environment initialized".to_string()))?;
+    let client_config_path = path_to_client_config_file(&current_env)?;
+    read_toml_struct_from_file::<ClientConfig>(&client_config_path).await
+}
+
 // TODO: PlutusDataInterop is prolly overconstraining for the Redeemer
 pub async fn get_trireme_ledger_client_from_file<
     Datum: PlutusDataInterop
@@ -77,20 +89,11 @@ pub async fn get_trireme_ledger_client_from_file<
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop + Clone + Eq + Debug + Hash + Send + Sync + DeserializeOwned,
 >() -> Result<TriremeLedgerClient<Datum, Redeemer>> {
-    let trireme_config = get_trireme_config_from_file().await?.ok_or(Error::Trireme(
-        "Trireme not initialized (config not found)".to_string(),
-    ))?;
-    let sub_dir = trireme_config
-        .get_current_env_subdir()
-        .ok_or(Error::Trireme("No environment initialized".to_string()))?;
-    let client_config_path = path_to_client_config_file(&sub_dir)?;
-    read_toml_struct_from_file::<ClientConfig>(&client_config_path)
-        .await?
-        .ok_or(Error::Trireme(
-            "Environment config doesn't exist".to_string(),
-        ))?
-        .to_client()
-        .await
+    if let Some(config) = get_current_client_config_from_file().await? {
+        config.to_client().await
+    } else {
+        Err(Error::Trireme("Config could not be read".to_string()))
+    }
 }
 
 pub async fn get_trireme_config_from_file() -> Result<Option<TriremeConfig>> {
@@ -450,12 +453,12 @@ where
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
-    pub async fn last_block_time_ms(&self) -> LedgerClientResult<i64> {
+    pub async fn current_time(&self) -> LedgerClientResult<i64> {
         match &self.inner_client {
             InnerClient::BlockFrost(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
                 Error::Trireme("Not implemented for Blockfrost client".to_string()),
             ))),
-            InnerClient::Mocked(test_client) => test_client.current_time().await,
+            InnerClient::Mocked(test_client) => test_client.current_time_millis().await,
             InnerClient::OgmiosScrolls(_) => Err(LedgerClientError::CurrentTime(Box::new(
                 Error::Trireme("Not implemented for Ogmios/Scrolls client".to_string()),
             ))),

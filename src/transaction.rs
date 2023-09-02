@@ -129,7 +129,8 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         self
     }
 
-    pub fn with_valid_range(mut self, lower: Option<i64>, upper: Option<i64>) -> Self {
+    // Specify valid range in seconds since the Unix epoch
+    pub fn with_valid_range_secs(mut self, lower: Option<i64>, upper: Option<i64>) -> Self {
         self.valid_range = (lower, upper);
         self
     }
@@ -229,7 +230,7 @@ pub enum TransactionVersion {
     V2,
 }
 
-/// Range of times in seconds since the Unix epoch
+/// Range of times in milliseconds since the Unix epoch
 type Range = (Option<i64>, Option<i64>);
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {

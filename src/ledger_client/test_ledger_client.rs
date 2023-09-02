@@ -247,11 +247,11 @@ where
     Datum: Clone + Send + Sync + PartialEq,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
-    pub async fn current_time(&self) -> LedgerClientResult<i64> {
+    pub async fn current_time_millis(&self) -> LedgerClientResult<i64> {
         self.storage.current_time().await
     }
 
-    pub async fn set_current_time(&self, posix_time: i64) -> LedgerClientResult<()> {
+    pub async fn set_current_time_millis(&self, posix_time: i64) -> LedgerClientResult<()> {
         self.storage.set_current_time(posix_time).await
     }
 
@@ -298,7 +298,7 @@ where
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // Setup
         let valid_range = tx.valid_range;
-        let current_time = self.current_time().await?;
+        let current_time = self.current_time_millis().await?;
         check_time_valid(valid_range, current_time)
             .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
@@ -401,7 +401,7 @@ where
     }
 
     async fn current_time_secs(&self) -> LedgerClientResult<i64> {
-        self.current_time().await
+        self.current_time_millis().await
     }
 }
 
@@ -410,11 +410,11 @@ fn check_time_valid(
     current_time: i64,
 ) -> Result<(), TestLCError> {
     if let Some(lower) = valid_range.0 {
-        if current_time < lower {
+        if current_time < lower * 1000 {
             return Err(TestLCError::TxTooEarly);
         }
     } else if let Some(upper) = valid_range.1 {
-        if current_time >= upper {
+        if current_time >= upper * 1000 {
             return Err(TestLCError::TxTooLate);
         }
     }
@@ -516,8 +516,8 @@ fn tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     signer_address: &Address,
     purpose: CtxScriptPurpose,
 ) -> LedgerClientResult<TxContext> {
-    let lower = tx.valid_range.0.map(|n| (n, true));
-    let upper = tx.valid_range.1.map(|n| (n, false));
+    let lower = tx.valid_range.0.map(|n| (n * 1000, true));
+    let upper = tx.valid_range.1.map(|n| (n * 1000, false));
 
     let mut inputs = Vec::new();
     let mut outputs = Vec::new();

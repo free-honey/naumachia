@@ -131,6 +131,6 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
             new_account_value,
             checking_account_address,
         )
-        .with_valid_range(current_time.into(), None);
+        .with_valid_range_secs(current_time.into(), None);
     Ok(actions)
 }
