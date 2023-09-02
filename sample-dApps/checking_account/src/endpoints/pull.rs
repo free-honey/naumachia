@@ -18,18 +18,12 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     checking_account_output_id: OutputId,
     amount: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
-    let network = ledger_client
-        .network()
-        .await
-        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let allow_pull_validator = pull_validator().map_err(SCLogicError::ValidatorScript)?;
-    let allow_pull_address = allow_pull_validator
-        .address(network)
-        .map_err(SCLogicError::ValidatorScript)?;
+    let network = ledger_client.network().await?;
+    let allow_pull_validator = pull_validator()?;
+    let allow_pull_address = allow_pull_validator.address(network)?;
     let allow_pull_output = ledger_client
         .all_outputs_at_address(&allow_pull_address)
-        .await
-        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .await?
         .into_iter()
         .find(|o| o.id() == &allow_pull_output_id)
         .ok_or(CheckingAccountError::OutputNotFound(
@@ -37,15 +31,11 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         ))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
 
-    let validator =
-        checking_account_validator().map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let checking_account_address = validator
-        .address(network)
-        .map_err(SCLogicError::ValidatorScript)?;
+    let validator = checking_account_validator()?;
+    let checking_account_address = validator.address(network)?;
     let checking_account_output = ledger_client
         .all_outputs_at_address(&checking_account_address)
-        .await
-        .map_err(|e| SCLogicError::Lookup(Box::new(e)))?
+        .await?
         .into_iter()
         .find(|o| o.id() == &checking_account_output_id)
         .ok_or(CheckingAccountError::OutputNotFound(
@@ -131,6 +121,6 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
             new_account_value,
             checking_account_address,
         )
-        .with_valid_range_secs(current_time.into(), None);
+        .with_valid_range_secs(Some(current_time / 1000), None);
     Ok(actions)
 }

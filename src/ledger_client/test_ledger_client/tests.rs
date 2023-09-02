@@ -185,7 +185,7 @@ async fn cannot_transfer_after_valid_range() {
     let record: TestLedgerClient<(), (), _> =
         TestLedgerClient::new_in_memory(sender.clone(), outputs, BLOCK_LENGTH, 0);
 
-    let current_time = 10;
+    let current_time = 10_000;
     let valid_time = 5;
     record.set_current_time_millis(current_time).await.unwrap();
 
