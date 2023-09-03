@@ -79,7 +79,7 @@ where
     pub fn build_in_memory(
         &self,
     ) -> Backend<Datum, Redeemer, TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>> {
-        let block_length = 1000;
+        let block_length = 20;
         let ledger_client = TestLedgerClient::new_in_memory(
             self.signer.clone(),
             self.outputs.clone(),
@@ -213,7 +213,7 @@ where
 {
     pub fn new_local_persisted(dir: T, signer: &Address, starting_amount: u64) -> Self {
         let signer_name = "Alice";
-        let block_length = 1000;
+        let block_length = 20;
         let starting_time = 0;
         let storage = LocalPersistedStorage::init(
             dir,

@@ -230,7 +230,7 @@ pub enum TransactionVersion {
     V2,
 }
 
-/// Range of times in milliseconds since the Unix epoch
+/// Range of times in seconds since the Unix epoch
 type Range = (Option<i64>, Option<i64>);
 
 pub struct UnbuiltTransaction<Datum, Redeemer> {

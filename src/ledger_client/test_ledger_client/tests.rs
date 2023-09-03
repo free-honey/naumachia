@@ -15,7 +15,7 @@ use crate::{
 const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
 const BOB: &str = "addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua";
 
-const BLOCK_LENGTH: i64 = 1000;
+const BLOCK_LENGTH: i64 = 20;
 
 #[tokio::test]
 async fn outputs_at_address() {
