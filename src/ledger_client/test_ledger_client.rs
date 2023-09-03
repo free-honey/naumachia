@@ -247,11 +247,11 @@ where
     Datum: Clone + Send + Sync + PartialEq,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
-    pub async fn current_time_millis(&self) -> LedgerClientResult<i64> {
+    pub async fn current_time_secs(&self) -> LedgerClientResult<i64> {
         self.storage.current_time().await
     }
 
-    pub async fn set_current_time_millis(&self, posix_time: i64) -> LedgerClientResult<()> {
+    pub async fn set_current_time_secs(&self, posix_time: i64) -> LedgerClientResult<()> {
         self.storage.set_current_time(posix_time).await
     }
 
@@ -298,7 +298,7 @@ where
     async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
         // Setup
         let valid_range = tx.valid_range;
-        let current_time = self.current_time_millis().await?;
+        let current_time = self.current_time_secs().await?;
         check_time_valid(valid_range, current_time)
             .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
 
@@ -400,8 +400,12 @@ where
         self.storage.network().await
     }
 
+    async fn last_block_time_secs(&self) -> LedgerClientResult<i64> {
+        self.current_time_secs().await
+    }
+
     async fn current_time_secs(&self) -> LedgerClientResult<i64> {
-        self.current_time_millis().await
+        self.current_time_secs().await
     }
 }
 

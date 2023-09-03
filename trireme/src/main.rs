@@ -1,6 +1,6 @@
 use crate::environment::{
     active_signer_impl, advance_blocks, current_time_impl, get_address_impl, get_pubkey_hash_impl,
-    switch_signer_impl,
+    last_block_time_impl, switch_signer_impl,
 };
 use crate::{
     balance::{ada_balance_impl, balance_impl},
@@ -45,7 +45,9 @@ enum ActionParams {
     /// Switch to different signer 👽 (Mock Network Only)
     SwitchSigner,
     /// Get get time relative to your local environment 🕰
-    CurrentTime,
+    Time,
+    /// Get the time of the last block in seconds
+    LastBlockTime,
     /// Advance time and block height by count 🧱
     AdvanceBlocks { count: u16 },
 }
@@ -72,7 +74,8 @@ async fn main() -> Result<()> {
         ActionParams::PubKeyHash => get_pubkey_hash_impl().await?,
         ActionParams::Signer => active_signer_impl().await?,
         ActionParams::SwitchSigner => switch_signer_impl().await?,
-        ActionParams::CurrentTime => current_time_impl().await?,
+        ActionParams::Time => current_time_impl().await?,
+        ActionParams::LastBlockTime => last_block_time_impl().await?,
         ActionParams::AdvanceBlocks { count } => advance_blocks(count as i64).await?,
     }
     Ok(())

@@ -54,6 +54,9 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
 
     async fn network(&self) -> LedgerClientResult<Network>;
 
+    /// Get the posix time of the most recent block
+    async fn last_block_time_secs(&self) -> LedgerClientResult<i64>;
+
     /// Get the current time in seconds since the UNIX epoch.
     async fn current_time_secs(&self) -> LedgerClientResult<i64>;
 }
@@ -82,6 +85,8 @@ pub enum LedgerClientError {
     CurrentTime(Box<dyn error::Error + Send + Sync>),
     #[error("While setting validity range: {0:?}")]
     ValidityRange(String),
+    #[error("While getting last block time: {0:?}")]
+    FailedToGetBlockTime(Box<dyn error::Error + Send + Sync>),
 }
 
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

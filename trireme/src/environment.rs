@@ -204,8 +204,8 @@ fn get_password_with_prompt(prompt: &str) -> Result<String> {
 
 async fn setup_local_mocked_env(name: &str) -> Result<()> {
     let block_length: i64 = Input::new()
-        .with_prompt("What is the block length in ms?")
-        .default(1000)
+        .with_prompt("What is the block length in secs?")
+        .default(20)
         .interact_text()?;
 
     let alice_name = "Alice";
@@ -404,6 +404,13 @@ pub async fn current_time_impl() -> Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+pub async fn last_block_time_impl() -> Result<()> {
+    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let last_block_time = ledger_client.last_block_time_secs().await?;
+    println!("Last block time: {}", last_block_time);
     Ok(())
 }
 

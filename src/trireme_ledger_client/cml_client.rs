@@ -184,6 +184,7 @@ impl ExecutionCost {
 
 #[async_trait]
 pub trait Ledger {
+    async fn last_block_time_secs(&self) -> Result<i64>;
     async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>>;
     async fn get_all_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
     async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, ExecutionCost>>;
@@ -685,6 +686,13 @@ where
             _ => CMLNetwork::Other(self.network_settings.network()),
         };
         Ok(network)
+    }
+
+    async fn last_block_time_secs(&self) -> LedgerClientResult<i64> {
+        self.ledger
+            .last_block_time_secs()
+            .await
+            .map_err(as_failed_to_get_block_time)
     }
 
     async fn current_time_secs(&self) -> LedgerClientResult<i64> {

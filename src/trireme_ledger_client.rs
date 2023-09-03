@@ -458,7 +458,7 @@ where
             InnerClient::BlockFrost(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
                 Error::Trireme("Not implemented for Blockfrost client".to_string()),
             ))),
-            InnerClient::Mocked(test_client) => test_client.current_time_millis().await,
+            InnerClient::Mocked(test_client) => test_client.current_time_secs().await,
             InnerClient::OgmiosScrolls(_) => Err(LedgerClientError::CurrentTime(Box::new(
                 Error::Trireme("Not implemented for Ogmios/Scrolls client".to_string()),
             ))),
@@ -543,10 +543,25 @@ where
         .await
     }
 
+    async fn last_block_time_secs(&self) -> LedgerClientResult<i64> {
+        match &self.inner_client {
+            InnerClient::BlockFrost(cml_client) => cml_client.last_block_time_secs(),
+            InnerClient::Mocked(test_client) => test_client.last_block_time_secs(),
+            InnerClient::OgmiosScrolls(cml_client) => cml_client.last_block_time_secs(),
+        }
+        .await
+    }
+
     async fn current_time_secs(&self) -> LedgerClientResult<i64> {
         match &self.inner_client {
             InnerClient::BlockFrost(cml_client) => cml_client.current_time_secs(),
-            InnerClient::Mocked(test_client) => test_client.current_time_secs(),
+            InnerClient::Mocked(test_client) => <TestLedgerClient<
+                Datum,
+                Redeemer,
+                LocalPersistedStorage<PathBuf, Datum>,
+            > as LedgerClient<Datum, Redeemer>>::current_time_secs(
+                test_client
+            ),
             InnerClient::OgmiosScrolls(cml_client) => cml_client.current_time_secs(),
         }
         .await

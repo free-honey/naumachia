@@ -43,4 +43,10 @@ pub fn as_failed_to_issue_tx<E: std::error::Error + Send + Sync + 'static>(
     LedgerClientError::FailedToIssueTx(Box::new(error))
 }
 
+pub fn as_failed_to_get_block_time<E: std::error::Error + Send + Sync + 'static>(
+    error: E,
+) -> LedgerClientError {
+    LedgerClientError::FailedToGetBlockTime(Box::new(error))
+}
+
 pub type Result<E, T = CMLLCError> = std::result::Result<E, T>;

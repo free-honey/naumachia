@@ -326,7 +326,7 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    const BLOCK_LENGTH: i64 = 1000;
+    const BLOCK_LENGTH: i64 = 20;
 
     #[tokio::test]
     async fn outputs_at_address() {
@@ -366,7 +366,7 @@ mod tests {
         );
         let current_time = storage.current_time().await.unwrap();
         assert_eq!(current_time, 0);
-        let new_time = 1000;
+        let new_time = 20;
         storage.set_current_time(new_time).await.unwrap();
         let current_time = storage.current_time().await.unwrap();
         assert_eq!(current_time, new_time);
