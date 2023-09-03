@@ -99,6 +99,15 @@ pub fn cmlvalue_from_bfvalues(values: &[BFValue]) -> Result<CMLValue> {
 
 #[async_trait]
 impl Ledger for BlockFrostLedger {
+    async fn last_block_time_secs(&self) -> Result<i64> {
+        let res = self
+            .client
+            .latest_block_info()
+            .await
+            .map_err(|e| CMLLCError::LedgerError(Box::new(e)))?;
+        Ok(res.time() as i64)
+    }
+
     async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>> {
         let addr_string = addr
             .to_bech32(None)

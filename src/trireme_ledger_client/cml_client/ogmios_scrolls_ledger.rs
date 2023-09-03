@@ -100,6 +100,10 @@ impl OgmiosScrollsLedger {
 
 #[async_trait]
 impl Ledger for OgmiosScrollsLedger {
+    async fn last_block_time_secs(&self) -> Result<i64> {
+        todo!()
+    }
+
     async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>> {
         let outputs = self
             .get_utxos(addr)

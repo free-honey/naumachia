@@ -68,7 +68,6 @@ pub async fn init_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         1,
     );
 
-    println!("address: {:?}", address.to_bech32());
     let actions = TxActions::v2()
         .with_script_init(datum, values, address)
         .with_specific_input(my_input)

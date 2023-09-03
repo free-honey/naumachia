@@ -15,7 +15,7 @@ use crate::{
 const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
 const BOB: &str = "addr_test1qzvrhz9v6lwcr26a52y8mmk2nzq37lky68359keq3dgth4lkzpnnjv8vf98m20lhqdzl60mcftq7r2lc4xtcsv0w6xjstag0ua";
 
-const BLOCK_LENGTH: i64 = 1000;
+const BLOCK_LENGTH: i64 = 20;
 
 #[tokio::test]
 async fn outputs_at_address() {
@@ -102,7 +102,7 @@ async fn issuing_tx_advances_time_by_block_length() {
     let outputs = vec![];
     let record: TestLedgerClient<(), (), _> =
         TestLedgerClient::new_in_memory(signer.clone(), outputs, BLOCK_LENGTH, 0);
-    let starting_time = record.current_time_millis().await.unwrap();
+    let starting_time = record.current_time_secs().await.unwrap();
     let tx = UnbuiltTransaction {
         script_version: TransactionVersion::V2,
         script_inputs: vec![],
@@ -113,7 +113,7 @@ async fn issuing_tx_advances_time_by_block_length() {
     };
     record.issue(tx).await.unwrap();
     let expected = starting_time + BLOCK_LENGTH;
-    let actual = record.current_time_millis().await.unwrap();
+    let actual = record.current_time_secs().await.unwrap();
     assert_eq!(expected, actual);
 }
 
@@ -155,7 +155,7 @@ async fn cannot_transfer_before_valid_range() {
 
     let current_time = 5;
     let valid_time = 10;
-    record.set_current_time_millis(current_time).await.unwrap();
+    record.set_current_time_secs(current_time).await.unwrap();
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, transfer_amount);
@@ -187,7 +187,7 @@ async fn cannot_transfer_after_valid_range() {
 
     let current_time = 10_000;
     let valid_time = 5;
-    record.set_current_time_millis(current_time).await.unwrap();
+    record.set_current_time_secs(current_time).await.unwrap();
 
     let mut values = Values::default();
     values.add_one_value(&PolicyId::Lovelace, transfer_amount);

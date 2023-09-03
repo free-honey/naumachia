@@ -49,9 +49,8 @@ scrolls-client = { version = "0.1.0", git = "https://github.com/free-honey/scrol
 secrecy = "0.8.0"
 
 [dependencies.blockfrost-http-client]
-version = "0.0.12"
-git = "https://github.com/MitchTurner/blockfrost-http-client.git"
-rev = "bbb29df268464a055b17b5ebfae20d5f02165dc0"
+version = "0.0.14"
+#git = "https://github.com/MitchTurner/blockfrost-http-client.git"
 
 [dependencies.cardano-multiplatform-lib]
 version = "3.1.1"
@@ -86,7 +85,7 @@ pallas-crypto = { version = "0.19.0-alpha.0", git = "https://github.com/txpipe/p
 #uplc = { version = "1.0.3-alpha", path = "../aiken-lang/aiken/crates/uplc" }
 
 #[patch."https://github.com/MitchTurner/blockfrost-http-client.git"]
-#blockfrost-http-client = { version = "0.0.12", path = "../blockfrost-http-client"}
+#blockfrost-http-client = { version = "0.0.13", path = "../blockfrost-http-client"}
 #
 #[patch."https://github.com/dcSpark/cardano-multiplatform-lib.git"]
 #cardano-multiplatform-lib = { version = "3.1.1", path = "../forks/cardano-multiplatform-lib/rust"}
