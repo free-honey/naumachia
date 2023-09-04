@@ -12,6 +12,7 @@ use crate::{
     UnbuiltTransaction,
 };
 
+use crate::trireme_ledger_client::cml_client::network_settings::NetworkSettings;
 use crate::trireme_ledger_client::cml_client::ogmios_scrolls_ledger::OgmiosScrollsLedger;
 use crate::trireme_ledger_client::cml_client::Keys;
 use crate::trireme_ledger_client::terminal_password_phrase::{
@@ -134,14 +135,13 @@ pub enum Network {
     Preprod,
     Preview,
     Mainnet,
-    Testnet,
 }
 
 impl From<Network> for u8 {
     fn from(network: Network) -> Self {
         match network {
             Network::Mainnet => 1,
-            Network::Preprod | Network::Preview | Network::Testnet => 0,
+            Network::Preprod | Network::Preview => 0,
         }
     }
 }
@@ -335,11 +335,6 @@ impl ClientConfig {
                                     "Preview network not supported yet".to_string(),
                                 ))
                             }
-                            Network::Testnet => {
-                                return Err(Error::Trireme(
-                                    "Testnet network is no longer supported".to_string(),
-                                ))
-                            }
                         };
                         let ledger = BlockFrostLedger::new(url, &key);
                         let network_settings = network.clone().into();
@@ -357,11 +352,16 @@ impl ClientConfig {
                     } => {
                         let scrolls_client = ScrollsClient::new_redis(scrolls_ip, scrolls_port);
                         let ogmios_client = OgmiosClient::new(ogmios_ip, ogmios_port);
-                        let ledger = OgmiosScrollsLedger::new(scrolls_client, ogmios_client);
+                        let network_settings: NetworkSettings = network.into();
+                        let ledger = OgmiosScrollsLedger::new(
+                            scrolls_client,
+                            ogmios_client,
+                            network_settings,
+                        );
                         InnerClient::OgmiosScrolls(CMLLedgerCLient::new(
                             ledger,
                             keys,
-                            network.into(),
+                            network_settings,
                         ))
                     }
                 };

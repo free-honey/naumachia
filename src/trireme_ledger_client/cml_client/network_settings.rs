@@ -1,6 +1,6 @@
 use crate::trireme_ledger_client::Network;
-use cardano_multiplatform_lib::ledger::common::value::BigNum;
 
+#[derive(Debug, Clone, Copy)]
 pub struct NetworkSettings {
     network: u8,
     slot_length: i64,
@@ -39,10 +39,16 @@ impl NetworkSettings {
         self.starting_slot_number
     }
 
-    pub fn slot_from_posix(&self, posix: i64) -> Option<BigNum> {
+    pub fn slot_from_posix(&self, posix: i64) -> Option<u64> {
         let time_s = posix.checked_sub(self.starting_slot_time())?;
         let abs_slot = (time_s / self.slot_length()) as u64 + self.starting_slot_number();
-        Some(abs_slot.into())
+        Some(abs_slot)
+    }
+
+    pub fn posix_from_slot(&self, slot: u64) -> i64 {
+        let slot = slot;
+        let time_s = (slot - self.starting_slot_number()) as i64 * self.slot_length();
+        time_s + self.starting_slot_time()
     }
 }
 
@@ -82,9 +88,6 @@ impl From<Network> for NetworkSettings {
                 PREVIEW_STARTING_SLOT_TIME,
                 PREVIEW_STARTING_SLOT_NUMBER,
             ),
-            Network::Testnet => {
-                unimplemented!("Testnet is no longer supported")
-            }
         }
     }
 }
@@ -105,7 +108,7 @@ mod tests {
         let posix = 1693686614;
 
         // then
-        let expected: BigNum = 102120323u64.into();
+        let expected = 102120323;
         let actual = network_settings.slot_from_posix(posix).unwrap();
         assert_eq!(expected, actual);
     }
@@ -120,7 +123,7 @@ mod tests {
         let posix = 1693686777;
 
         // then
-        let expected: BigNum = 38003577u64.into();
+        let expected = 38003577;
         let actual = network_settings.slot_from_posix(posix).unwrap();
         assert_eq!(expected, actual);
     }
@@ -135,8 +138,53 @@ mod tests {
         let posix = 1693686823;
 
         // then
-        let expected: BigNum = 27030823u64.into();
+        let expected = 27030823;
         let actual = network_settings.slot_from_posix(posix).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn posix_from_slot__mainnet() {
+        // given
+        let network = Network::Mainnet;
+        let network_settings = NetworkSettings::from(network);
+
+        // when
+        let posix = 102120323;
+
+        // then
+        let expected = 1693686614;
+        let actual = network_settings.posix_from_slot(posix);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn posix_from_slot__preprod() {
+        // given
+        let network = Network::Preprod;
+        let network_settings = NetworkSettings::from(network);
+
+        // when
+        let posix = 38003577;
+
+        // then
+        let expected = 1693686777;
+        let actual = network_settings.posix_from_slot(posix);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn posix_from_slot__preview() {
+        // given
+        let network = Network::Preview;
+        let network_settings = NetworkSettings::from(network);
+
+        // when
+        let posix = 27030823;
+
+        // then
+        let expected = 1693686823;
+        let actual = network_settings.posix_from_slot(posix);
         assert_eq!(expected, actual);
     }
 }
