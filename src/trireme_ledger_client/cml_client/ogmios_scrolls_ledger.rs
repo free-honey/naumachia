@@ -1,3 +1,4 @@
+use crate::trireme_ledger_client::cml_client::network_settings::NetworkSettings;
 use crate::trireme_ledger_client::cml_client::{
     error::{CMLLCError, Result},
     ExecutionCost, Ledger, UTxO,
@@ -11,7 +12,8 @@ use cardano_multiplatform_lib::{
 use ogmios_client::{EvaluationResult, OgmiosClient, OgmiosLocalTxSubmission, OgmiosResponse};
 use pallas_addresses::Address;
 use scrolls_client::{
-    Amount as ScrollClientAmount, ScrollsClient, UTxO as ScrollsClientUTxO, UTxOsByAddress,
+    Amount as ScrollClientAmount, LastBlockInfo, ScrollsClient, UTxO as ScrollsClientUTxO,
+    UTxOsByAddress,
 };
 use std::collections::HashMap;
 
@@ -73,14 +75,20 @@ fn plutus_data_from_scroll_datum(datum: &str) -> Result<Option<PlutusData>> {
 pub struct OgmiosScrollsLedger {
     scrolls_client: ScrollsClient,
     ogmios_client: OgmiosClient,
+    network_settings: NetworkSettings,
     // TODO: WS Client for Ogmios data
 }
 
 impl OgmiosScrollsLedger {
-    pub fn new(scrolls_client: ScrollsClient, ogmios_client: OgmiosClient) -> Self {
+    pub fn new(
+        scrolls_client: ScrollsClient,
+        ogmios_client: OgmiosClient,
+        network_settings: NetworkSettings,
+    ) -> Self {
         Self {
             scrolls_client,
             ogmios_client,
+            network_settings,
         }
     }
 
@@ -101,7 +109,8 @@ impl OgmiosScrollsLedger {
 #[async_trait]
 impl Ledger for OgmiosScrollsLedger {
     async fn last_block_time_secs(&self) -> Result<i64> {
-        todo!()
+        let slot = self.scrolls_client.get_last_block_info().await?.slot;
+        Ok(self.network_settings.posix_from_slot(slot))
     }
 
     async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>> {

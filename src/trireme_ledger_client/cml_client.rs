@@ -537,7 +537,7 @@ where
                     self.network_settings.starting_slot_time()
                 )),
             )?;
-            tx_builder.set_validity_start_interval(&slot);
+            tx_builder.set_validity_start_interval(&slot.into());
         }
         if let Some(posix) = upper {
             let slot = self.network_settings.slot_from_posix(posix).ok_or(
@@ -546,7 +546,7 @@ where
                     self.network_settings.starting_slot_time()
                 )),
             )?;
-            tx_builder.set_ttl(&slot);
+            tx_builder.set_ttl(&slot.into());
         }
         Ok(())
     }
