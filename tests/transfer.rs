@@ -63,7 +63,7 @@ async fn can_transfer_and_keep_remainder() {
         .finish_output()
         .build_in_memory();
 
-    let contract = SmartContract::new(&TransferADASmartContract, &backend);
+    let contract = SmartContract::new(TransferADASmartContract, backend);
 
     let call = Endpoint::Transfer {
         amount,
@@ -73,24 +73,27 @@ async fn can_transfer_and_keep_remainder() {
     contract.hit_endpoint(call).await.unwrap();
 
     let alice_expected = amount;
-    let alice_actual = backend
-        .ledger_client
+    let alice_actual = contract
+        .backend()
+        .ledger_client()
         .balance_at_address(&alice, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(alice_expected, alice_actual);
 
     let me_expected = input_amount - amount;
-    let me_actual = backend
-        .ledger_client
+    let me_actual = contract
+        .backend()
+        .ledger_client()
         .balance_at_address(&me, &PolicyId::Lovelace)
         .await
         .unwrap();
     assert_eq!(me_expected, me_actual);
 
     let expected_extra_amount = extra_amount;
-    let actual_extra_amount = backend
-        .ledger_client
+    let actual_extra_amount = contract
+        .backend()
+        .ledger_client()
         .balance_at_address(&me, &extra_policy)
         .await
         .unwrap();

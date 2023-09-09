@@ -10,7 +10,7 @@ async fn run_lookup(lookup: TriremeLookups) -> Result<TriremeResponses> {
     let logic = TriremeLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
     let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(&logic, &backend);
+    let contract = SmartContract::new(logic, backend);
     let res = contract.lookup(lookup).await?;
     Ok(res)
 }

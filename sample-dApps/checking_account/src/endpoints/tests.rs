@@ -33,15 +33,16 @@ async fn init_creates_instance_with_correct_balance() {
     let endpoint = CheckingAccountEndpoints::InitAccount {
         starting_lovelace: account_amount,
     };
-    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+    let contract = SmartContract::new(CheckingAccountLogic, backend);
     contract.hit_endpoint(endpoint).await.unwrap();
 
     // Then
     let script = checking_account_validator().unwrap();
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&address)
         .await
         .unwrap();
@@ -74,13 +75,14 @@ async fn add_puller_creates_new_datum_for_puller() {
         period: 1000,
         next_pull: 0,
     };
-    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+    let contract = SmartContract::new(CheckingAccountLogic, backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     let script = pull_validator().unwrap();
     let network = Network::Testnet;
     let script_address = script.address(network).unwrap();
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&script_address)
         .await
         .unwrap();
@@ -125,13 +127,14 @@ async fn remove_puller__removes_the_allowed_puller() {
         next_pull: 0,
     };
 
-    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+    let contract = SmartContract::new(CheckingAccountLogic, backend);
     contract.hit_endpoint(add_endpoint).await.unwrap();
     let script = pull_validator().unwrap();
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&address)
         .await
         .unwrap();
@@ -142,8 +145,9 @@ async fn remove_puller__removes_the_allowed_puller() {
 
     contract.hit_endpoint(remove_endpoint).await.unwrap();
 
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&address)
         .await
         .unwrap();
@@ -166,14 +170,15 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
         starting_lovelace: account_amount,
     };
 
-    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+    let contract = SmartContract::new(CheckingAccountLogic, backend);
     contract.hit_endpoint(init_endpoint).await.unwrap();
 
     let script = checking_account_validator().unwrap();
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&address)
         .await
         .unwrap();
@@ -186,8 +191,9 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
     };
 
     contract.hit_endpoint(fund_endpoint).await.unwrap();
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&address)
         .await
         .unwrap();
@@ -211,14 +217,15 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
     let init_endpoint = CheckingAccountEndpoints::InitAccount {
         starting_lovelace: account_amount,
     };
-    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+    let contract = SmartContract::new(CheckingAccountLogic, backend);
     contract.hit_endpoint(init_endpoint).await.unwrap();
 
     let script = checking_account_validator().unwrap();
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&address)
         .await
         .unwrap();
@@ -231,8 +238,9 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
     };
 
     contract.hit_endpoint(fund_endpoint).await.unwrap();
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&address)
         .await
         .unwrap();
@@ -294,18 +302,20 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
         .finish_output()
         .build_in_memory();
 
-    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+    let contract = SmartContract::new(CheckingAccountLogic, backend);
 
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&account_address)
         .await
         .unwrap();
     let script_output = outputs_at_address.pop().unwrap();
     let checking_account_output_id = script_output.id().to_owned();
 
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&allow_puller_address)
         .await
         .unwrap();
@@ -321,8 +331,9 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     contract.hit_endpoint(pull_endpoint).await.unwrap();
 
     // Then
-    let mut outputs_at_account_address = backend
-        .ledger_client
+    let mut outputs_at_account_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&account_address)
         .await
         .unwrap();
@@ -330,8 +341,9 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, account_amount - pull_amount);
 
-    let mut outputs_at_puller_address = backend
-        .ledger_client
+    let mut outputs_at_puller_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&puller)
         .await
         .unwrap();
@@ -339,8 +351,9 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, pull_amount);
 
-    let mut outputs_at_account_address = backend
-        .ledger_client
+    let mut outputs_at_account_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&allow_puller_address)
         .await
         .unwrap();
@@ -408,18 +421,20 @@ async fn pull_from_account__fails_if_time_not_past_next_pull_time() {
         .finish_output()
         .build_in_memory();
 
-    let contract = SmartContract::new(&CheckingAccountLogic, &backend);
+    let contract = SmartContract::new(CheckingAccountLogic, backend);
 
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&account_address)
         .await
         .unwrap();
     let script_output = outputs_at_address.pop().unwrap();
     let checking_account_output_id = script_output.id().to_owned();
 
-    let mut outputs_at_address = backend
-        .ledger_client
+    let mut outputs_at_address = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&allow_puller_address)
         .await
         .unwrap();

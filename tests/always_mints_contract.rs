@@ -87,13 +87,13 @@ async fn can_mint_from_always_true_minting_policy() {
     // Call mint endpoint
     let amount = 69;
     let call = Endpoint::Mint { amount };
-    let contract = SmartContract::new(&AlwaysMintsSmartContract, &backend);
+    let contract = SmartContract::new(AlwaysMintsSmartContract, backend);
     contract.hit_endpoint(call).await.unwrap();
 
     // Check my balance for minted tokens
     let expected = amount;
     let actual = <TestLedgerClient<(), (), InMemoryStorage<()>> as LedgerClient<(), ()>>::balance_at_address(
-        &backend.ledger_client,
+        contract.backend().ledger_client(),
         &me,
         &policy,
     )

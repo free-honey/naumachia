@@ -16,13 +16,14 @@ async fn lock_and_claim() {
     let amount = 10_000_000;
     let endpoint = AlwaysSucceedsEndpoints::Lock { amount };
     let script = get_script().unwrap();
-    let contract = SmartContract::new(&AlwaysSucceedsLogic, &backend);
+    let contract = SmartContract::new(AlwaysSucceedsLogic, backend);
     contract.hit_endpoint(endpoint).await.unwrap();
     let network = Network::Testnet;
     {
         let expected = amount;
-        let actual = backend
-            .ledger_client
+        let actual = contract
+            .backend()
+            .ledger_client()
             .balance_at_address(&script.address(network).unwrap(), &PolicyId::Lovelace)
             .await
             .unwrap();
@@ -31,15 +32,17 @@ async fn lock_and_claim() {
 
     {
         let expected = start_amount - amount;
-        let actual = backend
-            .ledger_client
+        let actual = contract
+            .backend()
+            .ledger_client()
             .balance_at_address(&me, &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(expected, actual);
     }
-    let instance = backend
-        .ledger_client
+    let instance = contract
+        .backend()
+        .ledger_client()
         .all_outputs_at_address(&script.address(network).unwrap())
         .await
         .unwrap()
@@ -51,16 +54,18 @@ async fn lock_and_claim() {
 
     contract.hit_endpoint(call).await.unwrap();
     {
-        let actual = backend
-            .ledger_client
+        let actual = contract
+            .backend()
+            .ledger_client()
             .balance_at_address(&me, &PolicyId::Lovelace)
             .await
             .unwrap();
         assert_eq!(actual, start_amount);
     }
     {
-        let script_balance = backend
-            .ledger_client
+        let script_balance = contract
+            .backend()
+            .ledger_client()
             .balance_at_address(&script.address(network).unwrap(), &PolicyId::Lovelace)
             .await
             .unwrap();
