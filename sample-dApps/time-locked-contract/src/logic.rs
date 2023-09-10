@@ -160,15 +160,16 @@ mod tests {
 
         let endpoint = TimeLockedEndpoints::Lock { amount, after_secs };
 
-        let contract = SmartContract::new(&TimeLockedLogic, &backend);
+        let contract = SmartContract::new(TimeLockedLogic, backend);
 
         // when
         contract.hit_endpoint(endpoint).await.unwrap();
 
         // then
-        let network = backend.ledger_client().network().await.unwrap();
+        let network = contract.backend().ledger_client().network().await.unwrap();
         let script_address = get_script().unwrap().address(network).unwrap();
-        let outputs = backend
+        let outputs = contract
+            .backend()
             .ledger_client()
             .all_outputs_at_address(&script_address)
             .await
@@ -216,20 +217,22 @@ mod tests {
                 .clone(),
         };
 
-        let contract = SmartContract::new(&TimeLockedLogic, &backend);
+        let contract = SmartContract::new(TimeLockedLogic, backend);
 
         // when
         contract.hit_endpoint(endpoint).await.unwrap();
 
         // then
-        let outputs = backend
+        let outputs = contract
+            .backend()
             .ledger_client()
             .all_outputs_at_address(&script_address)
             .await
             .unwrap();
         assert!(outputs.is_empty());
 
-        let my_balance = backend
+        let my_balance = contract
+            .backend()
             .ledger_client()
             .balance_at_address(&me, &PolicyId::Lovelace)
             .await
@@ -271,7 +274,7 @@ mod tests {
                 .clone(),
         };
 
-        let contract = SmartContract::new(&TimeLockedLogic, &backend);
+        let contract = SmartContract::new(TimeLockedLogic, backend);
 
         // when
         let res = contract.hit_endpoint(endpoint).await;

@@ -46,7 +46,7 @@ async fn hit_endpoint(endpoint: CheckingAccountEndpoints) -> Result<()> {
     let logic = CheckingAccountLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
     let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(&logic, &backend);
+    let contract = SmartContract::new(logic, backend);
     let res = contract.hit_endpoint(endpoint).await?;
     Ok(res)
 }
@@ -55,7 +55,7 @@ async fn run_lookup(lookup: CheckingAccountLookups) -> Result<CheckingAccountLoo
     let logic = CheckingAccountLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
     let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(&logic, &backend);
+    let contract = SmartContract::new(logic, backend);
     let res = contract.lookup(lookup).await?;
     Ok(res)
 }

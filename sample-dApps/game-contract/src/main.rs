@@ -35,7 +35,7 @@ async fn main() {
     let logic = GameLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
     let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(&logic, &backend);
+    let contract = SmartContract::new(logic, backend);
 
     match args.action {
         ActionParams::Lock { amount, secret } => {

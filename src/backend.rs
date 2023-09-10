@@ -14,10 +14,9 @@ where
     Redeemer: Clone + Eq,
     LC: LedgerClient<Datum, Redeemer>,
 {
-    // TODO: Make fields private
-    pub _datum: PhantomData<Datum>,
-    pub _redeemer: PhantomData<Redeemer>,
-    pub ledger_client: LC,
+    pub(crate) _datum: PhantomData<Datum>,
+    pub(crate) _redeemer: PhantomData<Redeemer>,
+    pub(crate) ledger_client: LC,
 }
 
 pub type RedemptionDetails<Datum, Redeemer> = (

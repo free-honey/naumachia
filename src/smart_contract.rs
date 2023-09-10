@@ -13,33 +13,41 @@ pub trait SmartContractTrait {
 }
 
 #[derive(Debug)]
-pub struct SmartContract<'a, Logic, Record>
+pub struct SmartContract<Logic, Record>
 where
     Logic: SCLogic,
     Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
-    pub offchain_logic: &'a Logic,
-    pub backend: &'a Backend<Logic::Datums, Logic::Redeemers, Record>,
+    offchain_logic: Logic,
+    backend: Backend<Logic::Datums, Logic::Redeemers, Record>,
 }
 
-impl<'a, Logic, Record> SmartContract<'a, Logic, Record>
+impl<Logic, Record> SmartContract<Logic, Record>
 where
     Logic: SCLogic,
     Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
     pub fn new(
-        offchain_logic: &'a Logic,
-        backend: &'a Backend<Logic::Datums, Logic::Redeemers, Record>,
+        offchain_logic: Logic,
+        backend: Backend<Logic::Datums, Logic::Redeemers, Record>,
     ) -> Self {
         SmartContract {
             offchain_logic,
             backend,
         }
     }
+
+    pub fn backend(&self) -> &Backend<Logic::Datums, Logic::Redeemers, Record> {
+        &self.backend
+    }
+
+    pub fn offchain_logic(&self) -> &Logic {
+        &self.offchain_logic
+    }
 }
 
 #[async_trait]
-impl<'a, Logic, Record> SmartContractTrait for SmartContract<'a, Logic, Record>
+impl<Logic, Record> SmartContractTrait for SmartContract<Logic, Record>
 where
     Logic: SCLogic + Eq + Debug + Send + Sync,
     Record: LedgerClient<Logic::Datums, Logic::Redeemers> + Send + Sync,
