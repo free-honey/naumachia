@@ -88,7 +88,7 @@ impl TryFrom<PlutusData> for CheckingAccountDatums {
 
     fn try_from(value: PlutusData) -> Result<Self, Self::Error> {
         let PlutusData::Constr(constr) = value else {
-            return Err(())
+            return Err(());
         };
 
         let datum = match constr.fields.len() {
@@ -102,9 +102,13 @@ impl TryFrom<PlutusData> for CheckingAccountDatums {
 }
 
 fn checking_account_datum(fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
-    let PlutusData::BoundedBytes(owner_bytes) = fields.get(0).ok_or(())? else { return Err(())};
+    let PlutusData::BoundedBytes(owner_bytes) = fields.get(0).ok_or(())? else {
+        return Err(());
+    };
     let owner = PubKeyHash::new(&owner_bytes);
-    let PlutusData::BoundedBytes(policy_bytes) = fields.get(1).ok_or(())? else { return Err(())};
+    let PlutusData::BoundedBytes(policy_bytes) = fields.get(1).ok_or(())? else {
+        return Err(());
+    };
     let spend_token_policy = policy_bytes.to_vec();
     Ok(CheckingAccount {
         owner,
@@ -114,19 +118,32 @@ fn checking_account_datum(fields: &[PlutusData]) -> Result<CheckingAccountDatums
 }
 
 fn allowed_puller(fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
-    let PlutusData::BoundedBytes(owner_bytes) = fields.get(0).ok_or(())? else { return Err(())};
+    let PlutusData::BoundedBytes(owner_bytes) = fields.get(0).ok_or(())? else {
+        return Err(())};
     let owner = PubKeyHash::new(&owner_bytes);
-    let PlutusData::BoundedBytes(puller_bytes) = fields.get(1).ok_or(())? else { return Err(())};
+    let PlutusData::BoundedBytes(puller_bytes) = fields.get(1).ok_or(())? else {
+        return Err(());
+    };
     let puller = PubKeyHash::new(&puller_bytes);
-    let PlutusData::BigInt(amount_lovelace) = fields.get(2).ok_or(())? else { return Err(())};
+    let PlutusData::BigInt(amount_lovelace) = fields.get(2).ok_or(())? else {
+        return Err(());
+    };
     let amount_lovelace: i64 = amount_lovelace.into();
-    let PlutusData::BigInt(next_pull) = fields.get(3).ok_or(())? else { return Err(())};
+    let PlutusData::BigInt(next_pull) = fields.get(3).ok_or(())? else {
+        return Err(());
+    };
     let next_pull: i64 = next_pull.into();
-    let PlutusData::BigInt(period) = fields.get(4).ok_or(())? else { return Err(())};
+    let PlutusData::BigInt(period) = fields.get(4).ok_or(())? else {
+        return Err(());
+    };
     let period: i64 = period.into();
-    let PlutusData::BoundedBytes(spending_token) = fields.get(5).ok_or(())? else { return Err(())};
+    let PlutusData::BoundedBytes(spending_token) = fields.get(5).ok_or(())? else {
+        return Err(());
+    };
     let spending_token = spending_token.to_vec();
-    let PlutusData::BoundedBytes(checking_account_nft) = fields.get(6).ok_or(())? else { return Err(())};
+    let PlutusData::BoundedBytes(checking_account_nft) = fields.get(6).ok_or(())? else {
+        return Err(());
+    };
     let checking_account_nft = checking_account_nft.to_vec();
     let datum = CheckingAccountDatums::AllowedPuller(AllowedPuller {
         owner,
