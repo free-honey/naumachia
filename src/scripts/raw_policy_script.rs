@@ -67,6 +67,17 @@ impl<R> RawPolicy<R> {
         };
         Ok(v2_policy)
     }
+
+    pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
+        let cbor =
+            hex::decode(cbor).map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = RawPolicy {
+            version: TransactionVersion::V2,
+            cbor,
+            _redeemer: Default::default(),
+        };
+        Ok(v2_policy)
+    }
 }
 
 pub struct OneParamRawPolicy<One, Redeemer> {

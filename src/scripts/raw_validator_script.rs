@@ -84,6 +84,18 @@ impl<D, R> RawPlutusValidator<D, R> {
         };
         Ok(v2_policy)
     }
+
+    pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
+        let cbor =
+            hex::decode(cbor).map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = RawPlutusValidator {
+            version: TransactionVersion::V2,
+            cbor,
+            _datum: Default::default(),
+            _redeemer: Default::default(),
+        };
+        Ok(v2_policy)
+    }
 }
 
 pub struct OneParamRawValidator<One, Datum, Redeemer> {
