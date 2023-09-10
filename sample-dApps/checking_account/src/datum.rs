@@ -119,7 +119,8 @@ fn checking_account_datum(fields: &[PlutusData]) -> Result<CheckingAccountDatums
 
 fn allowed_puller(fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
     let PlutusData::BoundedBytes(owner_bytes) = fields.get(0).ok_or(())? else {
-        return Err(())};
+        return Err(())
+    };
     let owner = PubKeyHash::new(&owner_bytes);
     let PlutusData::BoundedBytes(puller_bytes) = fields.get(1).ok_or(())? else {
         return Err(());
