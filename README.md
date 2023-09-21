@@ -29,6 +29,8 @@ Find us at the [TxPipe Discord!](https://discord.gg/4hUAdHAexb)
 
 ### Contributions
 
+Pick up a [good first issue](https://github.com/free-honey/naumachia/contribute)
+
 Excited to accept PRs and general feedback. There is a lot of work to be done to make this the best framework it can 
 be, so I'll try to help onboard anyone interested in contributing.
 
