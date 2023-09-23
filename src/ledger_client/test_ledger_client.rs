@@ -7,7 +7,6 @@ use std::{
 };
 
 use crate::{
-    backend::Backend,
     ledger_client::{
         test_ledger_client::in_memory_storage::InMemoryStorage, LedgerClient, LedgerClientError,
         LedgerClientResult,
@@ -36,24 +35,25 @@ pub mod local_persisted_storage;
 #[cfg(test)]
 mod tests;
 
-pub struct TestBackendsBuilder<Datum, Redeemer> {
+pub struct TestLedgerClientBuilder<Datum, Redeemer> {
     signer: Address,
-    // TODO: Remove owner
     outputs: Vec<(Address, Output<Datum>)>,
     starting_time: i64,
+    block_length: i64,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<Datum, Redeemer> TestBackendsBuilder<Datum, Redeemer>
+impl<Datum, Redeemer> TestLedgerClientBuilder<Datum, Redeemer>
 where
     Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
-    pub fn new(signer: &Address) -> TestBackendsBuilder<Datum, Redeemer> {
-        TestBackendsBuilder {
+    pub fn new(signer: &Address) -> TestLedgerClientBuilder<Datum, Redeemer> {
+        TestLedgerClientBuilder {
             signer: signer.clone(),
             outputs: Vec::new(),
             starting_time: 0,
+            block_length: 20,
             _redeemer: PhantomData,
         }
     }
@@ -76,27 +76,24 @@ where
         self
     }
 
-    pub fn build_in_memory(
-        &self,
-    ) -> Backend<Datum, Redeemer, TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>> {
-        let block_length = 20;
-        let ledger_client = TestLedgerClient::new_in_memory(
+    pub fn with_block_length(mut self, block_length: i64) -> Self {
+        self.block_length = block_length;
+        self
+    }
+
+    pub fn build_in_memory(&self) -> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>> {
+        TestLedgerClient::new_in_memory(
             self.signer.clone(),
             self.outputs.clone(),
-            block_length,
+            self.block_length,
             self.starting_time,
-        );
-        Backend {
-            _datum: PhantomData,
-            _redeemer: PhantomData,
-            ledger_client,
-        }
+        )
     }
 }
 
 pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
 {
-    inner: TestBackendsBuilder<Datum, Redeemer>,
+    inner: TestLedgerClientBuilder<Datum, Redeemer>,
     owner: Address,
     values: Values,
     datum: Option<Datum>,
@@ -121,7 +118,7 @@ where
         self
     }
 
-    pub fn finish_output(self) -> TestBackendsBuilder<Datum, Redeemer> {
+    pub fn finish_output(self) -> TestLedgerClientBuilder<Datum, Redeemer> {
         let OutputBuilder {
             mut inner,
             owner,

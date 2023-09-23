@@ -7,7 +7,7 @@ use crate::{
 use naumachia::{
     address::PolicyId,
     error::Error,
-    ledger_client::test_ledger_client::TestBackendsBuilder,
+    ledger_client::test_ledger_client::TestLedgerClientBuilder,
     ledger_client::LedgerClient,
     logic::SCLogicError,
     scripts::context::pub_key_hash_from_address_if_available,
@@ -21,7 +21,7 @@ async fn init_creates_instance_with_correct_balance() {
     // given
     let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
-    let backend = TestBackendsBuilder::new(&me)
+    let backend = TestLedgerClientBuilder::new(&me)
         .start_output(&me)
         .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
@@ -41,7 +41,6 @@ async fn init_creates_instance_with_correct_balance() {
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&address)
         .await
@@ -60,7 +59,7 @@ async fn add_puller_creates_new_datum_for_puller() {
     let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let nft_id = vec![1, 2, 3, 4, 5];
     let start_amount = 100_000_000;
-    let backend = TestBackendsBuilder::new(&me)
+    let backend = TestLedgerClientBuilder::new(&me)
         .start_output(&me)
         .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
@@ -81,7 +80,6 @@ async fn add_puller_creates_new_datum_for_puller() {
     let network = Network::Testnet;
     let script_address = script.address(network).unwrap();
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&script_address)
         .await
@@ -111,7 +109,7 @@ async fn remove_puller__removes_the_allowed_puller() {
     let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
     let nft_id = vec![1, 2, 3, 4, 5];
-    let backend = TestBackendsBuilder::new(&me)
+    let backend = TestLedgerClientBuilder::new(&me)
         .start_output(&me)
         .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
@@ -133,7 +131,6 @@ async fn remove_puller__removes_the_allowed_puller() {
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&address)
         .await
@@ -146,7 +143,6 @@ async fn remove_puller__removes_the_allowed_puller() {
     contract.hit_endpoint(remove_endpoint).await.unwrap();
 
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&address)
         .await
@@ -158,7 +154,7 @@ async fn remove_puller__removes_the_allowed_puller() {
 async fn fund_account__replaces_existing_balance_with_updated_amount() {
     let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
-    let backend = TestBackendsBuilder::new(&me)
+    let backend = TestLedgerClientBuilder::new(&me)
         .start_output(&me)
         .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
@@ -177,7 +173,6 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&address)
         .await
@@ -192,7 +187,6 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
 
     contract.hit_endpoint(fund_endpoint).await.unwrap();
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&address)
         .await
@@ -206,7 +200,7 @@ async fn fund_account__replaces_existing_balance_with_updated_amount() {
 async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() {
     let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
     let start_amount = 100_000_000;
-    let backend = TestBackendsBuilder::new(&me)
+    let backend = TestLedgerClientBuilder::new(&me)
         .start_output(&me)
         .with_value(PolicyId::Lovelace, start_amount)
         .finish_output()
@@ -224,7 +218,6 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
     let network = Network::Testnet;
     let address = script.address(network).unwrap();
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&address)
         .await
@@ -239,7 +232,6 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
 
     contract.hit_endpoint(fund_endpoint).await.unwrap();
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&address)
         .await
@@ -283,7 +275,7 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
         checking_account_nft: checking_account_nft_id.clone(),
     }
     .into();
-    let backend = TestBackendsBuilder::new(&puller)
+    let backend = TestLedgerClientBuilder::new(&puller)
         .with_starting_time(next_pull)
         .start_output(&account_address)
         .with_datum(account_datum)
@@ -305,7 +297,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     let contract = SmartContract::new(CheckingAccountLogic, backend);
 
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&account_address)
         .await
@@ -314,7 +305,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     let checking_account_output_id = script_output.id().to_owned();
 
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&allow_puller_address)
         .await
@@ -332,7 +322,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
 
     // Then
     let mut outputs_at_account_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&account_address)
         .await
@@ -342,7 +331,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     assert_eq!(value, account_amount - pull_amount);
 
     let mut outputs_at_puller_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&puller)
         .await
@@ -352,7 +340,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     assert_eq!(value, pull_amount);
 
     let mut outputs_at_account_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&allow_puller_address)
         .await
@@ -403,7 +390,7 @@ async fn pull_from_account__fails_if_time_not_past_next_pull_time() {
         checking_account_nft: checking_account_nft_id.clone(),
     }
     .into();
-    let backend = TestBackendsBuilder::new(&puller)
+    let backend = TestLedgerClientBuilder::new(&puller)
         .start_output(&account_address)
         .with_datum(account_datum)
         .with_value(PolicyId::Lovelace, account_amount)
@@ -424,7 +411,6 @@ async fn pull_from_account__fails_if_time_not_past_next_pull_time() {
     let contract = SmartContract::new(CheckingAccountLogic, backend);
 
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&account_address)
         .await
@@ -433,7 +419,6 @@ async fn pull_from_account__fails_if_time_not_past_next_pull_time() {
     let checking_account_output_id = script_output.id().to_owned();
 
     let mut outputs_at_address = contract
-        .backend()
         .ledger_client()
         .all_outputs_at_address(&allow_puller_address)
         .await

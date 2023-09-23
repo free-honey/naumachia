@@ -3,8 +3,7 @@ use free_minting_contract::logic::FreeMintingEndpoints;
 use free_minting_contract::logic::FreeMintingLogic;
 use naumachia::smart_contract::SmartContractTrait;
 use naumachia::{
-    backend::Backend, smart_contract::SmartContract,
-    trireme_ledger_client::get_trireme_ledger_client_from_file,
+    smart_contract::SmartContract, trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 
 #[derive(Parser, Debug)]
@@ -25,8 +24,7 @@ async fn main() {
     let args = Args::parse();
     let logic = FreeMintingLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
-    let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(logic, backend);
+    let contract = SmartContract::new(logic, ledger_client);
 
     match args.action {
         ActionParams::Mint { amount } => contract

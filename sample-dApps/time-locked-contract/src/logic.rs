@@ -136,7 +136,7 @@ mod tests {
     use super::*;
     use naumachia::{
         error::Error,
-        ledger_client::test_ledger_client::TestBackendsBuilder,
+        ledger_client::test_ledger_client::TestLedgerClientBuilder,
         ledger_client::LedgerClientError,
         smart_contract::{SmartContract, SmartContractTrait},
         Address, Network,
@@ -148,7 +148,7 @@ mod tests {
         let me = Address::from_bech32("addr_test1qpmtp5t0t5y6cqkaz7rfsyrx7mld77kpvksgkwm0p7en7qum7a589n30e80tclzrrnj8qr4qvzj6al0vpgtnmrkkksnqd8upj0").unwrap();
         let start_amount = 100_000_000;
         let start_time = 1;
-        let backend = TestBackendsBuilder::new(&me)
+        let backend = TestLedgerClientBuilder::new(&me)
             .with_starting_time(start_time)
             .start_output(&me)
             .with_value(PolicyId::Lovelace, start_amount)
@@ -166,10 +166,9 @@ mod tests {
         contract.hit_endpoint(endpoint).await.unwrap();
 
         // then
-        let network = contract.backend().ledger_client().network().await.unwrap();
+        let network = contract.ledger_client().network().await.unwrap();
         let script_address = get_script().unwrap().address(network).unwrap();
         let outputs = contract
-            .backend()
             .ledger_client()
             .all_outputs_at_address(&script_address)
             .await
@@ -194,7 +193,7 @@ mod tests {
         let locked_amount = 10_000_000;
         let datum = 5_000;
 
-        let backend = TestBackendsBuilder::new(&me)
+        let ledger_client = TestLedgerClientBuilder::new(&me)
             .with_starting_time(start_time)
             .start_output(&me)
             .with_value(PolicyId::Lovelace, start_amount)
@@ -206,8 +205,7 @@ mod tests {
             .build_in_memory();
 
         let endpoint = TimeLockedEndpoints::Claim {
-            output_id: backend
-                .ledger_client()
+            output_id: ledger_client
                 .outputs_at_address(&script_address, 1)
                 .await
                 .unwrap()
@@ -217,14 +215,13 @@ mod tests {
                 .clone(),
         };
 
-        let contract = SmartContract::new(TimeLockedLogic, backend);
+        let contract = SmartContract::new(TimeLockedLogic, ledger_client);
 
         // when
         contract.hit_endpoint(endpoint).await.unwrap();
 
         // then
         let outputs = contract
-            .backend()
             .ledger_client()
             .all_outputs_at_address(&script_address)
             .await
@@ -232,7 +229,6 @@ mod tests {
         assert!(outputs.is_empty());
 
         let my_balance = contract
-            .backend()
             .ledger_client()
             .balance_at_address(&me, &PolicyId::Lovelace)
             .await
@@ -251,7 +247,7 @@ mod tests {
         let locked_amount = 10_000_000;
         let datum = 15_000;
 
-        let backend = TestBackendsBuilder::new(&me)
+        let ledger_client = TestLedgerClientBuilder::new(&me)
             .with_starting_time(start_time)
             .start_output(&me)
             .with_value(PolicyId::Lovelace, start_amount)
@@ -263,8 +259,7 @@ mod tests {
             .build_in_memory();
 
         let endpoint = TimeLockedEndpoints::Claim {
-            output_id: backend
-                .ledger_client()
+            output_id: ledger_client
                 .outputs_at_address(&script_address, 1)
                 .await
                 .unwrap()
@@ -274,7 +269,7 @@ mod tests {
                 .clone(),
         };
 
-        let contract = SmartContract::new(TimeLockedLogic, backend);
+        let contract = SmartContract::new(TimeLockedLogic, ledger_client);
 
         // when
         let res = contract.hit_endpoint(endpoint).await;
