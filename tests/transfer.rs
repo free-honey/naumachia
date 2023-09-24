@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use naumachia::{
     address::PolicyId,
-    ledger_client::test_ledger_client::TestBackendsBuilder,
+    ledger_client::test_ledger_client::TestLedgerClientBuilder,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::SCLogicResult,
@@ -56,14 +56,14 @@ async fn can_transfer_and_keep_remainder() {
 
     let amount = 590;
 
-    let backend = TestBackendsBuilder::new(&me)
+    let ledger_client = TestLedgerClientBuilder::new(&me)
         .start_output(&me)
         .with_value(PolicyId::Lovelace, input_amount)
         .with_value(extra_policy.clone(), extra_amount)
         .finish_output()
         .build_in_memory();
 
-    let contract = SmartContract::new(TransferADASmartContract, backend);
+    let contract = SmartContract::new(TransferADASmartContract, ledger_client);
 
     let call = Endpoint::Transfer {
         amount,
@@ -74,7 +74,6 @@ async fn can_transfer_and_keep_remainder() {
 
     let alice_expected = amount;
     let alice_actual = contract
-        .backend()
         .ledger_client()
         .balance_at_address(&alice, &PolicyId::Lovelace)
         .await
@@ -83,7 +82,6 @@ async fn can_transfer_and_keep_remainder() {
 
     let me_expected = input_amount - amount;
     let me_actual = contract
-        .backend()
         .ledger_client()
         .balance_at_address(&me, &PolicyId::Lovelace)
         .await
@@ -92,7 +90,6 @@ async fn can_transfer_and_keep_remainder() {
 
     let expected_extra_amount = extra_amount;
     let actual_extra_amount = contract
-        .backend()
         .ledger_client()
         .balance_at_address(&me, &extra_policy)
         .await

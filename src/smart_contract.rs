@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::{backend::Backend, error::Result, ledger_client::LedgerClient, logic::SCLogic};
+use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
 
 #[async_trait]
 pub trait SmartContractTrait {
@@ -13,32 +13,29 @@ pub trait SmartContractTrait {
 }
 
 #[derive(Debug)]
-pub struct SmartContract<Logic, Record>
+pub struct SmartContract<Logic, LC>
 where
     Logic: SCLogic,
-    Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
+    LC: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
     offchain_logic: Logic,
-    backend: Backend<Logic::Datums, Logic::Redeemers, Record>,
+    ledger_client: LC,
 }
 
-impl<Logic, Record> SmartContract<Logic, Record>
+impl<Logic, LC> SmartContract<Logic, LC>
 where
     Logic: SCLogic,
-    Record: LedgerClient<Logic::Datums, Logic::Redeemers>,
+    LC: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
-    pub fn new(
-        offchain_logic: Logic,
-        backend: Backend<Logic::Datums, Logic::Redeemers, Record>,
-    ) -> Self {
+    pub fn new(offchain_logic: Logic, backend: LC) -> Self {
         SmartContract {
             offchain_logic,
-            backend,
+            ledger_client: backend,
         }
     }
 
-    pub fn backend(&self) -> &Backend<Logic::Datums, Logic::Redeemers, Record> {
-        &self.backend
+    pub fn ledger_client(&self) -> &LC {
+        &self.ledger_client
     }
 
     pub fn offchain_logic(&self) -> &Logic {
@@ -57,12 +54,14 @@ where
     type LookupResponse = Logic::LookupResponses;
 
     async fn hit_endpoint(&self, endpoint: Logic::Endpoints) -> Result<()> {
-        let tx_actions = Logic::handle_endpoint(endpoint, self.backend.ledger_client()).await?;
-        self.backend.process(tx_actions).await?;
+        let tx_actions = Logic::handle_endpoint(endpoint, &self.ledger_client).await?;
+        let tx = tx_actions.to_unbuilt_tx()?;
+        let tx_id = self.ledger_client.issue(tx).await?;
+        println!("Transaction Submitted: {:?}", &tx_id);
         Ok(())
     }
 
     async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
-        Ok(Logic::lookup(lookup, self.backend.ledger_client()).await?)
+        Ok(Logic::lookup(lookup, &self.ledger_client).await?)
     }
 }

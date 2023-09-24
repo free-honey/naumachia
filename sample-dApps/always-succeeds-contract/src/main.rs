@@ -4,7 +4,6 @@ use always_succeeds_contract::logic::{
 };
 use clap::Parser;
 use naumachia::{
-    backend::Backend,
     output::OutputId,
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
@@ -33,8 +32,7 @@ async fn main() {
 
     let logic = AlwaysSucceedsLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
-    let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(logic, backend);
+    let contract = SmartContract::new(logic, ledger_client);
 
     match args.action {
         ActionParams::Lock { amount } => contract

@@ -6,7 +6,6 @@ use checking::{
 use clap::Parser;
 use naumachia::scripts::context::PubKeyHash;
 use naumachia::{
-    backend::Backend,
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
@@ -45,8 +44,7 @@ async fn main() -> Result<()> {
 async fn hit_endpoint(endpoint: CheckingAccountEndpoints) -> Result<()> {
     let logic = CheckingAccountLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
-    let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(logic, backend);
+    let contract = SmartContract::new(logic, ledger_client);
     let res = contract.hit_endpoint(endpoint).await?;
     Ok(res)
 }
@@ -54,8 +52,7 @@ async fn hit_endpoint(endpoint: CheckingAccountEndpoints) -> Result<()> {
 async fn run_lookup(lookup: CheckingAccountLookups) -> Result<CheckingAccountLookupResponses> {
     let logic = CheckingAccountLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
-    let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(logic, backend);
+    let contract = SmartContract::new(logic, ledger_client);
     let res = contract.lookup(lookup).await?;
     Ok(res)
 }

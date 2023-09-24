@@ -1,22 +1,22 @@
 use crate::{TriremeLogic, TriremeLookups, TriremeResponses};
 use anyhow::Result;
-use naumachia::address::PolicyId;
-use naumachia::backend::Backend;
-use naumachia::error::Error;
-use naumachia::smart_contract::{SmartContract, SmartContractTrait};
-use naumachia::trireme_ledger_client::get_trireme_ledger_client_from_file;
+use naumachia::{
+    address::PolicyId,
+    error::Error,
+    smart_contract::{SmartContract, SmartContractTrait},
+    trireme_ledger_client::get_trireme_ledger_client_from_file,
+};
 
 async fn run_lookup(lookup: TriremeLookups) -> Result<TriremeResponses> {
     let logic = TriremeLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
-    let backend = Backend::new(ledger_client);
-    let contract = SmartContract::new(logic, backend);
+    let contract = SmartContract::new(logic, ledger_client);
     let res = contract.lookup(lookup).await?;
     Ok(res)
 }
 
 fn lovelace_to_ada(lovelace: f64) -> f64 {
-    lovelace as f64 / 1_000_000.0 // TODO: Panic
+    lovelace / 1_000_000.0 // TODO: Panic
 }
 
 pub(crate) async fn ada_balance_impl() -> Result<()> {
