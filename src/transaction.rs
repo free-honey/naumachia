@@ -1,9 +1,9 @@
 use crate::transaction::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs};
 use crate::{
-    address::PolicyId,
     backend::RedemptionDetails,
     error::*,
     output::{Output, UnbuiltOutput},
+    policy_id::PolicyId,
     scripts::{MintingPolicy, ValidatorCode},
     values::Values,
 };

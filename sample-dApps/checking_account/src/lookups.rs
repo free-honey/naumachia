@@ -3,9 +3,9 @@ use crate::{
     CheckingAccountLookupResponses, CHECKING_ACCOUNT_NFT_ASSET_NAME,
 };
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
     logic::{SCLogicError, SCLogicResult},
+    policy_id::PolicyId,
     scripts::context::pub_key_hash_from_address_if_available,
     scripts::ValidatorCode,
 };

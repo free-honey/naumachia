@@ -29,12 +29,30 @@ use pallas_addresses::{Address, Network};
 use rand::Rng;
 use thiserror::Error;
 
+/// In-memory storage module
 pub mod in_memory_storage;
+/// Local persisted storage module
 pub mod local_persisted_storage;
 
 #[cfg(test)]
 mod tests;
 
+/// Test Ledger Client Builder
+///
+/// The standard way to spin up a fake ledger client in a test. Will produce a [`TestLedgerClient`]
+/// that can passed to your specific smart contract:
+///
+/// ```
+///     let backend = TestLedgerClientBuilder::new(&me)
+///         .start_output(&me)
+///         .with_value(PolicyId::Lovelace, start_amount)
+///         .finish_output()
+///         .build_in_memory();
+///
+///     let contract = SmartContract::new(CheckingAccountLogic, backend);
+/// ```
+///
+/// Use builder methods to assemble the ledger state for your specific test.
 pub struct TestLedgerClientBuilder<Datum, Redeemer> {
     signer: Address,
     outputs: Vec<(Address, Output<Datum>)>,
@@ -48,6 +66,7 @@ where
     Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
+    /// Constructor for the [`TestLedgerClientBuilder`]
     pub fn new(signer: &Address) -> TestLedgerClientBuilder<Datum, Redeemer> {
         TestLedgerClientBuilder {
             signer: signer.clone(),
@@ -58,6 +77,9 @@ where
         }
     }
 
+    /// Start building an output for the given address. This will return an [`OutputBuilder`] that
+    /// can be used to add values and a datum to the output. After which you can call [`OutputBuilder::finish_output`]
+    /// to continue with the ledger client builder.
     pub fn start_output(self, owner: &Address) -> OutputBuilder<Datum, Redeemer> {
         OutputBuilder {
             inner: self,
@@ -67,20 +89,24 @@ where
         }
     }
 
+    /// Circumvents the [`OutputBuilder`] and adds an output directly to the ledger client builder.
     fn add_output(&mut self, address: &Address, output: Output<Datum>) {
         self.outputs.push((address.clone(), output))
     }
 
+    /// Specify the starting time for the ledger client.
     pub fn with_starting_time(mut self, starting_time: i64) -> Self {
         self.starting_time = starting_time;
         self
     }
 
+    /// Specify the time between blocks for the ledger client.
     pub fn with_block_length(mut self, block_length: i64) -> Self {
         self.block_length = block_length;
         self
     }
 
+    /// Build the [`TestLedgerClient`] with an _ephemeral_ [`InMemoryStorage`] for [`TestLedgerStorage`]
     pub fn build_in_memory(&self) -> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>> {
         TestLedgerClient::new_in_memory(
             self.signer.clone(),
@@ -91,6 +117,8 @@ where
     }
 }
 
+/// Sub-builder type of [`TestLedgerClientBuilder`] for building outputs that will be added to the
+/// parent [`TestLedgerClient`]
 pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
 {
     inner: TestLedgerClientBuilder<Datum, Redeemer>,
@@ -104,6 +132,7 @@ where
     Datum: Clone + PartialEq + Debug + Send + Sync + Into<PlutusData>,
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
+    /// Add another value to current output
     pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
         let mut new_total = amount;
         if let Some(total) = self.values.get(&policy) {
@@ -113,11 +142,13 @@ where
         self
     }
 
+    /// Specify the datum for the current output. This will override any previous datum specified.
     pub fn with_datum(mut self, datum: Datum) -> OutputBuilder<Datum, Redeemer> {
         self.datum = Some(datum);
         self
     }
 
+    /// Finish building the output and revert to parent [`TestLedgerClientBuilder`]
     pub fn finish_output(self) -> TestLedgerClientBuilder<Datum, Redeemer> {
         let OutputBuilder {
             mut inner,
@@ -138,6 +169,7 @@ where
     }
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 enum TestLCError {
     #[error("Mutex lock error: {0:?}")]

@@ -4,10 +4,10 @@ use crate::{
 };
 use nau_scripts::{one_shot, one_shot::OutputReference};
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
     logic::{SCLogicError, SCLogicResult},
     output::Output,
+    policy_id::PolicyId,
     scripts::context::pub_key_hash_from_address_if_available,
     scripts::ValidatorCode,
     scripts::{MintingPolicy, ScriptError},

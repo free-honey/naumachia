@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use naumachia::address::PolicyId;
 use naumachia::ledger_client::test_ledger_client::{
     in_memory_storage::InMemoryStorage, TestLedgerClient, TestLedgerClientBuilder,
 };
 use naumachia::logic::SCLogicError;
+use naumachia::policy_id::PolicyId;
 use naumachia::scripts::context::TxContext;
 use naumachia::scripts::ExecutionCost;
 use naumachia::{

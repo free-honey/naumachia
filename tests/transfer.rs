@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use naumachia::{
-    address::PolicyId,
     ledger_client::test_ledger_client::TestLedgerClientBuilder,
     ledger_client::LedgerClient,
     logic::SCLogic,
     logic::SCLogicResult,
+    policy_id::PolicyId,
     smart_contract::{SmartContract, SmartContractTrait},
     transaction::TxActions,
 };

@@ -1,7 +1,7 @@
 // use crate::logic::script::{get_parameterized_script, OutputReference};
 use async_trait::async_trait;
-use naumachia::address::PolicyId;
 use naumachia::output::Output;
+use naumachia::policy_id::PolicyId;
 use naumachia::scripts::ScriptError;
 use naumachia::{
     ledger_client::LedgerClient,

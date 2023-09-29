@@ -1,33 +1,26 @@
 use serde::{Deserialize, Serialize};
 
+/// Token identity.
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
 pub enum PolicyId {
+    /// ADA as denominated in Lovelace (1 ADA = 1_000_000 Lovelace)
     Lovelace,
+    /// Native token with policy id and optional asset name
     NativeToken(String, Option<String>),
 }
 
 impl PolicyId {
+    /// Constructor for Lovelace policy id
     pub fn ada() -> PolicyId {
         PolicyId::Lovelace
     }
 
+    /// Constructor for native token policy id
     pub fn native_token(id: &str, asset: &Option<String>) -> PolicyId {
         PolicyId::NativeToken(id.to_string(), asset.to_owned())
     }
 
-    pub fn to_str(&self) -> Option<String> {
-        match self {
-            PolicyId::Lovelace => None,
-            PolicyId::NativeToken(id, maybe_asset) => {
-                if let Some(asset) = maybe_asset {
-                    Some(format!("{id}-{asset}"))
-                } else {
-                    Some(id.to_string())
-                }
-            }
-        }
-    }
-
+    /// Getter for policy id
     pub fn id(&self) -> String {
         match self {
             PolicyId::Lovelace => "".to_string(),
@@ -35,6 +28,7 @@ impl PolicyId {
         }
     }
 
+    /// Getter for asset name
     pub fn asset_name(&self) -> Option<String> {
         match self {
             PolicyId::Lovelace => None,

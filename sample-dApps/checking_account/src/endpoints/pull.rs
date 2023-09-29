@@ -3,10 +3,10 @@ use crate::{
     CheckingAccountError,
 };
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
     logic::{SCLogicError, SCLogicResult},
     output::OutputId,
+    policy_id::PolicyId,
     scripts::ValidatorCode,
     transaction::TxActions,
     values::Values,

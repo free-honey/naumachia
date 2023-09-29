@@ -1,8 +1,9 @@
+#![allow(missing_docs)]
 use pallas_addresses::Address;
 use thiserror::Error;
 
 use crate::scripts::ScriptError;
-use crate::{address::PolicyId, ledger_client::LedgerClientError, logic::SCLogicError};
+use crate::{ledger_client::LedgerClientError, logic::SCLogicError, policy_id::PolicyId};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

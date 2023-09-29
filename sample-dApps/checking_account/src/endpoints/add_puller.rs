@@ -3,9 +3,9 @@ use crate::{
     SPEND_TOKEN_ASSET_NAME,
 };
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
     logic::{SCLogicError, SCLogicResult},
+    policy_id::PolicyId,
     scripts::context::{pub_key_hash_from_address_if_available, PubKeyHash},
     scripts::MintingPolicy,
     scripts::ValidatorCode,
