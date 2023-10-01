@@ -15,6 +15,7 @@ pub mod error;
 pub mod ledger_client;
 /// Smart contract logic module
 pub mod logic;
+/// UTxO data types module
 pub mod output;
 /// `PolicyId` type module
 pub mod policy_id;
