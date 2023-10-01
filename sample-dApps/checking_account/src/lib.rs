@@ -12,13 +12,10 @@ use endpoints::{
     add_puller::add_puller, fund_account::fund_account, init_account::init_account,
     pull::pull_from_account, remove_puller::remove_puller,
 };
+use naumachia::logic::error::SCLogicResult;
 use naumachia::{
-    ledger_client::LedgerClient,
-    logic::{SCLogic, SCLogicResult},
-    output::OutputId,
-    scripts::context::PubKeyHash,
-    transaction::TxActions,
-    Address,
+    ledger_client::LedgerClient, logic::SCLogic, output::OutputId, scripts::context::PubKeyHash,
+    transaction::TxActions, Address,
 };
 use thiserror::Error;
 

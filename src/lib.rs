@@ -13,6 +13,7 @@ pub mod error;
 
 /// Ledger client module
 pub mod ledger_client;
+/// Smart contract logic module
 pub mod logic;
 pub mod output;
 /// `PolicyId` type module

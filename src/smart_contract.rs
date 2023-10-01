@@ -7,61 +7,12 @@ use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
 #[async_trait]
 pub trait SmartContractTrait {
     /// Represents the domain-specific transactions the consumer of a Smart Contract can submit.
-    ///
-    /// For example a NFT auction Smart Contracts might have:
-    /// ```
-    /// type Endpoint = AuctionEndpoints;
-    ///
-    /// enum AuctionEndpoints {
-    ///     StartAuction {
-    ///         nft_id: String,
-    ///         start_price: u64,
-    ///         auction_end: u64,
-    ///     },
-    ///     Bid {
-    ///         amount: u64,
-    ///         auction_id: String,
-    ///     },
-    ///     ClaimWinnings {
-    ///         auction_id: String,
-    ///     },
-    ///     ClaimNFT {
-    ///         auction_id: String
-    ///     }
-    /// }
-    ///
     type Endpoint;
 
     /// Represents the domain-specific data the consumer of a Smart Contract can query.
-    ///
-    /// For example a NFT auction Smart Contracts might have:
-    /// ```
-    /// type Lookup = AuctionLookups;
-    ///
-    /// enum AuctionLookups {
-    ///    ActiveAuctions,
-    ///    AuctionDetails {
-    ///       auction_id: String
-    ///    },
-    /// }
-    /// ```
     type Lookup;
 
     /// Responses from the Lookup queries
-    ///
-    /// For example, the appropriate responses for the above lookups might be:
-    /// ```
-    /// type LookupResponse = AuctionLookupResponses;
-    ///
-    /// enum AuctionLookupResponses {
-    ///     ActiveAuctions(Vec<String>),
-    ///     AuctionDetails {
-    ///        nft_id: String,
-    ///        current_bid: u64,
-    ///        current_bidder: String,
-    ///        auction_end: u64,
-    ///     },
-    /// }
     type LookupResponse;
 
     /// Method for hitting specific endpoint

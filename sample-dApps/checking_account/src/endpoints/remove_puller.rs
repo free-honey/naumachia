@@ -1,10 +1,7 @@
 use crate::{pull_validator, CheckingAccountDatums, CheckingAccountError};
+use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::{
-    ledger_client::LedgerClient,
-    logic::{SCLogicError, SCLogicResult},
-    output::OutputId,
-    scripts::ValidatorCode,
-    transaction::TxActions,
+    ledger_client::LedgerClient, output::OutputId, scripts::ValidatorCode, transaction::TxActions,
 };
 
 pub async fn remove_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(

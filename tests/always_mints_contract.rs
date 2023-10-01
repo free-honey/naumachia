@@ -2,14 +2,13 @@ use async_trait::async_trait;
 use naumachia::ledger_client::test_ledger_client::{
     in_memory_storage::InMemoryStorage, TestLedgerClient, TestLedgerClientBuilder,
 };
-use naumachia::logic::SCLogicError;
+use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::policy_id::PolicyId;
 use naumachia::scripts::context::TxContext;
 use naumachia::scripts::ExecutionCost;
 use naumachia::{
     ledger_client::LedgerClient,
     logic::SCLogic,
-    logic::SCLogicResult,
     scripts::{MintingPolicy, ScriptResult},
     smart_contract::SmartContract,
     smart_contract::SmartContractTrait,

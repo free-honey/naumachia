@@ -1,10 +1,7 @@
 use crate::logic::script::get_policy;
 use async_trait::async_trait;
-use naumachia::{
-    ledger_client::LedgerClient,
-    logic::{SCLogic, SCLogicError, SCLogicResult},
-    transaction::TxActions,
-};
+use naumachia::logic::error::{SCLogicError, SCLogicResult};
+use naumachia::{ledger_client::LedgerClient, logic::SCLogic, transaction::TxActions};
 
 pub mod script;
 

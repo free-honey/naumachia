@@ -188,34 +188,47 @@ enum TestLCError {
     InvalidAddress,
 }
 
+/// Interface for the storage of the [`TestLedgerClient`]
 #[async_trait::async_trait]
 pub trait TestLedgerStorage<Datum> {
+    /// Get the signer address
     async fn signer(&self) -> LedgerClientResult<Address>;
+    /// Get count of UTxOs at the given address
     async fn outputs_by_count(
         &self,
         address: &Address,
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>>;
+    /// Get all UTxOs at the given address
     async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>>;
+    /// Remove the given output from the storage
     async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()>;
+    /// Add the given output to the storage
     async fn add_output(&self, output: &Output<Datum>) -> LedgerClientResult<()>;
+    /// Get the current time in seconds
     async fn current_time(&self) -> LedgerClientResult<i64>;
+    /// Set the current time in seconds
     async fn set_current_time(&self, posix_time: i64) -> LedgerClientResult<()>;
+    /// Get the time between blocks in seconds
     async fn get_block_length(&self) -> LedgerClientResult<i64>;
+    /// Get the network identifier for the ledger
     async fn network(&self) -> LedgerClientResult<Network>;
 }
 
+/// Implementation of the [`LedgerClient`] trait that mocks the ledger. Typically, the best way to
+/// construct is using the [`TestLedgerClientBuilder`].
 #[derive(Debug)]
 pub struct TestLedgerClient<Datum, Redeemer, Storage: TestLedgerStorage<Datum>> {
     storage: Storage,
-    _datum: PhantomData<Datum>, // This is useless but makes calling it's functions easier
-    _redeemer: PhantomData<Redeemer>, // This is useless but makes calling it's functions easier
+    _datum: PhantomData<Datum>,
+    _redeemer: PhantomData<Redeemer>,
 }
 
 impl<Datum, Redeemer> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>>
 where
     Datum: Clone + Send + Sync + PartialEq,
 {
+    /// Constructor for the [`TestLedgerClient`] with an _ephemeral_ [`InMemoryStorage`]
     pub fn new_in_memory(
         signer: Address,
         outputs: Vec<(Address, Output<Datum>)>,
@@ -240,6 +253,7 @@ where
     Datum: Clone + Send + Sync + PartialEq + Into<PlutusData> + TryFrom<PlutusData>,
     T: AsRef<Path> + Send + Sync,
 {
+    /// Constructor for the [`TestLedgerClient`] with a [`LocalPersistedStorage`]
     pub fn new_local_persisted(dir: T, signer: &Address, starting_amount: u64) -> Self {
         let signer_name = "Alice";
         let block_length = 20;
@@ -260,6 +274,7 @@ where
         }
     }
 
+    /// Constructor for the [`TestLedgerClient`] with a [`LocalPersistedStorage`] that loads the data from the given directory
     pub fn load_local_persisted(dir: T) -> Self {
         let storage = LocalPersistedStorage::load(dir);
         let _ = storage.get_data();
@@ -276,18 +291,22 @@ where
     Datum: Clone + Send + Sync + PartialEq,
     Storage: TestLedgerStorage<Datum> + Send + Sync,
 {
+    /// Get the current time in seconds
     pub async fn current_time_secs(&self) -> LedgerClientResult<i64> {
         self.storage.current_time().await
     }
 
+    /// Set the current time in seconds
     pub async fn set_current_time_secs(&self, posix_time: i64) -> LedgerClientResult<()> {
         self.storage.set_current_time(posix_time).await
     }
 
+    /// Advances the time by one block length
     pub async fn advance_time_one_block(&self) -> LedgerClientResult<()> {
         self.advance_time_n_blocks(1).await
     }
 
+    /// Advances the time by the given number of block lengths
     pub async fn advance_time_n_blocks(&self, n_blocks: i64) -> LedgerClientResult<()> {
         let block_length = self.storage.get_block_length().await?;
         let current_time = self.storage.current_time().await?;
