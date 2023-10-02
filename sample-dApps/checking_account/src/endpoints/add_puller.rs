@@ -8,7 +8,7 @@ use naumachia::{
     policy_id::PolicyId,
     scripts::context::{pub_key_hash_from_address_if_available, PubKeyHash},
     scripts::MintingPolicy,
-    scripts::ValidatorCode,
+    scripts::Validator,
     transaction::TxActions,
     values::Values,
 };

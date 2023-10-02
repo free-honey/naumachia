@@ -11,7 +11,7 @@ use naumachia::{
     ledger_client::LedgerClient,
     policy_id::PolicyId,
     scripts::context::pub_key_hash_from_address_if_available,
-    scripts::{MintingPolicy, ValidatorCode},
+    scripts::{MintingPolicy, Validator},
     smart_contract::{SmartContract, SmartContractTrait},
     Address, Network,
 };

@@ -2,7 +2,7 @@ use crate::trireme_ledger_client::cml_client::network_settings::NetworkSettings;
 use crate::{
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::{Output, UnbuiltOutput},
-    scripts::ValidatorCode,
+    scripts::Validator,
     transaction::{TransactionVersion, TxId},
     trireme_ledger_client::cml_client::issuance_helpers::{
         cml_v1_script_from_nau_policy, cml_v2_script_from_nau_policy,
@@ -256,7 +256,7 @@ where
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<InputBuilderResult> {
         let tx_hash = input_tx_hash(input).await?;
         let cml_script = cml_v1_script_from_nau_script(script).await?;
@@ -292,7 +292,7 @@ where
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<InputBuilderResult> {
         let tx_hash = input_tx_hash(input).await?;
         let cml_script = cml_v2_script_from_nau_script(script).await?;
@@ -326,7 +326,7 @@ where
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
         let cml_input = self
             .build_v1_cml_script_input(input, redeemer, script)
@@ -343,7 +343,7 @@ where
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
         let cml_input = self
             .build_v2_cml_script_input(input, redeemer, script)

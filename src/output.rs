@@ -1,4 +1,4 @@
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
+use crate::scripts::plutus_validator::plutus_data::PlutusData;
 use pallas_addresses::Address;
 use serde::{Deserialize, Serialize};
 

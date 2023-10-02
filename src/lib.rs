@@ -19,6 +19,7 @@ pub mod logic;
 pub mod output;
 /// `PolicyId` type module
 pub mod policy_id;
+/// On-chain script module
 pub mod scripts;
 pub mod smart_contract;
 pub mod transaction;

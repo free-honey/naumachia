@@ -1,11 +1,11 @@
+use naumachia::scripts::plutus_validator::PlutusValidator;
 use naumachia::scripts::raw_script::BlueprintFile;
-use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const BLUEPRINT: &str = include_str!("../../always_succeeds/plutus.json");
 const VALIDATOR_NAME: &str = "always_true.spend";
 
-pub fn get_script() -> ScriptResult<RawPlutusValidator<(), ()>> {
+pub fn get_script() -> ScriptResult<PlutusValidator<(), ()>> {
     let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     let validator_blueprint =
@@ -15,7 +15,7 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<(), ()>> {
                 "Validator not listed in Blueprint: {:?}",
                 VALIDATOR_NAME
             )))?;
-    let raw_script_validator = RawPlutusValidator::from_blueprint(validator_blueprint)
+    let raw_script_validator = PlutusValidator::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
@@ -24,7 +24,7 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<(), ()>> {
 mod tests {
     use super::*;
     use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
-    use naumachia::scripts::ValidatorCode;
+    use naumachia::scripts::Validator;
     use naumachia::Address;
 
     #[test]

@@ -5,7 +5,7 @@ use crate::{
         test_ledger_client::TestLedgerClient, LedgerClient, LedgerClientError, LedgerClientResult,
     },
     output::Output,
-    scripts::raw_validator_script::plutus_data::PlutusData,
+    scripts::plutus_validator::plutus_data::PlutusData,
     transaction::TxId,
     trireme_ledger_client::cml_client::blockfrost_ledger::BlockfrostApiKey,
     trireme_ledger_client::raw_secret_phrase::RawSecretPhraseKeys,

@@ -3,7 +3,7 @@ use crate::scripts::MintingPolicy;
 use crate::{
     ledger_client::{LedgerClientError, LedgerClientResult},
     output::Output,
-    scripts::ValidatorCode,
+    scripts::Validator,
     trireme_ledger_client::cml_client::{
         error::CMLLCError::JsError, plutus_data_interop::PlutusDataInterop, UTxO,
     },
@@ -390,7 +390,7 @@ pub(crate) async fn input_tx_hash<Datum>(
 }
 
 pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
-    script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+    script: &(dyn Validator<Datum, Redeemer> + '_),
 ) -> LedgerClientResult<PlutusScript> {
     let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
     let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;
@@ -402,7 +402,7 @@ pub(crate) async fn cml_v1_script_from_nau_script<Datum, Redeemer>(
 }
 
 pub(crate) async fn cml_v2_script_from_nau_script<Datum, Redeemer>(
-    script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+    script: &(dyn Validator<Datum, Redeemer> + '_),
 ) -> LedgerClientResult<PlutusScript> {
     let script_hex = script.script_hex().map_err(as_failed_to_issue_tx)?;
     let script_bytes = hex::decode(script_hex).map_err(as_failed_to_issue_tx)?;

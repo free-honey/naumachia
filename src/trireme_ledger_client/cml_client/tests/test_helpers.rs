@@ -1,10 +1,10 @@
+use crate::scripts::plutus_validator::PlutusValidator;
 use crate::scripts::raw_script::PlutusScriptFile;
-use crate::scripts::raw_validator_script::RawPlutusValidator;
 use crate::transaction::TransactionVersion;
 use crate::trireme_ledger_client::Network;
 use crate::{
     output::{Output, UnbuiltOutput},
-    scripts::ValidatorCode,
+    scripts::Validator,
     values::Values,
     Address, PolicyId, UnbuiltTransaction,
 };
@@ -78,8 +78,8 @@ pub fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
 }
 
 pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTransaction<(), ()> {
-    let script = RawPlutusValidator::new_v1(always_succeeds_hex()).unwrap();
-    let script = Box::new(script) as Box<dyn ValidatorCode<(), ()>>;
+    let script = PlutusValidator::new_v1(always_succeeds_hex()).unwrap();
+    let script = Box::new(script) as Box<dyn Validator<(), ()>>;
     UnbuiltTransaction {
         script_version: TransactionVersion::V1,
         script_inputs: vec![(script_input.clone(), (), script)],

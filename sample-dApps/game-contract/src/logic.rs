@@ -6,7 +6,7 @@ use naumachia::{
     logic::SCLogic,
     output::{Output, OutputId},
     policy_id::PolicyId,
-    scripts::ValidatorCode,
+    scripts::Validator,
     transaction::TxActions,
     values::Values,
 };

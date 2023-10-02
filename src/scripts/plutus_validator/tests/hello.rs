@@ -1,7 +1,7 @@
 use crate::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
+use crate::scripts::plutus_validator::PlutusValidator;
 use crate::scripts::raw_script::PlutusScriptFile;
-use crate::scripts::raw_validator_script::RawPlutusValidator;
-use crate::scripts::{ScriptError, ValidatorCode};
+use crate::scripts::{ScriptError, Validator};
 use pallas_addresses::Address;
 
 /// run :: HelloDatum -> HelloRedeemer -> ScriptContext -> Bool
@@ -24,7 +24,7 @@ fn hello_script_file() -> PlutusScriptFile {
 #[test]
 fn execute_hello_passes() {
     let script_file = hello_script_file();
-    let script = RawPlutusValidator::new_v1(script_file).unwrap();
+    let script = PlutusValidator::new_v1(script_file).unwrap();
 
     let datum: u64 = 50;
     let redeemer: u64 = 49;
@@ -40,7 +40,7 @@ fn execute_hello_passes() {
 #[test]
 fn execute_hello_fails() {
     let script_file = hello_script_file();
-    let script = RawPlutusValidator::new_v1(script_file).unwrap();
+    let script = PlutusValidator::new_v1(script_file).unwrap();
 
     let datum: u64 = 50;
     let redeemer: u64 = 51;

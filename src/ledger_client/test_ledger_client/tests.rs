@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use super::*;
-use crate::scripts::{ExecutionCost, MintingPolicy, ScriptError, ScriptResult, ValidatorCode};
+use crate::scripts::{ExecutionCost, MintingPolicy, ScriptError, ScriptResult, Validator};
 use crate::transaction::TransactionVersion;
 use crate::{
     ledger_client::{
@@ -209,7 +209,7 @@ async fn cannot_transfer_after_valid_range() {
 #[derive(Clone, Copy)]
 struct AlwaysTrueFakeValidator;
 
-impl ValidatorCode<(), ()> for AlwaysTrueFakeValidator {
+impl Validator<(), ()> for AlwaysTrueFakeValidator {
     fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
         Ok(ExecutionCost::default())
     }
@@ -273,7 +273,7 @@ async fn redeeming_datum() {
         .pop()
         .unwrap();
 
-    let script_box: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let script_box: Box<dyn Validator<(), ()>> = Box::new(validator);
     let redemption_details = (output, (), script_box);
 
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
@@ -301,7 +301,7 @@ async fn redeeming_datum() {
 
 struct AlwaysFailsFakeValidator;
 
-impl ValidatorCode<(), ()> for AlwaysFailsFakeValidator {
+impl Validator<(), ()> for AlwaysFailsFakeValidator {
     fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
         Err(ScriptError::FailedToExecute(
             "Should always fail!".to_string(),
@@ -367,7 +367,7 @@ async fn failing_script_will_not_redeem() {
         .pop()
         .unwrap();
 
-    let script_box: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let script_box: Box<dyn Validator<(), ()>> = Box::new(validator);
     let redemption_details = (output, (), script_box);
 
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
@@ -430,8 +430,8 @@ async fn cannot_redeem_datum_twice() {
         .unwrap();
 
     // When
-    let script_box_1: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
-    let script_box_2: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let script_box_1: Box<dyn Validator<(), ()>> = Box::new(validator);
+    let script_box_2: Box<dyn Validator<(), ()>> = Box::new(validator);
     let redemption_details_1 = (output.clone(), (), script_box_1);
     let redemption_details_2 = (output, (), script_box_2);
 
@@ -598,7 +598,7 @@ async fn spends_specific_script_value() {
 
     let script_box: Box<dyn MintingPolicy<()>> = Box::new(policy);
 
-    let boxed_validator: Box<dyn ValidatorCode<(), ()>> = Box::new(validator);
+    let boxed_validator: Box<dyn Validator<(), ()>> = Box::new(validator);
     let redeem_info = (input, (), boxed_validator);
     let tx: UnbuiltTransaction<(), ()> = UnbuiltTransaction {
         script_version: TransactionVersion::V2,

@@ -17,7 +17,7 @@ use crate::{
     },
     scripts::{
         context::{CtxScriptPurpose, CtxValue, Input, TxContext, ValidRange},
-        raw_validator_script::plutus_data::PlutusData,
+        plutus_validator::plutus_data::PlutusData,
     },
     transaction::TxId,
     values::Values,

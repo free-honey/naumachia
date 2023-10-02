@@ -12,7 +12,7 @@ use thiserror::Error;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
 use crate::output::OutputId;
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
+use crate::scripts::plutus_validator::plutus_data::PlutusData;
 use crate::{
     ledger_client::{test_ledger_client::TestLedgerStorage, LedgerClientError, LedgerClientResult},
     output::Output,

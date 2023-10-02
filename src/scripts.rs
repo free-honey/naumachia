@@ -3,13 +3,16 @@ use pallas_addresses::{Address, Network};
 use std::fmt::Debug;
 use thiserror::Error;
 
-pub mod raw_policy_script;
-pub mod raw_script;
-pub mod raw_validator_script;
-
+/// Script context types
 pub mod context;
+/// Adapter code for [`MintingPolicy`]
+pub mod plutus_minting_policy;
+/// Adapter code for [`Validator`]
+pub mod plutus_validator;
+/// Raw script types
+pub mod raw_script;
 
-pub trait ValidatorCode<D, R>: Send + Sync {
+pub trait Validator<D, R>: Send + Sync {
     fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost>;
     fn address(&self, network: Network) -> ScriptResult<Address>;
     fn script_hex(&self) -> ScriptResult<String>;

@@ -5,7 +5,7 @@ use crate::{
 use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::{
     ledger_client::LedgerClient, policy_id::PolicyId,
-    scripts::context::pub_key_hash_from_address_if_available, scripts::ValidatorCode,
+    scripts::context::pub_key_hash_from_address_if_available, scripts::Validator,
 };
 
 pub async fn get_my_accounts<LC: LedgerClient<CheckingAccountDatums, ()>>(

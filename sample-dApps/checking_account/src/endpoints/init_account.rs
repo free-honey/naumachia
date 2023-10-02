@@ -9,7 +9,7 @@ use naumachia::{
     output::Output,
     policy_id::PolicyId,
     scripts::context::pub_key_hash_from_address_if_available,
-    scripts::ValidatorCode,
+    scripts::Validator,
     scripts::{MintingPolicy, ScriptError},
     transaction::TxActions,
     values::Values,

@@ -2,11 +2,11 @@ use crate::{
     scripts::{
         as_failed_to_execute,
         context::TxContext,
+        plutus_validator::plutus_data::{BigInt, Constr, PlutusData},
         raw_script::{
             PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult, ValidatorBlueprint,
         },
-        raw_validator_script::plutus_data::{BigInt, Constr, PlutusData},
-        ScriptError, ScriptResult, ValidatorCode,
+        ScriptError, ScriptResult, Validator,
     },
     transaction::TransactionVersion,
 };
@@ -33,14 +33,14 @@ pub mod plutus_data;
 mod tests;
 
 // TODO: Maybe make V1 and V2 different types? We want to protect the end user better!
-pub struct RawPlutusValidator<Datum, Redeemer> {
+pub struct PlutusValidator<Datum, Redeemer> {
     version: TransactionVersion,
     cbor: Vec<u8>,
     _datum: PhantomData<Datum>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<D, R> RawPlutusValidator<D, R> {
+impl<D, R> PlutusValidator<D, R> {
     pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
@@ -48,7 +48,7 @@ impl<D, R> RawPlutusValidator<D, R> {
         let outer = outer_decoder
             .bytes()
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v1_policy = RawPlutusValidator {
+        let v1_policy = PlutusValidator {
             version: TransactionVersion::V1,
             cbor: outer.to_vec(),
             _datum: Default::default(),
@@ -64,7 +64,7 @@ impl<D, R> RawPlutusValidator<D, R> {
         let outer = outer_decoder
             .bytes()
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_policy = RawPlutusValidator {
+        let v2_policy = PlutusValidator {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
             _datum: Default::default(),
@@ -76,7 +76,7 @@ impl<D, R> RawPlutusValidator<D, R> {
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_policy = RawPlutusValidator {
+        let v2_policy = PlutusValidator {
             version: TransactionVersion::V2,
             cbor,
             _datum: Default::default(),
@@ -88,7 +88,7 @@ impl<D, R> RawPlutusValidator<D, R> {
     pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
         let cbor =
             hex::decode(cbor).map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_policy = RawPlutusValidator {
+        let v2_policy = PlutusValidator {
             version: TransactionVersion::V2,
             cbor,
             _datum: Default::default(),
@@ -137,7 +137,7 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
         Ok(v2_val)
     }
 
-    pub fn apply(&self, one: One) -> RawPlutusScriptResult<RawPlutusValidator<D, R>> {
+    pub fn apply(&self, one: One) -> RawPlutusScriptResult<PlutusValidator<D, R>> {
         let program: Program<NamedDeBruijn> =
             Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
                 .unwrap()
@@ -149,7 +149,7 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
         let new_cbor = fake
             .to_cbor()
             .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let policy = RawPlutusValidator {
+        let policy = PlutusValidator {
             version: self.version.clone(),
             cbor: new_cbor,
             _datum: Default::default(),
@@ -209,7 +209,7 @@ impl From<BigInt> for AikenBigInt {
     }
 }
 
-impl<Datum, Redeemer> ValidatorCode<Datum, Redeemer> for RawPlutusValidator<Datum, Redeemer>
+impl<Datum, Redeemer> Validator<Datum, Redeemer> for PlutusValidator<Datum, Redeemer>
 where
     Datum: Into<PlutusData> + Send + Sync,
     Redeemer: Into<PlutusData> + Send + Sync,

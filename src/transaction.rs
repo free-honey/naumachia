@@ -4,7 +4,7 @@ use crate::{
     error::*,
     output::{Output, UnbuiltOutput},
     policy_id::PolicyId,
-    scripts::{MintingPolicy, ValidatorCode},
+    scripts::{MintingPolicy, Validator},
     values::Values,
 };
 use pallas_addresses::Address;
@@ -34,7 +34,7 @@ pub enum Action<Datum, Redeemer> {
     RedeemScriptOutput {
         output: Output<Datum>,
         redeemer: Redeemer,
-        script: Box<dyn ValidatorCode<Datum, Redeemer>>, // Is there a way to do this without `dyn`?
+        script: Box<dyn Validator<Datum, Redeemer>>, // Is there a way to do this without `dyn`?
     },
     SpecificInput {
         input: Output<Datum>,
@@ -110,7 +110,7 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
         mut self,
         output: Output<Datum>,
         redeemer: Redeemer,
-        script: Box<dyn ValidatorCode<Datum, Redeemer>>,
+        script: Box<dyn Validator<Datum, Redeemer>>,
     ) -> Self {
         let action = Action::RedeemScriptOutput {
             output,

@@ -4,7 +4,7 @@ use crate::{
 };
 use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::{
-    ledger_client::LedgerClient, output::OutputId, policy_id::PolicyId, scripts::ValidatorCode,
+    ledger_client::LedgerClient, output::OutputId, policy_id::PolicyId, scripts::Validator,
     transaction::TxActions, values::Values,
 };
 

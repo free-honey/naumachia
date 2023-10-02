@@ -1,4 +1,4 @@
-use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use crate::scripts::plutus_validator::plutus_data::{BigInt, Constr, PlutusData};
 use cardano_multiplatform_lib::{
     ledger::common::value::BigInt as CMLBigInt,
     plutus::{

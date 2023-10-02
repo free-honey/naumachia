@@ -47,7 +47,7 @@ impl From<ClearString> for PlutusData {
 #[test]
 fn execute_game_passes() {
     let script_file = game_script_file();
-    let script = RawPlutusValidator::new_v1(script_file).unwrap();
+    let script = PlutusValidator::new_v1(script_file).unwrap();
 
     let word = "konnichiwa";
 
@@ -66,7 +66,7 @@ fn execute_game_passes() {
 #[test]
 fn execute_game_fails() {
     let script_file = game_script_file();
-    let script = RawPlutusValidator::new_v1(script_file).unwrap();
+    let script = PlutusValidator::new_v1(script_file).unwrap();
 
     let word = "konnichiwa";
     let bad_guess = "kombanwa";

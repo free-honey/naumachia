@@ -1,4 +1,4 @@
-use crate::scripts::ValidatorCode;
+use crate::scripts::Validator;
 use crate::{error::Result, ledger_client::LedgerClient, output::Output, TxActions};
 use pallas_addresses::Address;
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
@@ -19,11 +19,8 @@ where
     pub(crate) ledger_client: LC,
 }
 
-pub type RedemptionDetails<Datum, Redeemer> = (
-    Output<Datum>,
-    Redeemer,
-    Box<dyn ValidatorCode<Datum, Redeemer>>,
-);
+pub type RedemptionDetails<Datum, Redeemer> =
+    (Output<Datum>, Redeemer, Box<dyn Validator<Datum, Redeemer>>);
 
 impl<Datum, Redeemer, LC> Backend<Datum, Redeemer, LC>
 where

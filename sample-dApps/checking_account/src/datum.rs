@@ -1,5 +1,5 @@
 use naumachia::scripts::context::PubKeyHash;
-use naumachia::scripts::raw_validator_script::plutus_data::{Constr, PlutusData};
+use naumachia::scripts::plutus_validator::plutus_data::{Constr, PlutusData};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum CheckingAccountDatums {
