@@ -95,7 +95,7 @@ impl Values {
     }
 }
 
-pub fn add_to_map(h_map: &mut HashMap<PolicyId, u64>, policy: PolicyId, amount: u64) {
+pub(crate) fn add_to_map(h_map: &mut HashMap<PolicyId, u64>, policy: PolicyId, amount: u64) {
     let mut new_total = amount;
     if let Some(total) = h_map.get(&policy) {
         new_total += total;

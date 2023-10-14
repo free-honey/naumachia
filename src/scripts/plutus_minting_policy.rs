@@ -6,7 +6,7 @@ use crate::{
     scripts::{
         as_failed_to_execute,
         plutus_validator::plutus_data::PlutusData,
-        raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult},
+        raw_script::{PlutusScriptError, PlutusScriptFile, RawPlutusScriptResult},
         MintingPolicy, ScriptResult,
     },
     transaction::TransactionVersion,
@@ -31,11 +31,11 @@ impl<R> PlutusMintingPolicy<R> {
     /// Constructor for new V1 [`PlutusMintingPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v1_policy = PlutusMintingPolicy {
             version: TransactionVersion::V1,
             cbor: outer.to_vec(),
@@ -47,11 +47,11 @@ impl<R> PlutusMintingPolicy<R> {
     /// Constructor for new V2 [`PlutusMintingPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusMintingPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
@@ -63,7 +63,7 @@ impl<R> PlutusMintingPolicy<R> {
     /// Constructor for new V2 [`PlutusMintingPolicy`] from a [`ValidatorBlueprint`]
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusMintingPolicy {
             version: TransactionVersion::V2,
             cbor,
@@ -74,8 +74,7 @@ impl<R> PlutusMintingPolicy<R> {
 
     /// Constructor for new V2 [`PlutusMintingPolicy`] from a CBOR hex string
     pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
-        let cbor =
-            hex::decode(cbor).map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let cbor = hex::decode(cbor).map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusMintingPolicy {
             version: TransactionVersion::V2,
             cbor,
@@ -97,11 +96,11 @@ impl<One: Into<PlutusData>, R> OneParamPlutusPolicy<One, R> {
     /// Constructor for new V2 [`OneParamPlutusPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_val = OneParamPlutusPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
@@ -114,7 +113,7 @@ impl<One: Into<PlutusData>, R> OneParamPlutusPolicy<One, R> {
     /// Constructor for new V2 [`OneParamPlutusPolicy`] from a [`ValidatorBlueprint`]
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_val = OneParamPlutusPolicy {
             version: TransactionVersion::V2,
             cbor,
@@ -136,7 +135,7 @@ impl<One: Into<PlutusData>, R> OneParamPlutusPolicy<One, R> {
         let fake: Program<FakeNamedDeBruijn> = program.into();
         let new_cbor = fake
             .to_cbor()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let policy = PlutusMintingPolicy {
             version: self.version.clone(),
             cbor: new_cbor,
@@ -159,11 +158,11 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamMintingPolicy<One,
     /// Constructor for new V2 [`TwoParamMintingPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_pol = TwoParamMintingPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
@@ -177,7 +176,7 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamMintingPolicy<One,
     /// Constructor for new V2 [`TwoParamMintingPolicy`] from a [`ValidatorBlueprint`]
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_pol = TwoParamMintingPolicy {
             version: TransactionVersion::V2,
             cbor,
@@ -200,7 +199,7 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamMintingPolicy<One,
         let fake: Program<FakeNamedDeBruijn> = program.into();
         let new_cbor = fake
             .to_cbor()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let policy = OneParamPlutusPolicy {
             version: self.version.clone(),
             cbor: new_cbor,
@@ -234,7 +233,7 @@ where
         let cost = eval_result.cost();
         eval_result
             .result()
-            .map_err(|e| RawPlutusScriptError::AikenEval {
+            .map_err(|e| PlutusScriptError::AikenEval {
                 error: format!("{e:?}"),
                 logs,
             })

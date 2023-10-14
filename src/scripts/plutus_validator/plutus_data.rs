@@ -18,6 +18,7 @@ pub enum PlutusData {
 }
 
 impl PlutusData {
+    /// Hash the PlutusData with blake2b256
     pub fn hash(&self) -> Vec<u8> {
         // TODO: I'd prefer not to be taking a dep on CML here
         use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;
@@ -26,6 +27,7 @@ impl PlutusData {
         hash_plutus_data(&cml_data).to_bytes().to_vec()
     }
 
+    /// Raw bytes of PlutusData
     pub fn bytes(&self) -> Vec<u8> {
         // TODO: I'd prefer not to be taking a dep on CML here
         use crate::trireme_ledger_client::cml_client::plutus_data_interop::PlutusDataInterop;

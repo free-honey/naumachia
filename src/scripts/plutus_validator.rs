@@ -4,7 +4,7 @@ use crate::{
         context::TxContext,
         plutus_validator::plutus_data::{BigInt, Constr, PlutusData},
         raw_script::{
-            PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult, ValidatorBlueprint,
+            PlutusScriptError, PlutusScriptFile, RawPlutusScriptResult, ValidatorBlueprint,
         },
         ScriptError, ScriptResult, Validator,
     },
@@ -27,12 +27,14 @@ use uplc::{
     BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
 };
 
+#[allow(missing_docs)]
 pub mod plutus_data;
 
 #[cfg(test)]
 mod tests;
 
 // TODO: Maybe make V1 and V2 different types? We want to protect the end user better!
+/// Implementatoin of `Validator` for compiled UPLC code
 pub struct PlutusValidator<Datum, Redeemer> {
     version: TransactionVersion,
     cbor: Vec<u8>,
@@ -41,13 +43,14 @@ pub struct PlutusValidator<Datum, Redeemer> {
 }
 
 impl<D, R> PlutusValidator<D, R> {
+    /// Create a new V1 `PlutusValidator` from a [`PlutusScriptFile`]
     pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v1_policy = PlutusValidator {
             version: TransactionVersion::V1,
             cbor: outer.to_vec(),
@@ -57,13 +60,14 @@ impl<D, R> PlutusValidator<D, R> {
         Ok(v1_policy)
     }
 
+    /// Create a new V2 `PlutusValidator` from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusValidator {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
@@ -73,9 +77,10 @@ impl<D, R> PlutusValidator<D, R> {
         Ok(v2_policy)
     }
 
+    /// Create a new V2 `PlutusValidator` from a [`ValidatorBlueprint`] based on CIP-0057
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusValidator {
             version: TransactionVersion::V2,
             cbor,
@@ -85,9 +90,9 @@ impl<D, R> PlutusValidator<D, R> {
         Ok(v2_policy)
     }
 
+    /// Create a new V2 `PlutusValidator` from a CBOR string
     pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
-        let cbor =
-            hex::decode(cbor).map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+        let cbor = hex::decode(cbor).map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusValidator {
             version: TransactionVersion::V2,
             cbor,
@@ -98,6 +103,7 @@ impl<D, R> PlutusValidator<D, R> {
     }
 }
 
+/// A builder for a `PlutusValidator` that takes one parameter
 pub struct OneParamRawValidator<One, Datum, Redeemer> {
     version: TransactionVersion,
     cbor: Vec<u8>,
@@ -107,13 +113,14 @@ pub struct OneParamRawValidator<One, Datum, Redeemer> {
 }
 
 impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
+    /// Create a new V2 `OneParamRawValidator` from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_val = OneParamRawValidator {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
@@ -124,9 +131,10 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
         Ok(v2_val)
     }
 
+    /// Create a new V2 `OneParamRawValidator` from a [`ValidatorBlueprint`] based on CIP-0057
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_val = OneParamRawValidator {
             version: TransactionVersion::V2,
             cbor,
@@ -137,6 +145,7 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
         Ok(v2_val)
     }
 
+    /// Apply the parameter to the validator to get a full [`PlutusValidator`]
     pub fn apply(&self, one: One) -> RawPlutusScriptResult<PlutusValidator<D, R>> {
         let program: Program<NamedDeBruijn> =
             Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
@@ -148,7 +157,7 @@ impl<One: Into<PlutusData>, D, R> OneParamRawValidator<One, D, R> {
         let fake: Program<FakeNamedDeBruijn> = program.into();
         let new_cbor = fake
             .to_cbor()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let policy = PlutusValidator {
             version: self.version.clone(),
             cbor: new_cbor,
@@ -242,7 +251,7 @@ where
         let cost = eval_result.cost();
         eval_result
             .result()
-            .map_err(|e| RawPlutusScriptError::AikenEval {
+            .map_err(|e| PlutusScriptError::AikenEval {
                 error: format!("{e:?}"),
                 logs,
             })

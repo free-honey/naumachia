@@ -85,10 +85,13 @@ pub fn pub_key_hash_from_address_if_available(address: &Address) -> Option<PubKe
     }
 }
 
-/// Valid range of tx in milliseconds
+// TODO: Remove the inclusive bool. It's not needed.
+/// Valid range of tx in milliseconds, and a `bool` specifying inclusive. If `None`, then the range is unbounded.
 #[derive(Clone, Debug)]
 pub struct ValidRange {
+    /// Lower bound of valid range
     pub lower: Option<(i64, bool)>,
+    /// Upper bound of valid range
     pub upper: Option<(i64, bool)>,
 }
 
