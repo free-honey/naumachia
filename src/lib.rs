@@ -21,7 +21,9 @@ pub mod output;
 pub mod policy_id;
 /// On-chain script module
 pub mod scripts;
+/// Smart contract module
 pub mod smart_contract;
+/// Transaction module
 pub mod transaction;
 
 pub mod backend;

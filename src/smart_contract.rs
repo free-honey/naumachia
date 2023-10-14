@@ -37,6 +37,7 @@ where
     Logic: SCLogic,
     LC: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
+    /// Constructor for standard SmartContract impl
     pub fn new(offchain_logic: Logic, backend: LC) -> Self {
         SmartContract {
             offchain_logic,
