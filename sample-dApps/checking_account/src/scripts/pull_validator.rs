@@ -1,12 +1,12 @@
 use crate::datum::CheckingAccountDatums;
+use naumachia::scripts::plutus_validator::PlutusValidator;
 use naumachia::scripts::raw_script::BlueprintFile;
-use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const SCRIPT_RAW: &str = include_str!("../../checking/plutus.json");
 const VALIDATOR_NAME: &str = "pull_validator.spend";
 
-pub fn pull_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums, ()>> {
+pub fn pull_validator() -> ScriptResult<PlutusValidator<CheckingAccountDatums, ()>> {
     let blueprint: BlueprintFile = serde_json::from_str(SCRIPT_RAW)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     let validator_blueprint =
@@ -16,7 +16,7 @@ pub fn pull_validator() -> ScriptResult<RawPlutusValidator<CheckingAccountDatums
                 "Validator not listed in Blueprint: {:?}",
                 VALIDATOR_NAME
             )))?;
-    let raw_script_validator = RawPlutusValidator::from_blueprint(validator_blueprint)
+    let raw_script_validator = PlutusValidator::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
@@ -30,7 +30,7 @@ mod tests {
     use naumachia::scripts::context::{
         pub_key_hash_from_address_if_available, ContextBuilder, PubKeyHash, TxContext,
     };
-    use naumachia::scripts::ValidatorCode;
+    use naumachia::scripts::Validator;
     use naumachia::Network;
 
     struct PullTestContext {

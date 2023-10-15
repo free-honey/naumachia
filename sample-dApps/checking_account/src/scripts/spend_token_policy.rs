@@ -1,7 +1,7 @@
 use naumachia::scripts::context::PubKeyHash;
-use naumachia::scripts::raw_policy_script::TwoParamRawPolicy;
+use naumachia::scripts::plutus_minting_policy::TwoParamMintingPolicy;
+use naumachia::scripts::plutus_validator::plutus_data::PlutusData;
 use naumachia::scripts::raw_script::BlueprintFile;
-use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
 use naumachia::scripts::{ScriptError, ScriptResult};
 
 const BLUEPRINT: &str = include_str!("../../checking/plutus.json");
@@ -40,7 +40,7 @@ impl From<Owner> for PlutusData {
     }
 }
 
-pub fn spend_token_policy() -> ScriptResult<TwoParamRawPolicy<CheckingAccountNFT, Owner, ()>> {
+pub fn spend_token_policy() -> ScriptResult<TwoParamMintingPolicy<CheckingAccountNFT, Owner, ()>> {
     let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     let validator_blueprint =
@@ -50,7 +50,7 @@ pub fn spend_token_policy() -> ScriptResult<TwoParamRawPolicy<CheckingAccountNFT
                 "Validator not listed in Blueprint: {:?}",
                 VALIDATOR_NAME
             )))?;
-    let raw_script_validator = TwoParamRawPolicy::from_blueprint(validator_blueprint)
+    let raw_script_validator = TwoParamMintingPolicy::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }

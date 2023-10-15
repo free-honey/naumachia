@@ -4,14 +4,14 @@ use crate::{
     AllowedPuller, CheckingAccount, CheckingAccountEndpoints, CheckingAccountLogic,
     CHECKING_ACCOUNT_NFT_ASSET_NAME, SPEND_TOKEN_ASSET_NAME,
 };
+use naumachia::logic::error::SCLogicError;
 use naumachia::{
-    address::PolicyId,
     error::Error,
     ledger_client::test_ledger_client::TestLedgerClientBuilder,
     ledger_client::LedgerClient,
-    logic::SCLogicError,
+    policy_id::PolicyId,
     scripts::context::pub_key_hash_from_address_if_available,
-    scripts::{MintingPolicy, ValidatorCode},
+    scripts::{MintingPolicy, Validator},
     smart_contract::{SmartContract, SmartContractTrait},
     Address, Network,
 };

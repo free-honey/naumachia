@@ -17,16 +17,19 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
 
+/// A Ledger implementation that uses Blockfrost as a backend
 pub struct BlockFrostLedger {
     client: BlockFrostHttp,
 }
 
 impl BlockFrostLedger {
+    /// Constructor for BlockFrostLedger
     pub fn new(url: &str, key: &str) -> Self {
         let client = BlockFrostHttp::new(url, key);
         BlockFrostLedger { client }
     }
 
+    /// Convert a Blockfrost representation of a UTxO to a CML representation
     // TODO: Handle V2 outputs (with inline datums)
     async fn bfutxo_to_utxo(&self, bf_utxo: &BFUTxO) -> Result<UTxO> {
         let tx_hash = TransactionHash::from_hex(bf_utxo.tx_hash())
@@ -63,6 +66,7 @@ impl BlockFrostLedger {
     }
 }
 
+/// Convert a list of Blockfrost values to a CML value
 pub fn cmlvalue_from_bfvalues(values: &[BFValue]) -> Result<CMLValue> {
     let mut cml_value = CMLValue::zero();
     for value in values.iter() {
@@ -207,6 +211,7 @@ fn spend_from_bf_spend(
     }
 }
 
+/// API key for Blockfrost
 #[derive(Serialize, Deserialize)]
 pub struct BlockfrostApiKey {
     inner: String,
@@ -233,6 +238,7 @@ impl FromStr for BlockfrostApiKey {
     }
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum BlockfrostLedgerError {
     #[error("No config directory for raw phrase file: {0:?}")]

@@ -2,12 +2,10 @@ use crate::{
     checking_account_validator, pull_validator, Account, AccountPuller, CheckingAccountDatums,
     CheckingAccountLookupResponses, CHECKING_ACCOUNT_NFT_ASSET_NAME,
 };
+use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::{
-    address::PolicyId,
-    ledger_client::LedgerClient,
-    logic::{SCLogicError, SCLogicResult},
-    scripts::context::pub_key_hash_from_address_if_available,
-    scripts::ValidatorCode,
+    ledger_client::LedgerClient, policy_id::PolicyId,
+    scripts::context::pub_key_hash_from_address_if_available, scripts::Validator,
 };
 
 pub async fn get_my_accounts<LC: LedgerClient<CheckingAccountDatums, ()>>(

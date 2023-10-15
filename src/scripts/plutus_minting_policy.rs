@@ -5,8 +5,8 @@ use crate::{
     scripts::ScriptError,
     scripts::{
         as_failed_to_execute,
-        raw_script::{PlutusScriptFile, RawPlutusScriptError, RawPlutusScriptResult},
-        raw_validator_script::plutus_data::PlutusData,
+        plutus_validator::plutus_data::PlutusData,
+        raw_script::{PlutusScriptError, PlutusScriptFile, RawPlutusScriptResult},
         MintingPolicy, ScriptResult,
     },
     transaction::TransactionVersion,
@@ -20,21 +20,23 @@ use uplc::{
     machine::cost_model::ExBudget,
 };
 
-pub struct RawPolicy<Redeemer> {
+/// Implementation of [`MintingPolicy`] for UPLC Minting Policies
+pub struct PlutusMintingPolicy<Redeemer> {
     version: TransactionVersion,
     cbor: Vec<u8>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<R> RawPolicy<R> {
+impl<R> PlutusMintingPolicy<R> {
+    /// Constructor for new V1 [`PlutusMintingPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v1(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v1_policy = RawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v1_policy = PlutusMintingPolicy {
             version: TransactionVersion::V1,
             cbor: outer.to_vec(),
             _redeemer: Default::default(),
@@ -42,14 +44,15 @@ impl<R> RawPolicy<R> {
         Ok(v1_policy)
     }
 
+    /// Constructor for new V2 [`PlutusMintingPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_policy = RawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = PlutusMintingPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
             _redeemer: Default::default(),
@@ -57,10 +60,11 @@ impl<R> RawPolicy<R> {
         Ok(v2_policy)
     }
 
+    /// Constructor for new V2 [`PlutusMintingPolicy`] from a [`ValidatorBlueprint`]
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_policy = RawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = PlutusMintingPolicy {
             version: TransactionVersion::V2,
             cbor,
             _redeemer: Default::default(),
@@ -68,10 +72,10 @@ impl<R> RawPolicy<R> {
         Ok(v2_policy)
     }
 
+    /// Constructor for new V2 [`PlutusMintingPolicy`] from a CBOR hex string
     pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
-        let cbor =
-            hex::decode(cbor).map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_policy = RawPolicy {
+        let cbor = hex::decode(cbor).map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_policy = PlutusMintingPolicy {
             version: TransactionVersion::V2,
             cbor,
             _redeemer: Default::default(),
@@ -80,22 +84,24 @@ impl<R> RawPolicy<R> {
     }
 }
 
-pub struct OneParamRawPolicy<One, Redeemer> {
+/// Builder for [`PlutusMintingPolicy`] that requires a single parameter
+pub struct OneParamPlutusPolicy<One, Redeemer> {
     version: TransactionVersion,
     cbor: Vec<u8>,
     _one: PhantomData<One>,
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
+impl<One: Into<PlutusData>, R> OneParamPlutusPolicy<One, R> {
+    /// Constructor for new V2 [`OneParamPlutusPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_val = OneParamRawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_val = OneParamPlutusPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
             _one: Default::default(),
@@ -104,10 +110,11 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
         Ok(v2_val)
     }
 
+    /// Constructor for new V2 [`OneParamPlutusPolicy`] from a [`ValidatorBlueprint`]
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_val = OneParamRawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_val = OneParamPlutusPolicy {
             version: TransactionVersion::V2,
             cbor,
             _one: Default::default(),
@@ -116,7 +123,8 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
         Ok(v2_val)
     }
 
-    pub fn apply(&self, one: One) -> RawPlutusScriptResult<RawPolicy<R>> {
+    /// Apply the singular parameter to the policy to get a complete [`PlutusMintingPolicy`]
+    pub fn apply(&self, one: One) -> RawPlutusScriptResult<PlutusMintingPolicy<R>> {
         let program: Program<NamedDeBruijn> =
             Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
                 .unwrap()
@@ -127,8 +135,8 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
         let fake: Program<FakeNamedDeBruijn> = program.into();
         let new_cbor = fake
             .to_cbor()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let policy = RawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let policy = PlutusMintingPolicy {
             version: self.version.clone(),
             cbor: new_cbor,
             _redeemer: Default::default(),
@@ -137,7 +145,8 @@ impl<One: Into<PlutusData>, R> OneParamRawPolicy<One, R> {
     }
 }
 
-pub struct TwoParamRawPolicy<One, Two, Redeemer> {
+/// Builder for [`PlutusMintingPolicy`] that requires two parameters
+pub struct TwoParamMintingPolicy<One, Two, Redeemer> {
     version: TransactionVersion,
     cbor: Vec<u8>,
     _one: PhantomData<One>,
@@ -145,15 +154,16 @@ pub struct TwoParamRawPolicy<One, Two, Redeemer> {
     _redeemer: PhantomData<Redeemer>,
 }
 
-impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamRawPolicy<One, Two, R> {
+impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamMintingPolicy<One, Two, R> {
+    /// Constructor for new V2 [`TwoParamMintingPolicy`] from a [`PlutusScriptFile`]
     pub fn new_v2(script_file: PlutusScriptFile) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(script_file.cborHex)
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let mut outer_decoder = Decoder::new(&cbor);
         let outer = outer_decoder
             .bytes()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_pol = TwoParamRawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_pol = TwoParamMintingPolicy {
             version: TransactionVersion::V2,
             cbor: outer.to_vec(),
             _one: Default::default(),
@@ -163,10 +173,11 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamRawPolicy<One, Two
         Ok(v2_pol)
     }
 
+    /// Constructor for new V2 [`TwoParamMintingPolicy`] from a [`ValidatorBlueprint`]
     pub fn from_blueprint(blueprint: ValidatorBlueprint) -> RawPlutusScriptResult<Self> {
         let cbor = hex::decode(blueprint.compiled_code())
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let v2_pol = TwoParamRawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let v2_pol = TwoParamMintingPolicy {
             version: TransactionVersion::V2,
             cbor,
             _one: Default::default(),
@@ -176,7 +187,8 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamRawPolicy<One, Two
         Ok(v2_pol)
     }
 
-    pub fn apply(&self, one: One) -> RawPlutusScriptResult<OneParamRawPolicy<Two, R>> {
+    /// Apply a single parameter to the policy to get a [`OneParamPlutusPolicy`]
+    pub fn apply(&self, one: One) -> RawPlutusScriptResult<OneParamPlutusPolicy<Two, R>> {
         let program: Program<NamedDeBruijn> =
             Program::<FakeNamedDeBruijn>::from_cbor(&self.cbor, &mut Vec::new())
                 .unwrap()
@@ -187,8 +199,8 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamRawPolicy<One, Two
         let fake: Program<FakeNamedDeBruijn> = program.into();
         let new_cbor = fake
             .to_cbor()
-            .map_err(|e| RawPlutusScriptError::AikenApply(e.to_string()))?;
-        let policy = OneParamRawPolicy {
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let policy = OneParamPlutusPolicy {
             version: self.version.clone(),
             cbor: new_cbor,
             _one: Default::default(),
@@ -198,7 +210,7 @@ impl<One: Into<PlutusData>, Two: Into<PlutusData>, R> TwoParamRawPolicy<One, Two
     }
 }
 
-impl<Redeemer> MintingPolicy<Redeemer> for RawPolicy<Redeemer>
+impl<Redeemer> MintingPolicy<Redeemer> for PlutusMintingPolicy<Redeemer>
 where
     Redeemer: Into<PlutusData> + Send + Sync,
 {
@@ -221,7 +233,7 @@ where
         let cost = eval_result.cost();
         eval_result
             .result()
-            .map_err(|e| RawPlutusScriptError::AikenEval {
+            .map_err(|e| PlutusScriptError::AikenEval {
                 error: format!("{e:?}"),
                 logs,
             })

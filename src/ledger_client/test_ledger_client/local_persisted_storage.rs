@@ -12,7 +12,7 @@ use thiserror::Error;
 
 use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
 use crate::output::OutputId;
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
+use crate::scripts::plutus_validator::plutus_data::PlutusData;
 use crate::{
     ledger_client::{test_ledger_client::TestLedgerStorage, LedgerClientError, LedgerClientResult},
     output::Output,
@@ -115,6 +115,7 @@ impl LedgerData {
     }
 }
 
+/// Create a starting output for a given address for testing
 pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     let tx_hash = arbitrary_tx_id().to_vec();
     let index = 0;
@@ -123,7 +124,9 @@ pub fn starting_output<Datum>(owner: &Address, amount: u64) -> Output<Datum> {
     Output::new_wallet(tx_hash, index, owner.clone(), values)
 }
 
+/// A ['TestLedgerStorage'] implementation that persists data to a local directory
 pub struct LocalPersistedStorage<T: AsRef<Path>, Datum> {
+    /// Directory of persisted storage
     dir: T,
     _datum: PhantomData<Datum>,
 }
@@ -136,6 +139,7 @@ where
     T: AsRef<Path>,
     Datum: Clone + Into<PlutusData>,
 {
+    /// Initialize a new [`LocalPersistedStorage`]
     pub fn init(
         dir: T,
         signer_name: &str,
@@ -164,6 +168,7 @@ where
         }
     }
 
+    /// Constructor for revived [`LocalPersistedStorage`]
     pub fn load(dir: T) -> Self {
         LocalPersistedStorage {
             dir,
@@ -201,6 +206,7 @@ where
         Ok(())
     }
 
+    /// Add a new identity to the ledger
     pub fn add_new_signer(&self, name: &str, address: &Address, starting_amount: u64) {
         let path_ref: &Path = self.dir.as_ref();
         let path = path_ref.to_owned().join(DATA);
@@ -213,16 +219,19 @@ where
         file.write_all(&serialized.into_bytes()).unwrap();
     }
 
+    /// Get the name of the active signer
     pub fn active_signer_name(&self) -> String {
         let data = self.get_data();
         data.active_signer_name
     }
 
+    /// Get list of all signers, active and inactive
     pub fn get_signers(&self) -> Vec<String> {
         let data = self.get_data();
         data.signers()
     }
 
+    /// Switch the active signer
     pub fn switch_signer(&self, name: &str) {
         let path_ref: &Path = self.dir.as_ref();
         let path = path_ref.to_owned().join(DATA);

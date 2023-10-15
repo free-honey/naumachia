@@ -1,12 +1,13 @@
 use crate::logic::script::get_script;
 use async_trait::async_trait;
+use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::output::DatumKind;
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
-    logic::{SCLogic, SCLogicError, SCLogicResult},
+    logic::SCLogic,
     output::{Output, OutputId},
-    scripts::ValidatorCode,
+    policy_id::PolicyId,
+    scripts::Validator,
     transaction::TxActions,
     values::Values,
 };

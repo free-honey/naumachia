@@ -6,13 +6,18 @@ use uplc::machine::cost_model::ExBudget;
 #[allow(non_snake_case)]
 #[allow(unused)]
 #[derive(Serialize, Deserialize, Debug)]
+/// Representation of a standard Plutus Script file
 pub struct PlutusScriptFile {
+    /// Type of the script
     pub r#type: String,
+    /// Description of the script
     pub description: String,
+    /// Raw CBOR script bytes
     pub cborHex: String,
 }
 
 impl PlutusScriptFile {
+    /// Constructor for a PlutusScriptFile
     pub fn new(script_type: &str, description: &str, cbor: &str) -> Self {
         PlutusScriptFile {
             r#type: script_type.to_string(),
@@ -23,17 +28,20 @@ impl PlutusScriptFile {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+/// Representation of a CIP-0057 Blueprint file
 pub struct BlueprintFile {
     preamble: Preamble,
     validators: Vec<ValidatorBlueprint>,
 }
 
 impl BlueprintFile {
+    /// Get a specific validator from the Blueprint file representation
     pub fn get_validator(&self, title: &str) -> Option<ValidatorBlueprint> {
         self.validators.iter().find(|v| v.title == title).cloned()
     }
 }
 
+/// Preable of a CIP-0057 Blueprint file
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Preamble {
     title: String,
@@ -41,6 +49,7 @@ pub struct Preamble {
     version: String,
 }
 
+/// Representation of a CIP-0057 Validator Blueprint
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ValidatorBlueprint {
@@ -52,6 +61,7 @@ pub struct ValidatorBlueprint {
 }
 
 impl ValidatorBlueprint {
+    /// Get the hex bytes of the compiled Plutus script
     pub fn compiled_code(&self) -> String {
         self.compiledCode.clone()
     }
@@ -81,8 +91,10 @@ impl ValidatorBlueprint {
 //     fields: serde_json::Value, // TODO: what is this type actually?
 // }
 
+/// Error from dealing with Plutus Scripts
+#[allow(missing_docs)]
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum RawPlutusScriptError {
+pub enum PlutusScriptError {
     #[error("Error in Aiken Apply: {0:?}")]
     AikenApply(String),
     #[error("Error in Aiken Eval: {error:?}, Logs: {logs:?}")]
@@ -91,7 +103,8 @@ pub enum RawPlutusScriptError {
     CMLError(String),
 }
 
-pub type RawPlutusScriptResult<T, E = RawPlutusScriptError> = Result<T, E>;
+#[allow(missing_docs)]
+pub type RawPlutusScriptResult<T, E = PlutusScriptError> = Result<T, E>;
 
 impl From<ExBudget> for ExecutionCost {
     fn from(value: ExBudget) -> Self {

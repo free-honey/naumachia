@@ -12,12 +12,14 @@ use std::str::FromStr;
 use thiserror::Error;
 use tokio::fs;
 
+/// Type for holding the raw secret phrase
 pub struct RawSecretPhraseKeys {
     phrase_file_path: PathBuf,
     network: u8,
 }
 
 impl RawSecretPhraseKeys {
+    /// Constructor for the [`RawSecretPhraseKeys`] struct
     pub fn new(phrase_file_path: PathBuf, network: u8) -> Self {
         RawSecretPhraseKeys {
             phrase_file_path,
@@ -26,6 +28,7 @@ impl RawSecretPhraseKeys {
     }
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum RawSecretPhraseKeysError {
     #[error("Some non-StdError 🤮 error from Bip39 lib: {0:?}")]
@@ -35,12 +38,14 @@ pub enum RawSecretPhraseKeysError {
 }
 
 impl RawSecretPhraseKeys {
+    /// Get the account key from the secret phrase
     async fn get_account_key(&self) -> CMLLCResult<Bip32PrivateKey> {
         let phrase: String = read_secret_phrase(&self.phrase_file_path).await?.into();
         let account_key = secret_phrase_to_account_key(&phrase)?;
         Ok(account_key)
     }
 
+    /// Get the base address from the secret phrase
     async fn get_base_address(&self) -> CMLLCResult<BaseAddress> {
         let account_key = self.get_account_key().await?;
         let base_addr = private_key_to_base_address(&account_key, self.network);
@@ -62,6 +67,7 @@ impl Keys for RawSecretPhraseKeys {
     }
 }
 
+/// Type for holding the secret phrase
 #[derive(Serialize, Deserialize)]
 pub struct SecretPhrase {
     inner: String,
@@ -88,6 +94,7 @@ impl FromStr for SecretPhrase {
     }
 }
 
+/// Reads the secret phrase from the config file
 pub async fn read_secret_phrase(config_path: &PathBuf) -> CMLLCResult<SecretPhrase> {
     let text = fs::read_to_string(config_path)
         .await

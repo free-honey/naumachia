@@ -1,5 +1,6 @@
 use crate::trireme_ledger_client::Network;
 
+/// Network Settings
 #[derive(Debug, Clone, Copy)]
 pub struct NetworkSettings {
     network: u8,
@@ -9,6 +10,7 @@ pub struct NetworkSettings {
 }
 
 impl NetworkSettings {
+    /// Constructor for the [`NetworkSettings`] struct
     pub fn new(
         network: u8,
         slot_length: i64,
@@ -23,28 +25,34 @@ impl NetworkSettings {
         }
     }
 
+    /// Getter for the network
     pub fn network(&self) -> u8 {
         self.network
     }
 
+    /// Getter for the slot length
     pub fn slot_length(&self) -> i64 {
         self.slot_length
     }
 
+    /// Getter for the starting slot time
     pub fn starting_slot_time(&self) -> i64 {
         self.starting_slot_time
     }
 
+    /// Getter for the starting slot number
     pub fn starting_slot_number(&self) -> u64 {
         self.starting_slot_number
     }
 
+    /// Converts a POSIX timestamp to a slot number
     pub fn slot_from_posix(&self, posix: i64) -> Option<u64> {
         let time_s = posix.checked_sub(self.starting_slot_time())?;
         let abs_slot = (time_s / self.slot_length()) as u64 + self.starting_slot_number();
         Some(abs_slot)
     }
 
+    /// Converts a slot number to a POSIX timestamp
     pub fn posix_from_slot(&self, slot: u64) -> i64 {
         let slot = slot;
         let time_s = (slot - self.starting_slot_number()) as i64 * self.slot_length();

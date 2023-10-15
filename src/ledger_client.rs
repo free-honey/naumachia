@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// Test ledger client module
 pub mod test_ledger_client;
 
 use async_trait::async_trait;
@@ -13,6 +14,8 @@ use crate::{
 use pallas_addresses::{Address, Network};
 use std::error;
 
+/// Interface defining interactions with your specific ledger--AKA the Cardano blockchain. The
+/// abstraction allows the concept of fake and mock ledgers to be used in tests and simulations.
 // TODO: Having this bound to a specific Datum/Redeemer doesn't really make sense at this scope.
 //   It's convenient from the backend's perspective, but it's constricting else-wise.
 //   https://github.com/MitchTurner/naumachia/issues/38
@@ -20,18 +23,23 @@ use std::error;
 //   (getting all is expensive if you just want the output for a specific ID)
 #[async_trait]
 pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
+    /// Get the base address for the signer key owned by instance of the `LedgerClient`
     async fn signer_base_address(&self) -> LedgerClientResult<Address>;
+
+    /// Get list of UTxOs owned by a given address limited by `count`
     async fn outputs_at_address(
         &self,
         address: &Address,
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>>;
 
+    /// Get complete list of UTxOs owned by a given address
     async fn all_outputs_at_address(
         &self,
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>>;
 
+    /// Get the balance for a specific policy at a given address
     async fn balance_at_address(
         &self,
         address: &Address,
@@ -50,8 +58,11 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
             });
         Ok(bal)
     }
-    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId>; // TODO: Move to other trait
 
+    /// Issue a transaction to the ledger signed by the signer key owned by the instance of `LedgerClient`
+    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId>;
+
+    /// Get the network identifier for the ledger
     async fn network(&self) -> LedgerClientResult<Network>;
 
     /// Get the posix time of the most recent block
@@ -61,6 +72,7 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
     async fn current_time_secs(&self) -> LedgerClientResult<i64>;
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum LedgerClientError {
     #[error("Couldn't retrieve base address")]
@@ -89,4 +101,5 @@ pub enum LedgerClientError {
     FailedToGetBlockTime(Box<dyn error::Error + Send + Sync>),
 }
 
+#[allow(missing_docs)]
 pub type LedgerClientResult<T> = Result<T, LedgerClientError>;

@@ -3,7 +3,11 @@
     "title": "sample-dApps/always_succeeds",
     "description": "Aiken contracts",
     "version": "0.1.0",
-    "plutusVersion": "v2"
+    "plutusVersion": "v2",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.0.19-alpha+10b9dc2"
+    }
   },
   "validators": [
     {
@@ -20,8 +24,8 @@
           "$ref": "#/definitions/Void"
         }
       },
-      "compiledCode": "500100003222253330044a22930b2b9a01",
-      "hash": "90592520b329fe08f0e93946ecd405e49b7480795e27cb618f002d88"
+      "compiledCode": "5833010000323222253330044a22930a99802a491856616c696461746f722072657475726e65642066616c736500136565734ae701",
+      "hash": "52a21f2b4f282074cb6c5aefef20d18c25f3657ca348c73875810c37"
     }
   ],
   "definitions": {

@@ -1,25 +1,34 @@
-use crate::scripts::raw_validator_script::plutus_data::PlutusData;
-use crate::PolicyId;
+use crate::scripts::plutus_validator::plutus_data::PlutusData;
 use pallas_addresses::Address;
 use serde::{Deserialize, Serialize};
 
 use crate::values::Values;
 
-// TODO: Does this need to be separated?
+// TODO: Does this need to be separated? We might be able to just have one variant
+/// Representation of an UTxO that does not exist yet. This can be used inside the
+/// [`SCLogic`] to represent outputs that will be created when the transaction is submitted.
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub enum UnbuiltOutput<Datum> {
+    /// An output owned by a wallet
     Wallet {
+        /// Address of the wallet
         owner: String,
+        /// Values of the output
         values: Values,
     },
+    /// An output owned by a validator script
     Validator {
+        /// Address of the validator script
         script_address: String,
+        /// Values of the output
         values: Values,
+        /// Datum of the output
         datum: Datum,
     },
 }
 
 impl<Datum> UnbuiltOutput<Datum> {
+    /// Constructor for wallet output
     pub fn new_wallet(owner: Address, values: Values) -> Self {
         UnbuiltOutput::Wallet {
             owner: owner.to_bech32().expect("already validated"),
@@ -27,6 +36,7 @@ impl<Datum> UnbuiltOutput<Datum> {
         }
     }
 
+    /// Constructor for validator output
     pub fn new_validator(script_address: Address, values: Values, datum: Datum) -> Self {
         UnbuiltOutput::Validator {
             script_address: script_address.to_bech32().expect("Already validated"),
@@ -35,6 +45,7 @@ impl<Datum> UnbuiltOutput<Datum> {
         }
     }
 
+    /// Getter for owner of output
     pub fn owner(&self) -> Address {
         match self {
             UnbuiltOutput::Wallet { owner, .. } => {
@@ -46,6 +57,7 @@ impl<Datum> UnbuiltOutput<Datum> {
         }
     }
 
+    /// Getter for values of output
     pub fn values(&self) -> &Values {
         match self {
             UnbuiltOutput::Wallet { values, .. } => values,
@@ -53,6 +65,7 @@ impl<Datum> UnbuiltOutput<Datum> {
         }
     }
 
+    /// Getter for (optional) datum of output
     pub fn datum(&self) -> Option<&Datum> {
         match self {
             UnbuiltOutput::Wallet { .. } => None,
@@ -61,14 +74,19 @@ impl<Datum> UnbuiltOutput<Datum> {
     }
 }
 
+/// Representation of an on-chain datum
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub enum DatumKind<Datum> {
+    /// A typed datum
     Typed(Datum),
+    /// An untyped datum
     UnTyped(PlutusData),
+    /// No datum
     None,
 }
 
 impl<Datum> DatumKind<Datum> {
+    /// Unwrap the datum if it is typed
     pub fn unwrap_typed(self) -> Datum {
         match self {
             DatumKind::Typed(datum) => datum,
@@ -76,6 +94,7 @@ impl<Datum> DatumKind<Datum> {
         }
     }
 
+    /// Unwrap the datum if it is untyped
     pub fn unwrap_untyped(self) -> PlutusData {
         match self {
             DatumKind::UnTyped(datum) => datum,
@@ -93,6 +112,7 @@ impl<Datum> From<DatumKind<Datum>> for Option<Datum> {
     }
 }
 
+/// Domain specific representation of an on-chain UTxO
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct Output<Datum> {
     id: OutputId,
@@ -101,6 +121,7 @@ pub struct Output<Datum> {
     datum: DatumKind<Datum>,
 }
 
+/// Unique identifier for specific UTxO
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize)]
 pub struct OutputId {
     tx_hash: Vec<u8>,
@@ -108,22 +129,24 @@ pub struct OutputId {
 }
 
 impl OutputId {
+    /// Constructor for OutputId
     pub fn new(tx_hash: Vec<u8>, index: u64) -> Self {
         OutputId { tx_hash, index }
     }
 
+    /// Getter for id's tx_hash
     pub fn tx_hash(&self) -> &[u8] {
         &self.tx_hash
     }
 
+    /// Getter for id's index
     pub fn index(&self) -> u64 {
         self.index
     }
 }
 
-pub type Value = (PolicyId, u64);
-
 impl<Datum> Output<Datum> {
+    /// Constructor for wallet output
     pub fn new_wallet(tx_hash: Vec<u8>, index: u64, owner: Address, values: Values) -> Self {
         let id = OutputId::new(tx_hash, index);
         let addr = owner.to_bech32().expect("Already Validated");
@@ -135,6 +158,7 @@ impl<Datum> Output<Datum> {
         }
     }
 
+    /// Constructor for validator output
     pub fn new_validator(
         tx_hash: Vec<u8>,
         index: u64,
@@ -152,6 +176,7 @@ impl<Datum> Output<Datum> {
         }
     }
 
+    /// Constructor for validator output with untyped datum
     pub fn new_untyped_validator(
         tx_hash: Vec<u8>,
         index: u64,
@@ -169,24 +194,29 @@ impl<Datum> Output<Datum> {
         }
     }
 
+    /// Getter for Output's id
     pub fn id(&self) -> &OutputId {
         &self.id
     }
 
+    /// Getter for Output's owner address
     pub fn owner(&self) -> Address {
         Address::from_bech32(&self.owner).expect("Already Validated")
     }
 
+    /// Getter for Output's values
     pub fn values(&self) -> &Values {
         &self.values
     }
 
+    /// Getter for Output's datum
     pub fn datum(&self) -> &DatumKind<Datum> {
         &self.datum
     }
 }
 
 impl<Datum: Clone> Output<Datum> {
+    /// Getter for Output's datum, if it is typed. Returns `None` if datum is untyped or non-existent
     pub fn typed_datum(&self) -> Option<Datum> {
         match &self.datum {
             DatumKind::Typed(datum) => Some(datum.to_owned()),
@@ -196,6 +226,8 @@ impl<Datum: Clone> Output<Datum> {
 }
 
 impl<Datum: Clone + Into<PlutusData>> Output<Datum> {
+    /// Converts `Output` to have an untyped datum, if it is typed. Returns the same `Output` if
+    /// datum is untyped or non-existent
     pub fn with_untyped_datum(&self) -> Output<Datum> {
         let new_datum = match &self.datum {
             DatumKind::Typed(datum) => DatumKind::UnTyped(datum.to_owned().into()),
@@ -211,6 +243,7 @@ impl<Datum: Clone + Into<PlutusData>> Output<Datum> {
         }
     }
 
+    /// Getter for `Output`'s datum as `PlutusData`, if it is typed. Returns `None` if datum is non-existent
     pub fn datum_plutus_data(&self) -> Option<PlutusData> {
         match &self.datum {
             DatumKind::Typed(datum) => Some(datum.to_owned().into()),
@@ -221,6 +254,8 @@ impl<Datum: Clone + Into<PlutusData>> Output<Datum> {
 }
 
 impl<Datum: Clone + TryFrom<PlutusData>> Output<Datum> {
+    /// Converts `Output` to have a typed datum, if it is untyped and can be converted. Returns the
+    /// same `Output` if datum is typed, it can't convert, or non-existent
     pub fn with_typed_datum_if_possible(&self) -> Output<Datum> {
         let new_datum = match &self.datum {
             DatumKind::Typed(datum) => DatumKind::Typed(datum.clone()),

@@ -1,8 +1,8 @@
 use crate::{TriremeLogic, TriremeLookups, TriremeResponses};
 use anyhow::Result;
 use naumachia::{
-    address::PolicyId,
     error::Error,
+    policy_id::PolicyId,
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };

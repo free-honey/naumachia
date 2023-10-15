@@ -1,6 +1,6 @@
+use naumachia::scripts::plutus_validator::plutus_data::PlutusData;
+use naumachia::scripts::plutus_validator::PlutusValidator;
 use naumachia::scripts::raw_script::PlutusScriptFile;
-use naumachia::scripts::raw_validator_script::plutus_data::PlutusData;
-use naumachia::scripts::raw_validator_script::RawPlutusValidator;
 use naumachia::scripts::{ScriptError, ScriptResult};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
@@ -76,10 +76,10 @@ impl TryFrom<PlutusData> for ClearString {
     }
 }
 
-pub fn get_script() -> ScriptResult<RawPlutusValidator<HashedString, ClearString>> {
+pub fn get_script() -> ScriptResult<PlutusValidator<HashedString, ClearString>> {
     let script_file: PlutusScriptFile = serde_json::from_str(SCRIPT_RAW)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let raw_script_validator = RawPlutusValidator::new_v2(script_file)
+    let raw_script_validator = PlutusValidator::new_v2(script_file)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }
@@ -88,7 +88,7 @@ pub fn get_script() -> ScriptResult<RawPlutusValidator<HashedString, ClearString
 mod tests {
     use super::*;
     use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
-    use naumachia::scripts::ValidatorCode;
+    use naumachia::scripts::Validator;
     use naumachia::Address;
 
     // This is broken. I think it might have to do with the script itself.

@@ -3,15 +3,25 @@ use std::fmt::Debug;
 
 use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
 
+/// Interface defining how to interact with your smart contract
 #[async_trait]
 pub trait SmartContractTrait {
+    /// Represents the domain-specific transactions the consumer of a Smart Contract can submit.
     type Endpoint;
+
+    /// Represents the domain-specific data the consumer of a Smart Contract can query.
     type Lookup;
+
+    /// Responses from the Lookup queries
     type LookupResponse;
+
+    /// Method for hitting specific endpoint
     async fn hit_endpoint(&self, endpoint: Self::Endpoint) -> Result<()>;
+    /// Method for querying specific data
     async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse>;
 }
 
+/// Standard, concrete implementation of a Smart Contract
 #[derive(Debug)]
 pub struct SmartContract<Logic, LC>
 where
@@ -27,6 +37,7 @@ where
     Logic: SCLogic,
     LC: LedgerClient<Logic::Datums, Logic::Redeemers>,
 {
+    /// Constructor for standard SmartContract impl
     pub fn new(offchain_logic: Logic, backend: LC) -> Self {
         SmartContract {
             offchain_logic,
@@ -34,11 +45,14 @@ where
         }
     }
 
+    /// Returns reference to LedgerClient used by the SmartContract
+
     pub fn ledger_client(&self) -> &LC {
         &self.ledger_client
     }
 
-    pub fn offchain_logic(&self) -> &Logic {
+    /// Returns reference to the Smart contract logic used by the SmartContract
+    pub fn logic(&self) -> &Logic {
         &self.offchain_logic
     }
 }

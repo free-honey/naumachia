@@ -2,7 +2,7 @@ use crate::trireme_ledger_client::cml_client::network_settings::NetworkSettings;
 use crate::{
     ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
     output::{Output, UnbuiltOutput},
-    scripts::ValidatorCode,
+    scripts::Validator,
     transaction::{TransactionVersion, TxId},
     trireme_ledger_client::cml_client::issuance_helpers::{
         cml_v1_script_from_nau_policy, cml_v2_script_from_nau_policy,
@@ -40,18 +40,25 @@ use pallas_addresses::{Address, Network as CMLNetwork};
 use std::time::UNIX_EPOCH;
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, ops::Deref};
 
+/// Blockfrost Ledger module
 pub mod blockfrost_ledger;
+/// CML Ledger Client Error module
 pub mod error;
-pub mod issuance_helpers;
+mod issuance_helpers;
+/// CML Client Keys module
 pub mod key_manager;
+/// CML Client Network Settings module
 pub mod network_settings;
+/// Ogmios + Scrolls Ledger module
 pub mod ogmios_scrolls_ledger;
+/// Plutus Data Interop module
 pub mod plutus_data_interop;
 
 #[cfg(test)]
 mod tests;
 
 // TODO: Add minimum ADA https://github.com/MitchTurner/naumachia/issues/41
+/// Basic implementation of the [`LedgerClient`] that uses `cardano-multiplatform-lib` under the hood
 pub struct CMLLedgerCLient<L, K, Datum, Redeemer>
 where
     L: Ledger,
@@ -66,9 +73,12 @@ where
     _redeemer: PhantomData<Redeemer>,
 }
 
+/// Interface for providing keys to the [`CMLLedgerCLient`]
 #[async_trait]
 pub trait Keys {
+    /// Get the base address for signer
     async fn base_addr(&self) -> Result<BaseAddress>;
+    /// Get the private key for signer
     async fn private_key(&self) -> Result<PrivateKey>;
 }
 
@@ -78,6 +88,7 @@ fn addr_from_bech_32(addr: &str) -> Result<CMLAddress> {
     Ok(cml_address)
 }
 
+/// Local representation of a UTxO
 #[derive(Debug)]
 pub struct UTxO {
     tx_hash: TransactionHash,
@@ -87,6 +98,7 @@ pub struct UTxO {
 }
 
 impl UTxO {
+    /// Constructor for the [`UTxO`]
     pub fn new(
         tx_hash: TransactionHash,
         output_index: BigNum,
@@ -101,23 +113,28 @@ impl UTxO {
         }
     }
 
+    /// Get the transaction hash
     pub fn tx_hash(&self) -> &TransactionHash {
         &self.tx_hash
     }
 
+    /// Get the output index
     pub fn output_index(&self) -> BigNum {
         self.output_index
     }
 
+    /// Get the amount
     pub fn amount(&self) -> &CMLValue {
         &self.amount
     }
 
+    /// Get the datum attached to the `UTxO`
     pub fn datum(&self) -> &Option<PlutusData> {
         &self.datum
     }
 }
 
+/// Cost of execution for a transaction
 #[derive(Debug)]
 pub struct ExecutionCost {
     execution_type: ExecutionType,
@@ -125,15 +142,21 @@ pub struct ExecutionCost {
     steps: u64,
 }
 
+/// Type of execution
 #[derive(Clone, Debug)]
 pub enum ExecutionType {
+    /// Spending a script UTxO
     Spend,
+    /// Minting new tokens
     Mint,
+    ///
     Certificate,
+    /// Withdrawing from stake pool
     Withdrawal,
 }
 
 impl ExecutionCost {
+    /// Constructor for the [`ExecutionCost`] with `Spend` type
     pub fn new_spend(memory: u64, steps: u64) -> Self {
         let execution_type = ExecutionType::Spend;
         ExecutionCost {
@@ -143,6 +166,7 @@ impl ExecutionCost {
         }
     }
 
+    /// Constructor for the [`ExecutionCost`] with `Mint` type
     pub fn new_mint(memory: u64, steps: u64) -> Self {
         let execution_type = ExecutionType::Mint;
         ExecutionCost {
@@ -152,6 +176,7 @@ impl ExecutionCost {
         }
     }
 
+    /// Constructor for the [`ExecutionCost`] with `Certificate` type
     pub fn new_certificate(memory: u64, steps: u64) -> Self {
         let execution_type = ExecutionType::Certificate;
         ExecutionCost {
@@ -161,6 +186,7 @@ impl ExecutionCost {
         }
     }
 
+    /// Constructor for the [`ExecutionCost`] with `Withdrawal` type
     pub fn new_withdrawal(memory: u64, steps: u64) -> Self {
         let execution_type = ExecutionType::Withdrawal;
         ExecutionCost {
@@ -170,24 +196,33 @@ impl ExecutionCost {
         }
     }
 
+    /// Getter for the execution type
     pub fn execution_type(&self) -> ExecutionType {
         self.execution_type.clone()
     }
 
+    /// Getter for the memory cost
     pub fn memory(&self) -> u64 {
         self.memory
     }
+    /// Getter for the step cost
     pub fn steps(&self) -> u64 {
         self.steps
     }
 }
 
+/// Interface for providing a ledger to the [`CMLLedgerCLient`]
 #[async_trait]
 pub trait Ledger {
+    /// Get the last block time in seconds
     async fn last_block_time_secs(&self) -> Result<i64>;
+    /// Get the UTxOs for an address
     async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>>;
+    /// Get all the UTxOs for an address
     async fn get_all_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
+    /// Calculate the execution units for a transaction
     async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, ExecutionCost>>;
+    /// Submit a transaction
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String>;
 }
 
@@ -198,6 +233,7 @@ where
     D: PlutusDataInterop,
     R: PlutusDataInterop,
 {
+    /// Constructor for the [`CMLLedgerCLient`] struct
     pub fn new(ledger: L, keys: K, network_settings: NetworkSettings) -> Self {
         CMLLedgerCLient {
             ledger,
@@ -256,7 +292,7 @@ where
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<InputBuilderResult> {
         let tx_hash = input_tx_hash(input).await?;
         let cml_script = cml_v1_script_from_nau_script(script).await?;
@@ -292,7 +328,7 @@ where
         &self,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<InputBuilderResult> {
         let tx_hash = input_tx_hash(input).await?;
         let cml_script = cml_v2_script_from_nau_script(script).await?;
@@ -326,7 +362,7 @@ where
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
         let cml_input = self
             .build_v1_cml_script_input(input, redeemer, script)
@@ -343,7 +379,7 @@ where
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
         redeemer: &Redeemer,
-        script: &(dyn ValidatorCode<Datum, Redeemer> + '_),
+        script: &(dyn Validator<Datum, Redeemer> + '_),
     ) -> LedgerClientResult<()> {
         let cml_input = self
             .build_v2_cml_script_input(input, redeemer, script)

@@ -5,13 +5,21 @@ use crate::output::Output;
 use pallas_addresses::{Address, Network};
 use std::sync::{Arc, Mutex};
 
+/// A mutable, shared reference to a vector of `Output`s.
 type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
 
+/// Storage adapter for [`TestLedgerClient`] that is ephemeral and in-memory. This is useful
+/// for Unit Tests and Integration Tests.
 #[derive(Debug)]
 pub struct InMemoryStorage<Datum> {
+    /// The address of the signer key owned by this instance of the [`LedgerClient`]. This is a
+    /// simplification of how Cardano works, but it's sufficient for testing.
     pub signer: Address,
+    /// A list of all the outputs on this fake ledger.
     pub outputs: MutableData<Datum>,
+    /// The current time on the ledger, or the time of the last "block" committed to the ledger.
     pub current_posix_time: Arc<Mutex<i64>>,
+    /// The time between blocks on the ledger in seconds.
     pub block_length: i64,
 }
 

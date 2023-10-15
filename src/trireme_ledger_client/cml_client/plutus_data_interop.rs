@@ -1,4 +1,4 @@
-use crate::scripts::raw_validator_script::plutus_data::{BigInt, Constr, PlutusData};
+use crate::scripts::plutus_validator::plutus_data::{BigInt, Constr, PlutusData};
 use cardano_multiplatform_lib::{
     ledger::common::value::BigInt as CMLBigInt,
     plutus::{
@@ -8,15 +8,21 @@ use cardano_multiplatform_lib::{
 };
 use std::collections::BTreeMap;
 
+#[allow(missing_docs)]
 pub enum PlutusDataInteropError {
     CannotDeserializeFromPlutusData(PlutusData),
 }
 
+#[allow(missing_docs)]
 pub type Result<T, E = PlutusDataInteropError> = std::result::Result<T, E>;
 
+/// Trait for converting between [`PlutusData`] and the `CMLPlutusData`
 pub trait PlutusDataInterop: Sized {
+    /// The error type
     type Error;
+    /// Convert into a `CMLPlutusData`
     fn to_plutus_data(&self) -> CMLPlutusData;
+    /// Convert from a `CMLPlutusData`
     fn from_plutus_data(plutus_data: &CMLPlutusData) -> Result<Self, Self::Error>;
 }
 

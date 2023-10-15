@@ -1,9 +1,7 @@
 use async_trait::async_trait;
+use naumachia::logic::error::{as_lookup_err, SCLogicResult};
 use naumachia::{
-    address::PolicyId,
-    ledger_client::LedgerClient,
-    logic::{as_lookup_err, SCLogic, SCLogicResult},
-    transaction::TxActions,
+    ledger_client::LedgerClient, logic::SCLogic, policy_id::PolicyId, transaction::TxActions,
     values::Values,
 };
 

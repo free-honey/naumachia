@@ -2,8 +2,8 @@ use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::{
     output::Output as NauOutput,
     scripts::{
-        raw_policy_script::OneParamRawPolicy,
-        raw_validator_script::plutus_data::{Constr, PlutusData},
+        plutus_minting_policy::OneParamPlutusPolicy,
+        plutus_validator::plutus_data::{Constr, PlutusData},
         ScriptError, ScriptResult,
     },
 };
@@ -53,7 +53,7 @@ impl From<OutputReference> for PlutusData {
     }
 }
 
-pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputReference, ()>> {
+pub fn get_parameterized_script() -> ScriptResult<OneParamPlutusPolicy<OutputReference, ()>> {
     let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     let validator_blueprint =
@@ -63,7 +63,7 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamRawPolicy<OutputRefere
                 "Validator not listed in Blueprint: {:?}",
                 VALIDATOR_NAME
             )))?;
-    let raw_script_validator = OneParamRawPolicy::from_blueprint(validator_blueprint)
+    let raw_script_validator = OneParamPlutusPolicy::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
 }

@@ -1,11 +1,12 @@
 use crate::logic::script::{get_script, ClearString, HashedString};
 use async_trait::async_trait;
+use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::{
-    address::PolicyId,
     ledger_client::LedgerClient,
-    logic::{SCLogic, SCLogicError, SCLogicResult},
+    logic::SCLogic,
     output::{Output, OutputId},
-    scripts::ValidatorCode,
+    policy_id::PolicyId,
+    scripts::Validator,
     transaction::TxActions,
     values::Values,
 };
