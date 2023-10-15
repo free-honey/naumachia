@@ -175,7 +175,8 @@ impl<D: Clone + Into<PlutusData>> From<Option<D>> for CtxDatum {
 /// Builder for constructing [`TxContext`]s in tests and other mocked environments
 ///
 /// For example, you can construct a context with a "spend" purpose like this:
-/// ```
+/// ```ignore
+/// use naumachia::scripts::context::ContextBuilder;
 /// let ctx = ContextBuilder::new(signer_pkh)
 ///             .with_input(&hex::decode("73d65e0b9b68ebf3971b6ccddc75900dd62f9845f5ab972e469c5d803973015b")
 ///                     .unwrap(),

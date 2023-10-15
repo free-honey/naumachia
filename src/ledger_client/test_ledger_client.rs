@@ -42,7 +42,7 @@ mod tests;
 /// The standard way to spin up a fake ledger client in a test. Will produce a [`TestLedgerClient`]
 /// that can passed to your specific smart contract:
 ///
-/// ```
+/// ```ignore
 ///     let backend = TestLedgerClientBuilder::new(&me)
 ///         .start_output(&me)
 ///         .with_value(PolicyId::Lovelace, start_amount)
