@@ -28,4 +28,5 @@ pub mod transaction;
 
 /// Types and helpers for working with the Trireme CLI
 pub mod trireme_ledger_client;
+/// Values module
 pub mod values;

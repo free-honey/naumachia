@@ -441,7 +441,9 @@ impl ClientConfig {
 
 /// Variants of Secret Phrase [`Keys`] impl
 pub enum SecretPhraseKeys {
+    /// Raw secret phrase
     RawSecretPhraseKeys(RawSecretPhraseKeys),
+    /// Password-protected secret phrase
     PasswordProtectedPhraseKeys(PasswordProtectedPhraseKeys<TerminalPasswordUpfront>),
 }
 
@@ -462,6 +464,7 @@ impl Keys for SecretPhraseKeys {
     }
 }
 
+/// Client for interacting with the Ledger via Trireme
 enum InnerClient<Datum, Redeemer>
 where
     Datum: PlutusDataInterop
@@ -473,8 +476,11 @@ where
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
+    /// BlockFrost client
     BlockFrost(CMLLedgerCLient<BlockFrostLedger, SecretPhraseKeys, Datum, Redeemer>),
+    /// Ogmios + Scrolls client
     OgmiosScrolls(CMLLedgerCLient<OgmiosScrollsLedger, SecretPhraseKeys, Datum, Redeemer>),
+    /// Test client
     Mocked(TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<PathBuf, Datum>>),
 }
 
@@ -506,6 +512,7 @@ where
         + TryFrom<PlutusData>,
     Redeemer: PlutusDataInterop,
 {
+    /// Get current time within context of current ledger
     pub async fn current_time(&self) -> LedgerClientResult<i64> {
         match &self.inner_client {
             InnerClient::BlockFrost(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
@@ -518,6 +525,9 @@ where
         }
     }
 
+    /// Advance time for current context.
+    ///
+    /// **NOTE:** This is only implemented for the test client.
     pub async fn advance_blocks(&self, count: i64) -> LedgerClientResult<()> {
         match &self.inner_client {
             InnerClient::BlockFrost(_cml_client) => Err(LedgerClientError::CurrentTime(Box::new(
@@ -621,12 +631,14 @@ where
     }
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum TomlError {
     #[error("No config directory for raw phrase file: {0:?}")]
     NoParentDir(String),
 }
 
+/// Write a TOML-serializable struct to a file
 pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
     file_path: &PathBuf,
     toml_struct: &Toml,
@@ -652,6 +664,7 @@ pub async fn write_toml_struct_to_file<Toml: ser::Serialize>(
     Ok(())
 }
 
+/// Read a TOML-serializable struct from a TOML file
 pub async fn read_toml_struct_from_file<Toml: DeserializeOwned>(
     file_path: &PathBuf,
 ) -> Result<Option<Toml>> {

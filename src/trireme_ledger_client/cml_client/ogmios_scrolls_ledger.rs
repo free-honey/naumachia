@@ -72,6 +72,7 @@ fn plutus_data_from_scroll_datum(datum: &str) -> Result<Option<PlutusData>> {
     Ok(PlutusData::from_bytes(bytes).ok())
 }
 
+/// Implementation of the [`Ledger`] trait for the Ogmios + Scrolls client
 pub struct OgmiosScrollsLedger {
     scrolls_client: ScrollsClient,
     ogmios_client: OgmiosClient,
@@ -80,6 +81,7 @@ pub struct OgmiosScrollsLedger {
 }
 
 impl OgmiosScrollsLedger {
+    /// Constructor for the [`OgmiosScrollsLedger`] struct
     pub fn new(
         scrolls_client: ScrollsClient,
         ogmios_client: OgmiosClient,
@@ -92,6 +94,7 @@ impl OgmiosScrollsLedger {
         }
     }
 
+    /// Get the UTxOs for an address
     pub async fn get_utxos(&self, addr: &CMLAddress) -> Result<Vec<UTxO>> {
         let address_str = addr
             .to_bech32(None)

@@ -8,12 +8,14 @@ use cardano_multiplatform_lib::{
 use std::{fs, path::Path};
 use thiserror::Error;
 
+/// Standard implementation of the [`Keys`] trait
 pub struct KeyManager {
     config_path: String,
     network: u8,
 }
 
 impl KeyManager {
+    /// Constructor for the [`KeyManager`] struct
     pub fn new(config_path: String, network: u8) -> Self {
         KeyManager {
             config_path,
@@ -22,6 +24,7 @@ impl KeyManager {
     }
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum KeyManagerError {
     #[error("Some non-StdError 🤮 error from Bip32 lib: {0:?}")]
@@ -69,6 +72,7 @@ impl KeyManager {
     }
 }
 
+/// Loads the phrase from the config file
 pub fn load_phrase_from_file(config_path: &str) -> String {
     let path = Path::new(config_path);
     let text = fs::read_to_string(path).unwrap();

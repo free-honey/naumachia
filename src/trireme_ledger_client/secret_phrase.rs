@@ -8,6 +8,7 @@ use cardano_multiplatform_lib::{
     crypto::Bip32PrivateKey,
 };
 
+/// Get Private Key from Secret Phrase
 pub fn secret_phrase_to_account_key(phrase: &str) -> CMLLCResult<Bip32PrivateKey> {
     let mnemonic = Mnemonic::from_phrase(phrase, Language::English)
         .map_err(|e| RawSecretPhraseKeysError::Bip39(e.to_string()))
@@ -23,6 +24,7 @@ pub fn secret_phrase_to_account_key(phrase: &str) -> CMLLCResult<Bip32PrivateKey
     Ok(account_key)
 }
 
+/// Get Base Address from Private Key
 pub fn private_key_to_base_address(account_key: &Bip32PrivateKey, network: u8) -> BaseAddress {
     let pub_key = account_key.derive(0).derive(0).to_public();
     let stake_key = account_key.derive(2).derive(0).to_public();

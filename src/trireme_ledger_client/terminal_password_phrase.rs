@@ -16,6 +16,7 @@ use tokio::fs;
 
 use crate::trireme_ledger_client::cml_client::error::{CMLLCError, Result as CMLResult};
 
+/// Type for representing a password protected phrase
 pub struct PasswordProtectedPhraseKeys<P: Password> {
     password: P,
     phrase_file_path: PathBuf,
@@ -24,6 +25,7 @@ pub struct PasswordProtectedPhraseKeys<P: Password> {
 }
 
 impl<P: Password> PasswordProtectedPhraseKeys<P> {
+    /// Constructor for the [`PasswordProtectedPhraseKeys`] struct
     pub fn new(
         password: P,
         phrase_file_path: PathBuf,
@@ -38,6 +40,7 @@ impl<P: Password> PasswordProtectedPhraseKeys<P> {
         }
     }
 
+    /// Decrypt and read the secret phrase
     async fn read_phrase(&self) -> CMLResult<String> {
         let text = fs::read_to_string(&self.phrase_file_path)
             .await
@@ -69,6 +72,7 @@ impl<P: Password + Send + Sync> Keys for PasswordProtectedPhraseKeys<P> {
     }
 }
 
+/// Type for holding password
 pub struct TerminalPasswordUpfront {
     password: Secret<[u8; 32]>,
 }
@@ -88,6 +92,7 @@ impl TerminalPasswordUpfront {
     }
 }
 
+/// Normalize the password with Argon2 and specified `salt`
 pub fn normalize_password(original: &str, salt: &[u8]) -> Result<[u8; 32]> {
     // TODO: Upgrade config to be more secure?
     let config = argon2::Config::default();
@@ -98,7 +103,9 @@ pub fn normalize_password(original: &str, salt: &[u8]) -> Result<[u8; 32]> {
     Ok(new)
 }
 
+/// Trait for representing a password
 pub trait Password {
+    /// Get the password
     fn get_password(&self) -> Result<[u8; 32]>;
 }
 
@@ -123,6 +130,7 @@ fn decrypt_phrase(
     String::from_utf8(buffer).map_err(|e| CMLLCError::KeyError(Box::new(e)))
 }
 
+/// Encrypt a phrase with a password and nonce
 pub fn encrypt_phrase(
     phrase: &str,
     password: &[u8; 32],
@@ -137,6 +145,7 @@ pub fn encrypt_phrase(
     EncryptedSecretPhrase { inner: buffer }
 }
 
+/// Type for holding the encrypted secret phrase
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncryptedSecretPhrase {
     inner: Vec<u8>,
