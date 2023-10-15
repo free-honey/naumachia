@@ -17,6 +17,27 @@ type RedemptionDetails<Datum, Redeemer> =
     (Output<Datum>, Redeemer, Box<dyn Validator<Datum, Redeemer>>);
 
 /// Declarative constraints for specifying what a transaction should do.
+///
+/// Primarily used within the `endpoint` for a [`SCLogic`](crate::logic::SCLogic)
+/// implementation, which returns a [`TxActions`] that will be converted to a [`UnbuiltTransaction`]
+/// then consumed by a [`LedgerClient`] to submit a fully formed transaction.
+///
+/// ```ignore
+///     let actions = TxActions::v2()
+///         .with_script_redeem(allow_pull_output, allow_pull_redeemer, allow_pull_script)
+///         .with_script_init(new_allow_pull_datum, allow_pull_value, allow_pull_address)
+///         .with_script_redeem(
+///             checking_account_output,
+///             checking_account_redeemer,
+///             checking_account_script,
+///         )
+///         .with_script_init(
+///             new_checking_account_datum,
+///             new_account_value,
+///             checking_account_address,
+///         )
+///         .with_valid_range_secs(Some(current_time / 1000), None);
+/// ```
 pub enum Action<Datum, Redeemer> {
     /// Specify a transfer of `amount` or `policy_id` to `recipient`
     Transfer {
