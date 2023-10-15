@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+/// Domain representation of value on the Cardano blockchain
 #[serde_with::serde_as]
 #[derive(Clone, PartialEq, Debug, Eq, Deserialize, Serialize, Default)]
 pub struct Values {
@@ -15,6 +16,7 @@ pub struct Values {
 }
 
 impl Values {
+    /// Construct a `Values` from a list of `Output`s
     pub fn from_outputs<D>(outputs: &[Output<D>]) -> Self {
         outputs.iter().fold(Values::default(), |mut acc, output| {
             acc.add_values(output.values());
@@ -22,6 +24,7 @@ impl Values {
         })
     }
 
+    /// Try to remove the `other` `Values` from `self`
     pub fn try_subtract(&self, other: &Values) -> Result<Option<Values>> {
         let mut remainders = Vec::new();
         let mut mine_cloned = self.values.clone();
@@ -60,36 +63,44 @@ impl Values {
         }
     }
 
+    /// Add one value to the `self`
     pub fn add_one_value(&mut self, policy: &PolicyId, amount: u64) {
         add_to_map(&mut self.values, policy.clone(), amount)
     }
 
+    /// Add a `Values` to the `self`
     pub fn add_values(&mut self, values: &Values) {
         for (policy, amt) in values.as_iter() {
             self.add_one_value(policy, *amt)
         }
     }
 
+    /// Convert the `Values` to an iterator of [`PolicyId`]s and amounts
     pub fn as_iter(&self) -> std::collections::hash_map::Iter<'_, PolicyId, u64> {
         self.values.iter()
     }
 
+    /// Convert the `Values` to a `Vec` of [`PolicyId`]s and amounts
     pub fn vec(&self) -> Vec<(PolicyId, u64)> {
         self.values.clone().into_iter().collect()
     }
 
+    /// Get the amount for a given [`PolicyId`]
     pub fn get(&self, policy: &PolicyId) -> Option<u64> {
         self.values.get(policy).copied()
     }
 
+    /// Remove all values for a given [`PolicyId`] and return the amount
     pub fn take(&mut self, policy: &PolicyId) -> Option<u64> {
         self.values.remove(policy)
     }
 
+    /// Get the number of [`PolicyId`]s in the `Values`
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
+    /// Check if the `Values` is empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
