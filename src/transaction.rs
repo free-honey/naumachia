@@ -1,6 +1,5 @@
 use crate::transaction::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs};
 use crate::{
-    backend::RedemptionDetails,
     error::*,
     output::{Output, UnbuiltOutput},
     policy_id::PolicyId,
@@ -13,6 +12,9 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 pub(crate) mod nested_value_map;
+
+type RedemptionDetails<Datum, Redeemer> =
+    (Output<Datum>, Redeemer, Box<dyn Validator<Datum, Redeemer>>);
 
 /// Declarative constraints for specifying what a transaction should do.
 pub enum Action<Datum, Redeemer> {

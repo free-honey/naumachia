@@ -34,16 +34,23 @@ use std::{fmt::Debug, hash::Hash, marker::PhantomData, path::PathBuf};
 use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
 
-// pub mod blockfrost_ledger;
+/// CML CLient module
 pub mod cml_client;
+/// Raw secret phrase module
 pub mod raw_secret_phrase;
+/// Secret Phrase module
 pub mod secret_phrase;
+/// Terminal password upfront module
 pub mod terminal_password_phrase;
 
+/// Default Trireme config folder
 pub const TRIREME_CONFIG_FOLDER: &str = ".trireme";
+/// Default Trireme config file name
 pub const TRIREME_CONFIG_FILE: &str = "config.toml";
+/// Default Trireme client config file name
 pub const CLIENT_CONFIG_FILE: &str = "config.toml";
 
+/// Default Trireme config folder
 pub fn path_to_trireme_config_dir() -> Result<PathBuf> {
     let mut dir =
         home_dir().ok_or_else(|| Error::Trireme("Could not find home directory :(".to_string()))?;
@@ -51,12 +58,14 @@ pub fn path_to_trireme_config_dir() -> Result<PathBuf> {
     Ok(dir)
 }
 
+/// Path to the default Trireme config file
 pub fn path_to_trireme_config_file() -> Result<PathBuf> {
     let mut dir = path_to_trireme_config_dir()?;
     dir.push(TRIREME_CONFIG_FILE);
     Ok(dir)
 }
 
+/// Path to specific Trireme client config file
 pub fn path_to_client_config_file(sub_dir: &str) -> Result<PathBuf> {
     let mut dir = path_to_trireme_config_dir()?;
     dir.push(sub_dir);
@@ -64,6 +73,7 @@ pub fn path_to_client_config_file(sub_dir: &str) -> Result<PathBuf> {
     Ok(dir)
 }
 
+/// Attempts to read the default config and returns the current client config from file
 pub async fn get_current_client_config_from_file() -> Result<Option<ClientConfig>> {
     let trireme_config = get_trireme_config_from_file().await?;
     let current_env = trireme_config
@@ -76,6 +86,7 @@ pub async fn get_current_client_config_from_file() -> Result<Option<ClientConfig
     read_toml_struct_from_file::<ClientConfig>(&client_config_path).await
 }
 
+/// Attempts to read the default config and returns the current client proper based on current config
 // TODO: PlutusDataInterop is prolly overconstraining for the Redeemer
 pub async fn get_trireme_ledger_client_from_file<
     Datum: PlutusDataInterop
@@ -97,43 +108,63 @@ pub async fn get_trireme_ledger_client_from_file<
     }
 }
 
+/// Attempts to read the default Trireme config
 pub async fn get_trireme_config_from_file() -> Result<Option<TriremeConfig>> {
     let trireme_config_path = path_to_trireme_config_file()?;
     read_toml_struct_from_file::<TriremeConfig>(&trireme_config_path).await
 }
 
+/// Types of providers for the Ledger
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum LedgerSource {
+    /// Read from BlockFrost API
     BlockFrost {
+        /// Path to API key file
         api_key_file: PathBuf,
     },
+    /// Read from a Ogmios + Scrolls instance
     OgmiosAndScrolls {
+        /// IP address of Scrolls instance
         scrolls_ip: String,
+        /// Port of Scrolls instance
         scrolls_port: String,
+        /// IP address of Ogmios instance
         ogmios_ip: String,
+        /// Port of Ogmios instance
         ogmios_port: String,
     },
 }
 
+/// Type of key storage
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum KeySource {
+    /// Read from a raw secret phrase file
     RawSecretPhrase {
+        /// Path to secret phrase file
         phrase_file: PathBuf,
     },
+    /// Read from a password-protected secret phrase file
     TerminalPasswordUpfrontSecretPhrase {
+        /// Path to encrypted secret phrase file
         phrase_file: PathBuf,
+        /// Salt used to hash the password
         password_salt: Vec<u8>,
+        /// Nonce used to encrypt the secret phrase
         encrpytion_nonce: [u8; 12],
     },
 }
 
+/// The networks supported by Trireme
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum Network {
+    /// "Preprod" Cardano test network
     Preprod,
+    /// "Preview" Cardano test network
     Preview,
+    /// Cardano Mainnet
     Mainnet,
 }
 
@@ -146,6 +177,7 @@ impl From<Network> for u8 {
     }
 }
 
+/// Config for Trireme Ledger Client
 #[derive(Deserialize, Serialize)]
 pub struct TriremeConfig {
     current_env: Option<String>,
@@ -153,6 +185,7 @@ pub struct TriremeConfig {
 }
 
 impl TriremeConfig {
+    /// Constructor for TriremeConfig
     pub fn new(current_env: &str) -> Self {
         TriremeConfig {
             current_env: Some(current_env.to_string()),
@@ -160,10 +193,12 @@ impl TriremeConfig {
         }
     }
 
+    /// Get the subdir for current environment
     pub fn get_current_env_subdir(&self) -> Option<String> {
         self.current_env.clone()
     }
 
+    /// Add new environmnet and set it as current
     pub fn set_new_env(&mut self, new_env_name: &str) -> Result<()> {
         if self.envs.contains(&(new_env_name.to_string())) {
             Err(Error::Trireme(
@@ -176,6 +211,7 @@ impl TriremeConfig {
         }
     }
 
+    /// Switch current environment to another existing environment
     pub fn switch_env(&mut self, env_name: &str) -> Result<()> {
         if self.envs.contains(&(env_name.to_string())) {
             self.current_env = Some(env_name.to_string());
@@ -185,6 +221,7 @@ impl TriremeConfig {
         }
     }
 
+    /// Delete specified environment
     pub fn remove_env(&mut self, env_name: &str) -> Result<()> {
         if self.envs.contains(&(env_name.to_string())) {
             self.envs.retain(|env| env != env_name);
@@ -199,28 +236,35 @@ impl TriremeConfig {
         }
     }
 
+    /// Getter for the current environment name
     pub fn current_env(&self) -> Option<String> {
         self.current_env.clone()
     }
 
+    /// Getter for list of environment names
     pub fn envs(&self) -> Vec<String> {
         self.envs.clone()
     }
 }
 
+/// Single environment client config
 #[derive(Deserialize, Serialize)]
 pub struct ClientConfig {
     name: String,
     variant: ClientVariant,
 }
 
+/// Variant of client config
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum ClientVariant {
+    /// CML (Cardano Multiplatform Library) client
     CML(CMLClientConfig),
+    /// Test client
     Test(TestClientConfig),
 }
 
+/// Config for CML client
 #[derive(Deserialize, Serialize, Clone)]
 pub struct CMLClientConfig {
     ledger_source: LedgerSource,
@@ -228,18 +272,21 @@ pub struct CMLClientConfig {
     network: Network,
 }
 
+/// Config for Test client
 #[derive(Deserialize, Serialize, Clone)]
 pub struct TestClientConfig {
     data_path: PathBuf,
 }
 
 impl TestClientConfig {
+    /// Getter for the data path
     pub fn data_path(&self) -> PathBuf {
         self.data_path.clone()
     }
 }
 
 impl ClientConfig {
+    /// Constructor for CML client config
     pub fn new_cml(
         name: &str,
         ledger_source: LedgerSource,
@@ -258,6 +305,7 @@ impl ClientConfig {
         }
     }
 
+    /// Constructor for Test client config
     pub fn new_test(name: &str, data_path: &PathBuf) -> Self {
         let inner = TestClientConfig {
             data_path: data_path.to_owned(),
@@ -269,14 +317,17 @@ impl ClientConfig {
         }
     }
 
+    /// Getter for the name of config
     pub fn name(&self) -> String {
         self.name.clone()
     }
 
+    /// Getter for the variant of config
     pub fn variant(&self) -> ClientVariant {
         self.variant.clone()
     }
 
+    /// Convert config into a [`TriremeLedgerClient`]
     pub async fn to_client<
         Datum: PlutusDataInterop
             + Clone
@@ -388,6 +439,7 @@ impl ClientConfig {
     }
 }
 
+/// Variants of Secret Phrase [`Keys`] impl
 pub enum SecretPhraseKeys {
     RawSecretPhraseKeys(RawSecretPhraseKeys),
     PasswordProtectedPhraseKeys(PasswordProtectedPhraseKeys<TerminalPasswordUpfront>),
@@ -426,6 +478,7 @@ where
     Mocked(TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<PathBuf, Datum>>),
 }
 
+/// Implementation of [`LedgerClient`] for the Trireme CLI environment manager
 pub struct TriremeLedgerClient<Datum, Redeemer>
 where
     Datum: PlutusDataInterop

@@ -26,6 +26,6 @@ pub mod smart_contract;
 /// Transaction module
 pub mod transaction;
 
-pub mod backend;
+/// Types and helpers for working with the Trireme CLI
 pub mod trireme_ledger_client;
 pub mod values;

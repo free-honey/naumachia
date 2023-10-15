@@ -2,6 +2,7 @@ use crate::ledger_client::LedgerClientError;
 use pallas_addresses::Address;
 use thiserror::Error;
 
+#[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum CMLLCError {
     #[error("CML JsError: {0:?}")]
@@ -31,22 +32,26 @@ pub enum CMLLCError {
     InvalidPolicyId(String),
 }
 
+/// Convenience function for wrapping a `CMLLCError` in a [`LedgerClientError`] `FailedToRetrieveOutputsAt` variant
 pub fn as_failed_to_retrieve_by_address(
     addr: &Address,
 ) -> impl Fn(CMLLCError) -> LedgerClientError + '_ {
     move |e| LedgerClientError::FailedToRetrieveOutputsAt(addr.to_owned(), Box::new(e))
 }
 
+/// Convenience function for wrapping a `CMLLCError` in a [`LedgerClientError`] `FailedToRetrieveOutputsAt` variant
 pub fn as_failed_to_issue_tx<E: std::error::Error + Send + Sync + 'static>(
     error: E,
 ) -> LedgerClientError {
     LedgerClientError::FailedToIssueTx(Box::new(error))
 }
 
+/// Convenience function for wrapping a `CMLLCError` in a [`LedgerClientError`] `FailedToGetBlockTime` variant
 pub fn as_failed_to_get_block_time<E: std::error::Error + Send + Sync + 'static>(
     error: E,
 ) -> LedgerClientError {
     LedgerClientError::FailedToGetBlockTime(Box::new(error))
 }
 
-pub type Result<E, T = CMLLCError> = std::result::Result<E, T>;
+#[allow(missing_docs)]
+pub type Result<T, E = CMLLCError> = std::result::Result<T, E>;

@@ -40,12 +40,18 @@ use pallas_addresses::{Address, Network as CMLNetwork};
 use std::time::UNIX_EPOCH;
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, ops::Deref};
 
+/// Blockfrost Ledger module
 pub mod blockfrost_ledger;
+/// CML Ledger Client Error module
 pub mod error;
-pub mod issuance_helpers;
+mod issuance_helpers;
+/// CML Client Keys module
 pub mod key_manager;
+/// CML Client Network Settings module
 pub mod network_settings;
+/// Ogmios + Scrolls Ledger module
 pub mod ogmios_scrolls_ledger;
+/// Plutus Data Interop module
 pub mod plutus_data_interop;
 
 #[cfg(test)]
