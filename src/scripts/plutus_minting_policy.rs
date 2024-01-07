@@ -13,9 +13,9 @@ use crate::{
 };
 use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script, PlutusV2Script};
 use minicbor::{Decoder, Encoder};
+use pallas_primitives::babbage::Language;
 use std::marker::PhantomData;
 use std::rc::Rc;
-use pallas_primitives::babbage::Language;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     machine::cost_model::ExBudget,

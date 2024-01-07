@@ -54,7 +54,6 @@ impl NetworkSettings {
 
     /// Converts a slot number to a POSIX timestamp
     pub fn posix_from_slot(&self, slot: u64) -> i64 {
-        let slot = slot;
         let time_s = (slot - self.starting_slot_number()) as i64 * self.slot_length();
         time_s + self.starting_slot_time()
     }
