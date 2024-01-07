@@ -10,12 +10,12 @@ use cardano_multiplatform_lib::{
     PolicyID, Transaction as CMLTransaction,
 };
 use ogmios_client::{EvaluationResult, OgmiosClient, OgmiosLocalTxSubmission, OgmiosResponse};
-use pallas_addresses::Address;
 use scrolls_client::{
     Amount as ScrollClientAmount, LastBlockInfo, ScrollsClient, UTxO as ScrollsClientUTxO,
     UTxOsByAddress,
 };
 use std::collections::HashMap;
+use pallas_addresses::Address;
 
 fn utxo_from_scrolls_utxo(utxo: &ScrollsClientUTxO) -> Result<UTxO> {
     let tx_hash = TransactionHash::from_hex(utxo.tx_hash())

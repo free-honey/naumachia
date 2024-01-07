@@ -17,9 +17,9 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-aiken = "1.0.19-alpha"
-aiken-project = "1.0.19-alpha"
-uplc = "1.0.19-alpha"
+aiken = "1.0.21-alpha"
+aiken-project = "1.0.21-alpha"
+uplc = "1.0.21-alpha"
 
 miette = { version = "5.3.0", features = ["fancy"] }
 owo-colors = "3.5.0"

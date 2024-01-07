@@ -21,6 +21,7 @@ use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use pallas_addresses::{Address, Network};
 use std::marker::PhantomData;
 use std::rc::Rc;
+use pallas_primitives::babbage::Language;
 use uplc::{
     ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     machine::{cost_model::ExBudget, runtime::convert_constr_to_tag},
@@ -244,7 +245,7 @@ where
         let ctx_term = Term::Constant(Rc::new(Constant::Data(ctx_data.into())));
         let program = program.apply_term(&ctx_term);
         let mut eval_result = match self.version {
-            TransactionVersion::V1 => program.eval_v1(),
+            TransactionVersion::V1 => program.eval_version(&Language::PlutusV1),
             TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
         };
         let logs = eval_result.logs();

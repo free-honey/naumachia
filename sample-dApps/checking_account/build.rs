@@ -1,6 +1,6 @@
-use aiken::Terminal;
 use aiken_lang::ast::Tracing;
 use aiken_project::Project;
+use aiken_project::telemetry::Terminal;
 
 const PROJECT: &str = "./checking";
 
