@@ -1,5 +1,5 @@
-use aiken::Terminal;
 use aiken_lang::ast::Tracing;
+use aiken_project::telemetry::Terminal;
 use aiken_project::Project;
 
 const MINT_NFT_PROJECT: &str = "./aiken/mint_nft";

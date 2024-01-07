@@ -19,6 +19,7 @@ use minicbor::{Decoder, Encoder};
 use crate::scripts::ExecutionCost;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
 use pallas_addresses::{Address, Network};
+use pallas_primitives::babbage::Language;
 use std::marker::PhantomData;
 use std::rc::Rc;
 use uplc::{
@@ -244,7 +245,7 @@ where
         let ctx_term = Term::Constant(Rc::new(Constant::Data(ctx_data.into())));
         let program = program.apply_term(&ctx_term);
         let mut eval_result = match self.version {
-            TransactionVersion::V1 => program.eval_v1(),
+            TransactionVersion::V1 => program.eval_version(&Language::PlutusV1),
             TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
         };
         let logs = eval_result.logs();
