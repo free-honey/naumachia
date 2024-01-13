@@ -35,17 +35,21 @@ async fn main() {
     let contract = SmartContract::new(logic, ledger_client);
 
     match args.action {
-        ActionParams::Lock { amount } => contract
-            .hit_endpoint(AlwaysSucceedsEndpoints::Lock {
-                amount: (amount * 1_000_000.) as u64,
-            })
-            .await
-            .unwrap(),
+        ActionParams::Lock { amount } => {
+            let tx_id = contract
+                .hit_endpoint(AlwaysSucceedsEndpoints::Lock {
+                    amount: (amount * 1_000_000.) as u64,
+                })
+                .await
+                .unwrap();
+            println!("TxId: {:?}", tx_id);
+        },
         ActionParams::Claim { tx_hash, index } => {
             let tx_hash_bytes = hex::decode(tx_hash).unwrap();
             let output_id = OutputId::new(tx_hash_bytes, index);
             let endpoint = AlwaysSucceedsEndpoints::Claim { output_id };
-            contract.hit_endpoint(endpoint).await.unwrap()
+            let tx_id = contract.hit_endpoint(endpoint).await.unwrap();
+            println!("TxId: {:?}", tx_id);
         }
         ActionParams::List { count } => {
             let res = contract

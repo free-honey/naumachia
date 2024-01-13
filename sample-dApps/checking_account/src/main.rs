@@ -9,6 +9,7 @@ use naumachia::{
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
+use naumachia::transaction::TxId;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -41,7 +42,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn hit_endpoint(endpoint: CheckingAccountEndpoints) -> Result<()> {
+async fn hit_endpoint(endpoint: CheckingAccountEndpoints) -> Result<TxId> {
     let logic = CheckingAccountLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
     let contract = SmartContract::new(logic, ledger_client);
@@ -61,7 +62,9 @@ async fn run_lookup(lookup: CheckingAccountLookups) -> Result<CheckingAccountLoo
 async fn init_checking_account_impl(starting_ada: f64) -> Result<()> {
     let starting_lovelace = (starting_ada * 1_000_000.0) as u64; // TODO: Panic
     let endpoint = CheckingAccountEndpoints::InitAccount { starting_lovelace };
-    hit_endpoint(endpoint).await
+    let tx_id = hit_endpoint(endpoint).await?;
+    println!("TxId: {:?}", tx_id);
+    Ok(())
 }
 
 async fn my_account_impl() -> Result<()> {
@@ -115,5 +118,7 @@ async fn add_puller_impl() -> Result<()> {
         period,
         next_pull,
     };
-    hit_endpoint(endpoint).await
+    let tx_id = hit_endpoint(endpoint).await?;
+    println!("TxId: {:?}", tx_id);
+    Ok(())
 }

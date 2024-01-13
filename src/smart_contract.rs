@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 
 use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
+use crate::transaction::TxId;
 
 /// Interface defining how to interact with your smart contract
 #[async_trait]
@@ -16,7 +17,7 @@ pub trait SmartContractTrait {
     type LookupResponse;
 
     /// Method for hitting specific endpoint
-    async fn hit_endpoint(&self, endpoint: Self::Endpoint) -> Result<()>;
+    async fn hit_endpoint(&self, endpoint: Self::Endpoint) -> Result<TxId>;
     /// Method for querying specific data
     async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse>;
 }
@@ -67,12 +68,11 @@ where
     type Lookup = Logic::Lookups;
     type LookupResponse = Logic::LookupResponses;
 
-    async fn hit_endpoint(&self, endpoint: Logic::Endpoints) -> Result<()> {
+    async fn hit_endpoint(&self, endpoint: Logic::Endpoints) -> Result<TxId> {
         let tx_actions = Logic::handle_endpoint(endpoint, &self.ledger_client).await?;
         let tx = tx_actions.to_unbuilt_tx()?;
         let tx_id = self.ledger_client.issue(tx).await?;
-        println!("Transaction Submitted: {:?}", &tx_id);
-        Ok(())
+        Ok(tx_id)
     }
 
     async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {

@@ -26,7 +26,8 @@ async fn main() {
     let ledger_client = get_trireme_ledger_client_from_file().await.unwrap();
     let contract = SmartContract::new(logic, ledger_client);
 
-    match args.action {
+    let tx_id = match args.action {
         ActionParams::Mint => contract.hit_endpoint(MintNFTEndpoints::Mint).await.unwrap(),
-    }
+    };
+    println!("TxId: {:?}", tx_id);
 }

@@ -34,19 +34,22 @@ async fn main() {
     let contract = SmartContract::new(logic, ledger_client);
 
     match args.action {
-        ActionParams::Lock { amount, after_secs } => contract
-            .hit_endpoint(TimeLockedEndpoints::Lock {
-                amount: (amount * 1_000_000.) as u64,
-                after_secs,
-            })
-            .await
-            .unwrap(),
+        ActionParams::Lock { amount, after_secs } => {
+            let tx_id = contract
+                .hit_endpoint(TimeLockedEndpoints::Lock {
+                    amount: (amount * 1_000_000.) as u64,
+                    after_secs,
+                })
+                .await
+                .unwrap();
+            println!("TxId: {:?}", tx_id);
+        },
         ActionParams::Claim { tx_hash, index } => {
             let tx_hash_bytes = hex::decode(tx_hash).unwrap();
             let output_id = OutputId::new(tx_hash_bytes, index);
             let endpoint = TimeLockedEndpoints::Claim { output_id };
             match contract.hit_endpoint(endpoint).await {
-                Ok(_) => println!("Claimed output :)"),
+                Ok(tx_id) => println!("Claimed output :) with tx_id: {:?}", tx_id),
                 Err(e) => println!("Error claiming output: {:?}", e),
             }
         }
