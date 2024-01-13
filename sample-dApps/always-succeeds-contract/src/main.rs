@@ -43,7 +43,7 @@ async fn main() {
                 .await
                 .unwrap();
             println!("TxId: {:?}", tx_id);
-        },
+        }
         ActionParams::Claim { tx_hash, index } => {
             let tx_hash_bytes = hex::decode(tx_hash).unwrap();
             let output_id = OutputId::new(tx_hash_bytes, index);

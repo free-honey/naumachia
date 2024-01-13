@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
 use crate::transaction::TxId;
+use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
 
 /// Interface defining how to interact with your smart contract
 #[async_trait]

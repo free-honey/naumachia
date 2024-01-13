@@ -5,11 +5,11 @@ use checking::{
 };
 use clap::Parser;
 use naumachia::scripts::context::PubKeyHash;
+use naumachia::transaction::TxId;
 use naumachia::{
     smart_contract::{SmartContract, SmartContractTrait},
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
-use naumachia::transaction::TxId;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
