@@ -3,6 +3,7 @@ use std::fmt::Debug;
 
 use crate::transaction::TxId;
 use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
+use crate::ledger_client::LedgerClientResult;
 
 /// Interface defining how to interact with your smart contract
 #[async_trait]
@@ -62,6 +63,8 @@ where
 impl<Logic, Record> SmartContractTrait for SmartContract<Logic, Record>
 where
     Logic: SCLogic + Eq + Debug + Send + Sync,
+    Logic::Endpoints: Debug,
+    Logic::Lookups: Debug,
     Record: LedgerClient<Logic::Datums, Logic::Redeemers> + Send + Sync,
 {
     type Endpoint = Logic::Endpoints;
@@ -69,13 +72,23 @@ where
     type LookupResponse = Logic::LookupResponses;
 
     async fn hit_endpoint(&self, endpoint: Logic::Endpoints) -> Result<TxId> {
+        tracing::info!("Hitting smart contract endpoint: {:?}", &endpoint);
         let tx_actions = Logic::handle_endpoint(endpoint, &self.ledger_client).await?;
         let tx = tx_actions.to_unbuilt_tx()?;
-        let tx_id = self.ledger_client.issue(tx).await?;
-        Ok(tx_id)
+        match self.ledger_client.issue(tx).await {
+            Ok(tx_id) => {
+                tracing::info!("Successfully submitted transaction with id: {:?}", &tx_id);
+                Ok(tx_id)
+            }
+            Err(err) => {
+                tracing::error!("Failed to submit transaction: {:?}", err);
+                Err(err.into())
+            }
+        }
     }
 
     async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
+        tracing::info!("Looking up smart contract information: {:?}", &lookup);
         Ok(Logic::lookup(lookup, &self.ledger_client).await?)
     }
 }
