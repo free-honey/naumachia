@@ -31,6 +31,7 @@ pub const SPEND_TOKEN_ASSET_NAME: &str = "SPEND TOKEN";
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TimeLockedLogic;
 
+#[derive(Debug)]
 pub enum CheckingAccountEndpoints {
     // Owner Endpoints
     /// Create a new checking account
@@ -65,10 +66,12 @@ pub enum CheckingAccountEndpoints {
     },
 }
 
+#[derive(Debug)]
 pub enum CheckingAccountLookups {
     MyAccounts,
 }
 
+#[derive(Debug)]
 pub enum CheckingAccountLookupResponses {
     MyAccounts(Vec<Account>),
 }

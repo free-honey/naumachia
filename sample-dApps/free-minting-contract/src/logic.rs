@@ -8,6 +8,7 @@ pub mod script;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FreeMintingLogic;
 
+#[derive(Debug)]
 pub enum FreeMintingEndpoints {
     Mint { amount: u64 },
 }

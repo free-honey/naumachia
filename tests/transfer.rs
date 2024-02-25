@@ -13,6 +13,7 @@ use pallas_addresses::Address;
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct TransferADASmartContract;
 
+#[derive(Debug)]
 enum Endpoint {
     Transfer { amount: u64, recipient: Address },
 }

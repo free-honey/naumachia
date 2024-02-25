@@ -12,6 +12,7 @@ use naumachia::logic::error::{SCLogicError, SCLogicResult};
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MintNFTLogic;
 
+#[derive(Debug)]
 pub enum MintNFTEndpoints {
     Mint,
 }
