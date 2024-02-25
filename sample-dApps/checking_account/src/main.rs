@@ -33,6 +33,7 @@ enum ActionParams {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
     let args = Args::parse();
     match args.action {
         ActionParams::Init { starting_ada } => init_checking_account_impl(starting_ada).await?,

@@ -3,7 +3,6 @@ use std::fmt::Debug;
 
 use crate::transaction::TxId;
 use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
-use crate::ledger_client::LedgerClientResult;
 
 /// Interface defining how to interact with your smart contract
 #[async_trait]
@@ -65,6 +64,7 @@ where
     Logic: SCLogic + Eq + Debug + Send + Sync,
     Logic::Endpoints: Debug,
     Logic::Lookups: Debug,
+    Logic::LookupResponses: Debug,
     Record: LedgerClient<Logic::Datums, Logic::Redeemers> + Send + Sync,
 {
     type Endpoint = Logic::Endpoints;
@@ -89,6 +89,15 @@ where
 
     async fn lookup(&self, lookup: Self::Lookup) -> Result<Self::LookupResponse> {
         tracing::info!("Looking up smart contract information: {:?}", &lookup);
-        Ok(Logic::lookup(lookup, &self.ledger_client).await?)
+        match Logic::lookup(lookup, &self.ledger_client).await {
+            Ok(res) => {
+                tracing::info!("Successfully queried information: {:?}", &res);
+                Ok(res)
+            }
+            Err(err) => {
+                tracing::error!("Failed to query information: {:?}", err);
+                Err(err.into())
+            }
+        }
     }
 }
