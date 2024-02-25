@@ -35,6 +35,7 @@ impl<R> MintingPolicy<R> for AlwaysMintsPolicy {
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct AlwaysMintsSmartContract;
 
+#[derive(Debug)]
 enum Endpoint {
     Mint { amount: u64 },
 }
