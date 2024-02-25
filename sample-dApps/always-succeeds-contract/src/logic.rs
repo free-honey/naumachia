@@ -19,15 +19,18 @@ mod tests;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AlwaysSucceedsLogic;
 
+#[derive(Debug)]
 pub enum AlwaysSucceedsEndpoints {
     Lock { amount: u64 },
     Claim { output_id: OutputId },
 }
 
+#[derive(Debug)]
 pub enum AlwaysSucceedsLookups {
     ListActiveContracts { count: usize },
 }
 
+#[derive(Debug)]
 pub enum AlwaysSucceedsLookupResponses {
     ActiveContracts(Vec<Output<()>>),
 }

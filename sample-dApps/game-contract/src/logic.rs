@@ -19,15 +19,18 @@ mod tests;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GameLogic;
 
+#[derive(Debug)]
 pub enum GameEndpoints {
     Lock { amount: u64, secret: String },
     Guess { output_id: OutputId, guess: String },
 }
 
+#[derive(Debug)]
 pub enum GameLookups {
     ListActiveContracts { count: usize },
 }
 
+#[derive(Debug)]
 pub enum GameLookupResponses {
     ActiveContracts(Vec<Output<HashedString>>),
 }

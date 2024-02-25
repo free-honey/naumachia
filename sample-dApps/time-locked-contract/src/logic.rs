@@ -18,15 +18,18 @@ pub mod script;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TimeLockedLogic;
 
+#[derive(Debug)]
 pub enum TimeLockedEndpoints {
     Lock { amount: u64, after_secs: i64 },
     Claim { output_id: OutputId },
 }
 
+#[derive(Debug)]
 pub enum TimeLockedLookups {
     ListActiveContracts { count: usize },
 }
 
+#[derive(Debug)]
 pub enum TimeLockedLookupResponses {
     ActiveContracts(Vec<Output<i64>>),
 }
