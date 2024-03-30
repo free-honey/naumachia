@@ -21,7 +21,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --workspace
     - name: Lint
-      run: cargo fmt --all -- --check
+      run: cargo +nightly fmt --all -- --check
     - name: Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
     - name: Audit

@@ -46,7 +46,7 @@ FYI, CI requires these commands to pass. So, try to run them locally to save you
 ```
 cargo build --workspace
 cargo test --workspace
-cargo fmt --all -- --check
+cargo +nightly fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 ```
 
