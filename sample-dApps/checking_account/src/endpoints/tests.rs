@@ -1,19 +1,34 @@
-use crate::datum::CheckingAccountDatums;
 use crate::{
-    checking_account_validator, scripts::pull_validator::pull_validator, spend_token_policy,
-    AllowedPuller, CheckingAccount, CheckingAccountEndpoints, CheckingAccountLogic,
-    CHECKING_ACCOUNT_NFT_ASSET_NAME, SPEND_TOKEN_ASSET_NAME,
+    checking_account_validator,
+    datum::CheckingAccountDatums,
+    scripts::pull_validator::pull_validator,
+    spend_token_policy,
+    AllowedPuller,
+    CheckingAccount,
+    CheckingAccountEndpoints,
+    CheckingAccountLogic,
+    CHECKING_ACCOUNT_NFT_ASSET_NAME,
+    SPEND_TOKEN_ASSET_NAME,
 };
-use naumachia::logic::error::SCLogicError;
 use naumachia::{
     error::Error,
-    ledger_client::test_ledger_client::TestLedgerClientBuilder,
-    ledger_client::LedgerClient,
+    ledger_client::{
+        test_ledger_client::TestLedgerClientBuilder,
+        LedgerClient,
+    },
+    logic::error::SCLogicError,
     policy_id::PolicyId,
-    scripts::context::pub_key_hash_from_address_if_available,
-    scripts::{MintingPolicy, Validator},
-    smart_contract::{SmartContract, SmartContractTrait},
-    Address, Network,
+    scripts::{
+        context::pub_key_hash_from_address_if_available,
+        MintingPolicy,
+        Validator,
+    },
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
+    Address,
+    Network,
 };
 
 #[tokio::test]
@@ -49,7 +64,8 @@ async fn init_creates_instance_with_correct_balance() {
     let value = script_output.values().get(&PolicyId::Lovelace).unwrap();
     assert_eq!(value, account_amount);
     let nft = script_output.values().as_iter().find(|(policy_id, amt)| {
-        policy_id.asset_name() == Some(CHECKING_ACCOUNT_NFT_ASSET_NAME.to_string()) && **amt == 1
+        policy_id.asset_name() == Some(CHECKING_ACCOUNT_NFT_ASSET_NAME.to_string())
+            && **amt == 1
     });
     assert!(nft.is_some());
 }
@@ -242,9 +258,11 @@ async fn withdraw_from_account__replaces_existing_balance_with_updated_amount() 
 }
 
 #[tokio::test]
-async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_updates_datum() {
+async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_updates_datum(
+) {
     let owner_address = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
-    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner_address).unwrap();
+    let owner_pubkey_hash =
+        pub_key_hash_from_address_if_available(&owner_address).unwrap();
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
 
     let allow_puller_script = pull_validator().unwrap();
@@ -360,7 +378,8 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
 #[tokio::test]
 async fn pull_from_account__fails_if_time_not_past_next_pull_time() {
     let owner_address = Address::from_bech32("addr_test1qpuy2q9xel76qxdw8r29skldzc876cdgg9cugfg7mwh0zvpg3292mxuf3kq7nysjumlxjrlsfn9tp85r0l54l29x3qcs7nvyfm").unwrap();
-    let owner_pubkey_hash = pub_key_hash_from_address_if_available(&owner_address).unwrap();
+    let owner_pubkey_hash =
+        pub_key_hash_from_address_if_available(&owner_address).unwrap();
     let puller = Address::from_bech32("addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr").unwrap();
 
     let allow_puller_script = pull_validator().unwrap();

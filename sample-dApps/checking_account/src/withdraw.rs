@@ -1,8 +1,19 @@
-use crate::{checking_account_validator, CheckingAccountDatums, CheckingAccountError};
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
+use crate::{
+    checking_account_validator,
+    CheckingAccountDatums,
+    CheckingAccountError,
+};
 use naumachia::{
-    ledger_client::LedgerClient, output::OutputId, policy_id::PolicyId, scripts::Validator,
-    transaction::TxActions, values::Values,
+    ledger_client::LedgerClient,
+    logic::error::{
+        SCLogicError,
+        SCLogicResult,
+    },
+    output::OutputId,
+    policy_id::PolicyId,
+    scripts::Validator,
+    transaction::TxActions,
+    values::Values,
 };
 
 pub async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(

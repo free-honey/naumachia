@@ -1,16 +1,29 @@
 use crate::{
-    checking_account_validator, spend_token_policy, CheckingAccount, CheckingAccountDatums,
-    CheckingAccountError, CHECKING_ACCOUNT_NFT_ASSET_NAME,
+    checking_account_validator,
+    spend_token_policy,
+    CheckingAccount,
+    CheckingAccountDatums,
+    CheckingAccountError,
+    CHECKING_ACCOUNT_NFT_ASSET_NAME,
 };
-use nau_scripts::{one_shot, one_shot::OutputReference};
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
+use nau_scripts::{
+    one_shot,
+    one_shot::OutputReference,
+};
 use naumachia::{
     ledger_client::LedgerClient,
+    logic::error::{
+        SCLogicError,
+        SCLogicResult,
+    },
     output::Output,
     policy_id::PolicyId,
-    scripts::context::pub_key_hash_from_address_if_available,
-    scripts::Validator,
-    scripts::{MintingPolicy, ScriptError},
+    scripts::{
+        context::pub_key_hash_from_address_if_available,
+        MintingPolicy,
+        ScriptError,
+        Validator,
+    },
     transaction::TxActions,
     values::Values,
 };

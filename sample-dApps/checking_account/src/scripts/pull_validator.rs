@@ -1,7 +1,10 @@
 use crate::datum::CheckingAccountDatums;
-use naumachia::scripts::plutus_validator::PlutusValidator;
-use naumachia::scripts::raw_script::BlueprintFile;
-use naumachia::scripts::{ScriptError, ScriptResult};
+use naumachia::scripts::{
+    plutus_validator::PlutusValidator,
+    raw_script::BlueprintFile,
+    ScriptError,
+    ScriptResult,
+};
 
 const SCRIPT_RAW: &str = include_str!("../../checking/plutus.json");
 const VALIDATOR_NAME: &str = "pull_validator.spend";
@@ -25,13 +28,26 @@ pub fn pull_validator() -> ScriptResult<PlutusValidator<CheckingAccountDatums, (
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datum::{AllowedPuller, CheckingAccount, CheckingAccountDatums};
-    use crate::Address;
-    use naumachia::scripts::context::{
-        pub_key_hash_from_address_if_available, ContextBuilder, PubKeyHash, TxContext,
+    use crate::{
+        datum::{
+            AllowedPuller,
+            CheckingAccount,
+            CheckingAccountDatums,
+        },
+        Address,
     };
-    use naumachia::scripts::Validator;
-    use naumachia::Network;
+    use naumachia::{
+        scripts::{
+            context::{
+                pub_key_hash_from_address_if_available,
+                ContextBuilder,
+                PubKeyHash,
+                TxContext,
+            },
+            Validator,
+        },
+        Network,
+    };
 
     struct PullTestContext {
         pub signer_pkh: PubKeyHash,
@@ -73,7 +89,8 @@ mod tests {
                 pub_key_hash_from_address_if_available(&account_owner).unwrap();
 
             let puller = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
-            let signer_pubkey_hash = pub_key_hash_from_address_if_available(&puller).unwrap();
+            let signer_pubkey_hash =
+                pub_key_hash_from_address_if_available(&puller).unwrap();
             let checking_account_address = Address::from_bech32(
                 "addr_test1wpe9mt7mkjmkkuqjmevzafm6mle9t0spprr9335q0e6p92cur7fvl",
             )
@@ -215,7 +232,7 @@ mod tests {
         // when
         ctx_builder.signer_pkh = not_puller_pkh;
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -230,7 +247,7 @@ mod tests {
         // when
         ctx_builder.range_lower = Some((8, true));
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -245,7 +262,7 @@ mod tests {
         // when
         ctx_builder.range_lower = Some((10, false));
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -260,7 +277,7 @@ mod tests {
         // when
         ctx_builder.range_lower = Some((10, true));
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap();
@@ -275,7 +292,7 @@ mod tests {
         // when
         ctx_builder.output_datum = None;
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
 
@@ -302,7 +319,7 @@ mod tests {
         };
         ctx_builder.output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
 
@@ -329,7 +346,7 @@ mod tests {
         };
         ctx_builder.output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
 
@@ -354,7 +371,7 @@ mod tests {
         };
         ctx_builder.output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
 
@@ -379,7 +396,7 @@ mod tests {
         };
         ctx_builder.output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
 
@@ -408,7 +425,7 @@ mod tests {
         };
         ctx_builder.output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
 
@@ -420,9 +437,10 @@ mod tests {
         // given
         let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
-        let wrong_puller =
-            Address::from_bech32("addr_test1vzpwq95z3xyum8vqndgdd9mdnmafh3djcxnc6jemlgdmswcve6tkw")
-                .unwrap();
+        let wrong_puller = Address::from_bech32(
+            "addr_test1vzpwq95z3xyum8vqndgdd9mdnmafh3djcxnc6jemlgdmswcve6tkw",
+        )
+        .unwrap();
         let wrong_puller_pubkey_hash =
             pub_key_hash_from_address_if_available(&wrong_puller).unwrap();
 
@@ -437,7 +455,7 @@ mod tests {
         };
         ctx_builder.output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
 
@@ -453,7 +471,7 @@ mod tests {
         // when
         ctx_builder.output_token_policy_id = "".to_string(); // Replace spending token with lovelace
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -466,12 +484,13 @@ mod tests {
         let script = pull_validator().unwrap();
 
         // when
-        let wrong_address =
-            Address::from_bech32("addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt")
-                .unwrap();
+        let wrong_address = Address::from_bech32(
+            "addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt",
+        )
+        .unwrap();
         ctx_builder.account_output_address = wrong_address; // Replace spending token with lovelace
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -486,7 +505,7 @@ mod tests {
         // when
         ctx_builder.account_output_ada = ctx_builder.account_output_ada - 100; // pull too much
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -501,7 +520,7 @@ mod tests {
         // when
         ctx_builder.account_output_datum = None;
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -512,23 +531,27 @@ mod tests {
         // given
         let mut ctx_builder = PullTestContext::pull_happy_path();
         let script = pull_validator().unwrap();
-        let wrong_owner =
-            Address::from_bech32("addr_test1wr34avr87aq3aj0xlgj78jqjwjfppcj2ctsz8rppr2w8upc4jayvq")
-                .unwrap();
-        let wrong_owner_pubkey_hash = pub_key_hash_from_address_if_available(&wrong_owner).unwrap();
+        let wrong_owner = Address::from_bech32(
+            "addr_test1wr34avr87aq3aj0xlgj78jqjwjfppcj2ctsz8rppr2w8upc4jayvq",
+        )
+        .unwrap();
+        let wrong_owner_pubkey_hash =
+            pub_key_hash_from_address_if_available(&wrong_owner).unwrap();
 
         // when
         let new_datum = match ctx_builder.account_output_datum.unwrap() {
-            CheckingAccountDatums::CheckingAccount(old_checking_account) => CheckingAccount {
-                owner: wrong_owner_pubkey_hash,
-                ..old_checking_account
+            CheckingAccountDatums::CheckingAccount(old_checking_account) => {
+                CheckingAccount {
+                    owner: wrong_owner_pubkey_hash,
+                    ..old_checking_account
+                }
+                .into()
             }
-            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.account_output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -543,16 +566,18 @@ mod tests {
 
         // when
         let new_datum = match ctx_builder.account_output_datum.unwrap() {
-            CheckingAccountDatums::CheckingAccount(old_checking_account) => CheckingAccount {
-                spend_token_policy: bad_token_id,
-                ..old_checking_account
+            CheckingAccountDatums::CheckingAccount(old_checking_account) => {
+                CheckingAccount {
+                    spend_token_policy: bad_token_id,
+                    ..old_checking_account
+                }
+                .into()
             }
-            .into(),
             _ => panic!("wrong variant"),
         };
         ctx_builder.account_output_datum = Some(new_datum);
 
-        //then
+        // then
         let input_datum = ctx_builder.input_datum.clone().unwrap();
         let ctx = ctx_builder.build();
         let _eval = script.execute(input_datum, (), ctx).unwrap_err();
@@ -560,9 +585,10 @@ mod tests {
 
     #[test]
     fn execute__remove_happy_path() {
-        let account_address =
-            Address::from_bech32("addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt")
-                .unwrap();
+        let account_address = Address::from_bech32(
+            "addr_test1vz3ppzmmzuz0nlsjeyrqjm4pvdxl3cyfe8x06eg6htj2gwgv02qjt",
+        )
+        .unwrap();
         let puller_address = Address::from_bech32("addr_test1qrksjmprvgcedgdt6rhg40590vr6exdzdc2hm5wc6pyl9ymkyskmqs55usm57gflrumk9kd63f3ty6r0l2tdfwfm28qs0rurdr").unwrap();
         let owner = pub_key_hash_from_address_if_available(&account_address).unwrap();
         let puller = pub_key_hash_from_address_if_available(&puller_address).unwrap();

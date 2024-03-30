@@ -1,21 +1,35 @@
-use crate::lookups::get_my_accounts;
 use crate::{
+    lookups::get_my_accounts,
     scripts::{
-        checking_account_validtor::checking_account_validator, pull_validator::pull_validator,
+        checking_account_validtor::checking_account_validator,
+        pull_validator::pull_validator,
         spend_token_policy::spend_token_policy,
     },
     withdraw::withdraw_from_account,
 };
 use async_trait::async_trait;
-use datum::{AllowedPuller, CheckingAccount, CheckingAccountDatums};
-use endpoints::{
-    add_puller::add_puller, fund_account::fund_account, init_account::init_account,
-    pull::pull_from_account, remove_puller::remove_puller,
+use datum::{
+    AllowedPuller,
+    CheckingAccount,
+    CheckingAccountDatums,
 };
-use naumachia::logic::error::SCLogicResult;
+use endpoints::{
+    add_puller::add_puller,
+    fund_account::fund_account,
+    init_account::init_account,
+    pull::pull_from_account,
+    remove_puller::remove_puller,
+};
 use naumachia::{
-    ledger_client::LedgerClient, logic::SCLogic, output::OutputId, scripts::context::PubKeyHash,
-    transaction::TxActions, Address,
+    ledger_client::LedgerClient,
+    logic::{
+        error::SCLogicResult,
+        SCLogic,
+    },
+    output::OutputId,
+    scripts::context::PubKeyHash,
+    transaction::TxActions,
+    Address,
 };
 use thiserror::Error;
 
