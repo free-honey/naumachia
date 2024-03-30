@@ -1,7 +1,16 @@
 use crate::logic::script::get_policy;
 use async_trait::async_trait;
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
-use naumachia::{ledger_client::LedgerClient, logic::SCLogic, transaction::TxActions};
+use naumachia::{
+    ledger_client::LedgerClient,
+    logic::{
+        error::{
+            SCLogicError,
+            SCLogicResult,
+        },
+        SCLogic,
+    },
+    transaction::TxActions,
+};
 
 pub mod script;
 
@@ -29,8 +38,12 @@ impl SCLogic for FreeMintingLogic {
             FreeMintingEndpoints::Mint { amount } => {
                 let inner_policy = get_policy().map_err(SCLogicError::PolicyScript)?;
                 let policy = Box::new(inner_policy);
-                let actions =
-                    TxActions::v1().with_mint(amount, Some("FREEEEEE".to_string()), (), policy);
+                let actions = TxActions::v1().with_mint(
+                    amount,
+                    Some("FREEEEEE".to_string()),
+                    (),
+                    policy,
+                );
                 Ok(actions)
             }
         }

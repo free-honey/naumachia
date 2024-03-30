@@ -1,4 +1,7 @@
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 /// Token identity.
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]

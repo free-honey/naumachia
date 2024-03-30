@@ -1,10 +1,14 @@
-use crate::ledger_client::LedgerClient;
-use crate::TxActions;
+use crate::{
+    ledger_client::LedgerClient,
+    TxActions,
+};
 
 use async_trait::async_trait;
 use error::SCLogicResult;
-use std::fmt::Debug;
-use std::hash::Hash;
+use std::{
+    fmt::Debug,
+    hash::Hash,
+};
 
 #[allow(missing_docs)]
 pub mod error;
@@ -35,7 +39,6 @@ pub trait SCLogic: Send + Sync {
     ///         auction_id: String
     ///     }
     /// }
-    ///
     type Endpoints: Send + Sync;
 
     /// Represents the domain-specific data the consumer of a Smart Contract can query.

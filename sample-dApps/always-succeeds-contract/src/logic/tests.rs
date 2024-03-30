@@ -1,7 +1,13 @@
 use super::*;
-use naumachia::ledger_client::test_ledger_client::TestLedgerClientBuilder;
-use naumachia::smart_contract::{SmartContract, SmartContractTrait};
-use naumachia::{Address, Network};
+use naumachia::{
+    ledger_client::test_ledger_client::TestLedgerClientBuilder,
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
+    Address,
+    Network,
+};
 
 #[tokio::test]
 async fn lock_and_claim() {

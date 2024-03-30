@@ -1,8 +1,14 @@
 use crate::{
-    output::Output, scripts::plutus_validator::plutus_data::PlutusData, values::Values, PolicyId,
+    output::Output,
+    scripts::plutus_validator::plutus_data::PlutusData,
+    values::Values,
+    PolicyId,
 };
 use pallas_addresses::Address;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use std::collections::HashMap;
 
 // TODO: Flesh out and probably move https://github.com/MitchTurner/naumachia/issues/39
@@ -210,7 +216,11 @@ impl ContextBuilder {
     }
 
     /// Add specific valid range for the `TxContext`
-    pub fn with_range(mut self, lower: Option<(i64, bool)>, upper: Option<(i64, bool)>) -> Self {
+    pub fn with_range(
+        mut self,
+        lower: Option<(i64, bool)>,
+        upper: Option<(i64, bool)>,
+    ) -> Self {
         let valid_range = ValidRange { lower, upper };
         self.range = Some(valid_range);
         self
@@ -241,7 +251,10 @@ impl ContextBuilder {
     }
 
     /// Add specific [`Output`] as an input, rather than using `with_input`
-    pub fn add_specific_input<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
+    pub fn add_specific_input<D: Clone + Into<PlutusData>>(
+        mut self,
+        input: &Output<D>,
+    ) -> Self {
         let id = input.id();
         let transaction_id = id.tx_hash().to_vec();
         let output_index = id.index();
@@ -278,7 +291,10 @@ impl ContextBuilder {
     }
 
     /// Add specific [`Output`] as an output, rather than using `with_input`
-    pub fn add_specific_output<D: Clone + Into<PlutusData>>(mut self, input: &Output<D>) -> Self {
+    pub fn add_specific_output<D: Clone + Into<PlutusData>>(
+        mut self,
+        input: &Output<D>,
+    ) -> Self {
         let address = input.owner();
         let value = CtxValue::from(input.values().to_owned());
         let datum = input.typed_datum().into();
@@ -316,7 +332,10 @@ impl ContextBuilder {
             }
         };
         TxContext {
-            purpose: CtxScriptPurpose::Spend(CtxOutputReference::new(tx_id.to_vec(), index)),
+            purpose: CtxScriptPurpose::Spend(CtxOutputReference::new(
+                tx_id.to_vec(),
+                index,
+            )),
             signer: self.signer.clone(),
             range,
             inputs: self.inputs.clone(),
@@ -361,13 +380,21 @@ pub struct CtxInputBuilder {
 
 impl CtxInputBuilder {
     /// Add single value to the `CtxInput`
-    pub fn with_value(mut self, policy_id: &str, asset_name: &str, amt: u64) -> CtxInputBuilder {
+    pub fn with_value(
+        mut self,
+        policy_id: &str,
+        asset_name: &str,
+        amt: u64,
+    ) -> CtxInputBuilder {
         add_to_nested(&mut self.value, policy_id, asset_name, amt);
         self
     }
 
     /// Add an inline `Datum` to the `CtxInput`. Will override previous value
-    pub fn with_inline_datum<Datum: Into<PlutusData>>(mut self, datum: Datum) -> CtxInputBuilder {
+    pub fn with_inline_datum<Datum: Into<PlutusData>>(
+        mut self,
+        datum: Datum,
+    ) -> CtxInputBuilder {
         self.datum = CtxDatum::InlineDatum(datum.into());
         self
     }
@@ -431,7 +458,10 @@ impl CtxOutputBuilder {
     }
 
     /// Add a `Datum` that will be stored on the `CtxOutput` as a datum hash.
-    pub fn with_datum_hash_from_datum<Datum: Into<PlutusData>>(mut self, datum: Datum) -> Self {
+    pub fn with_datum_hash_from_datum<Datum: Into<PlutusData>>(
+        mut self,
+        datum: Datum,
+    ) -> Self {
         self.datum = CtxDatum::DatumHash(datum.into().hash());
         self
     }

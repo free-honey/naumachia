@@ -1,9 +1,23 @@
-use crate::ledger_client::test_ledger_client::{TestLCError, TestLedgerStorage};
-use crate::ledger_client::LedgerClientError::FailedToIssueTx;
-use crate::ledger_client::{LedgerClientError, LedgerClientResult};
-use crate::output::Output;
-use pallas_addresses::{Address, Network};
-use std::sync::{Arc, Mutex};
+use crate::{
+    ledger_client::{
+        test_ledger_client::{
+            TestLCError,
+            TestLedgerStorage,
+        },
+        LedgerClientError,
+        LedgerClientError::FailedToIssueTx,
+        LedgerClientResult,
+    },
+    output::Output,
+};
+use pallas_addresses::{
+    Address,
+    Network,
+};
+use std::sync::{
+    Arc,
+    Mutex,
+};
 
 /// A mutable, shared reference to a vector of `Output`s.
 type MutableData<Datum> = Arc<Mutex<Vec<(Address, Output<Datum>)>>>;
@@ -24,7 +38,9 @@ pub struct InMemoryStorage<Datum> {
 }
 
 #[async_trait::async_trait]
-impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemoryStorage<Datum> {
+impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum>
+    for InMemoryStorage<Datum>
+{
     async fn signer(&self) -> LedgerClientResult<Address> {
         Ok(self.signer.clone())
     }
@@ -49,7 +65,10 @@ impl<Datum: Clone + Send + Sync + PartialEq> TestLedgerStorage<Datum> for InMemo
         Ok(outputs)
     }
 
-    async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>> {
+    async fn all_outputs(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let outputs = self
             .outputs
             .lock()

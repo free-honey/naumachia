@@ -1,11 +1,18 @@
 use async_trait::async_trait;
-use naumachia::logic::error::SCLogicResult;
 use naumachia::{
-    ledger_client::test_ledger_client::TestLedgerClientBuilder,
-    ledger_client::LedgerClient,
-    logic::SCLogic,
+    ledger_client::{
+        test_ledger_client::TestLedgerClientBuilder,
+        LedgerClient,
+    },
+    logic::{
+        error::SCLogicResult,
+        SCLogic,
+    },
     policy_id::PolicyId,
-    smart_contract::{SmartContract, SmartContractTrait},
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
     transaction::TxActions,
 };
 use pallas_addresses::Address;
@@ -32,7 +39,8 @@ impl SCLogic for TransferADASmartContract {
     ) -> SCLogicResult<TxActions<(), ()>> {
         match endpoint {
             Endpoint::Transfer { amount, recipient } => {
-                let u_tx = TxActions::v1().with_transfer(amount, recipient, PolicyId::Lovelace);
+                let u_tx =
+                    TxActions::v1().with_transfer(amount, recipient, PolicyId::Lovelace);
                 Ok(u_tx)
             }
         }

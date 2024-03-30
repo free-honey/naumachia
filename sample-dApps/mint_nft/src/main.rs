@@ -1,7 +1,13 @@
 use clap::Parser;
-use mint_nft::logic::{MintNFTEndpoints, MintNFTLogic};
+use mint_nft::logic::{
+    MintNFTEndpoints,
+    MintNFTLogic,
+};
 use naumachia::{
-    smart_contract::{SmartContract, SmartContractTrait},
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 
@@ -27,7 +33,9 @@ async fn main() {
     let contract = SmartContract::new(logic, ledger_client);
 
     let tx_id = match args.action {
-        ActionParams::Mint => contract.hit_endpoint(MintNFTEndpoints::Mint).await.unwrap(),
+        ActionParams::Mint => {
+            contract.hit_endpoint(MintNFTEndpoints::Mint).await.unwrap()
+        }
     };
     println!("TxId: {:?}", tx_id);
 }

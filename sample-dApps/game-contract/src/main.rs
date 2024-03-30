@@ -1,8 +1,16 @@
 use clap::Parser;
-use game_contract::logic::{GameEndpoints, GameLogic, GameLookupResponses, GameLookups};
+use game_contract::logic::{
+    GameEndpoints,
+    GameLogic,
+    GameLookupResponses,
+    GameLookups,
+};
 use naumachia::{
     output::OutputId,
-    smart_contract::{SmartContract, SmartContractTrait},
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 

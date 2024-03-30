@@ -1,6 +1,12 @@
-use crate::{values::Values, PolicyId};
+use crate::{
+    values::Values,
+    PolicyId,
+};
 use pallas_addresses::Address;
-use std::{cell::RefCell, collections::HashMap};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+};
 
 pub(crate) fn nested_map_to_vecs(
     nested_map: HashMap<String, RefCell<Values>>,

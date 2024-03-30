@@ -1,6 +1,9 @@
-use naumachia::scripts::plutus_minting_policy::PlutusMintingPolicy;
-use naumachia::scripts::raw_script::PlutusScriptFile;
-use naumachia::scripts::{ScriptError, ScriptResult};
+use naumachia::scripts::{
+    plutus_minting_policy::PlutusMintingPolicy,
+    raw_script::PlutusScriptFile,
+    ScriptError,
+    ScriptResult,
+};
 
 // const SCRIPT_RAW: &str = include_str!("../../plutus/anyone-can-mint.plutus");
 // const SCRIPT_RAW: &str = include_str!("../../plutus/free-minting.plutus");
@@ -17,9 +20,16 @@ pub fn get_policy<R>() -> ScriptResult<PlutusMintingPolicy<R>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
-    use naumachia::scripts::MintingPolicy;
-    use naumachia::Address;
+    use naumachia::{
+        scripts::{
+            context::{
+                pub_key_hash_from_address_if_available,
+                ContextBuilder,
+            },
+            MintingPolicy,
+        },
+        Address,
+    };
 
     #[test]
     fn can_execute_policy() {

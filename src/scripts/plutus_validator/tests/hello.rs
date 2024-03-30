@@ -1,7 +1,13 @@
-use crate::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
-use crate::scripts::plutus_validator::PlutusValidator;
-use crate::scripts::raw_script::PlutusScriptFile;
-use crate::scripts::{ScriptError, Validator};
+use crate::scripts::{
+    context::{
+        pub_key_hash_from_address_if_available,
+        ContextBuilder,
+    },
+    plutus_validator::PlutusValidator,
+    raw_script::PlutusScriptFile,
+    ScriptError,
+    Validator,
+};
 use pallas_addresses::Address;
 
 /// run :: HelloDatum -> HelloRedeemer -> ScriptContext -> Bool

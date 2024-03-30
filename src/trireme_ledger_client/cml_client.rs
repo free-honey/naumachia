@@ -1,44 +1,106 @@
-use crate::trireme_ledger_client::cml_client::network_settings::NetworkSettings;
 use crate::{
-    ledger_client::{LedgerClient, LedgerClientError, LedgerClientResult},
-    output::{Output, UnbuiltOutput},
+    ledger_client::{
+        LedgerClient,
+        LedgerClientError,
+        LedgerClientResult,
+    },
+    output::{
+        Output,
+        UnbuiltOutput,
+    },
     scripts::Validator,
-    transaction::{TransactionVersion, TxId},
-    trireme_ledger_client::cml_client::issuance_helpers::{
-        cml_v1_script_from_nau_policy, cml_v2_script_from_nau_policy,
-        cml_v2_script_from_nau_script, vasil_v2_tx_builder,
+    transaction::{
+        TransactionVersion,
+        TxId,
     },
     trireme_ledger_client::cml_client::{
         issuance_helpers::{
-            add_collateral, build_tx_for_signing, cml_v1_script_from_nau_script, input_tx_hash,
-            partial_script_witness, select_inputs_from_utxos, sign_tx,
-            specify_utxos_available_for_input_selection, utxo_to_nau_utxo, vasil_v1_tx_builder,
+            add_collateral,
+            build_tx_for_signing,
+            cml_v1_script_from_nau_policy,
+            cml_v1_script_from_nau_script,
+            cml_v2_script_from_nau_policy,
+            cml_v2_script_from_nau_script,
+            input_tx_hash,
+            partial_script_witness,
+            select_inputs_from_utxos,
+            sign_tx,
+            specify_utxos_available_for_input_selection,
+            utxo_to_nau_utxo,
+            vasil_v1_tx_builder,
+            vasil_v2_tx_builder,
         },
+        network_settings::NetworkSettings,
         plutus_data_interop::PlutusDataInterop,
     },
     UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::{
-    address::{Address as CMLAddress, BaseAddress, EnterpriseAddress, StakeCredential},
+    address::{
+        Address as CMLAddress,
+        BaseAddress,
+        EnterpriseAddress,
+        StakeCredential,
+    },
     builders::{
-        input_builder::{InputBuilderResult, SingleInputBuilder},
-        mint_builder::{MintBuilderResult, SingleMintBuilder},
+        input_builder::{
+            InputBuilderResult,
+            SingleInputBuilder,
+        },
+        mint_builder::{
+            MintBuilderResult,
+            SingleMintBuilder,
+        },
         output_builder::SingleOutputBuilderResult,
         redeemer_builder::RedeemerWitnessKey,
-        tx_builder::{ChangeSelectionAlgo, TransactionBuilder},
-        witness_builder::{PartialPlutusWitness, PlutusScriptWitness},
+        tx_builder::{
+            ChangeSelectionAlgo,
+            TransactionBuilder,
+        },
+        witness_builder::{
+            PartialPlutusWitness,
+            PlutusScriptWitness,
+        },
     },
-    crypto::{PrivateKey, TransactionHash},
-    ledger::common::{hash::hash_plutus_data, value::BigNum, value::Int, value::Value as CMLValue},
-    plutus::{ExUnits, PlutusData, PlutusScript, RedeemerTag},
-    AssetName, Datum as CMLDatum, MintAssets, RequiredSigners, Transaction as CMLTransaction,
-    TransactionInput, TransactionOutput,
+    crypto::{
+        PrivateKey,
+        TransactionHash,
+    },
+    ledger::common::{
+        hash::hash_plutus_data,
+        value::{
+            BigNum,
+            Int,
+            Value as CMLValue,
+        },
+    },
+    plutus::{
+        ExUnits,
+        PlutusData,
+        PlutusScript,
+        RedeemerTag,
+    },
+    AssetName,
+    Datum as CMLDatum,
+    MintAssets,
+    RequiredSigners,
+    Transaction as CMLTransaction,
+    TransactionInput,
+    TransactionOutput,
 };
 use error::*;
-use pallas_addresses::{Address, Network as CMLNetwork};
-use std::time::UNIX_EPOCH;
-use std::{collections::HashMap, fmt::Debug, marker::PhantomData, ops::Deref};
+use pallas_addresses::{
+    Address,
+    Network as CMLNetwork,
+};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    marker::PhantomData,
+    ops::Deref,
+    time::UNIX_EPOCH,
+};
 
 /// Blockfrost Ledger module
 pub mod blockfrost_ledger;
@@ -217,11 +279,18 @@ pub trait Ledger {
     /// Get the last block time in seconds
     async fn last_block_time_secs(&self) -> Result<i64>;
     /// Get the UTxOs for an address
-    async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>>;
+    async fn get_utxos_for_addr(
+        &self,
+        addr: &CMLAddress,
+        count: usize,
+    ) -> Result<Vec<UTxO>>;
     /// Get all the UTxOs for an address
     async fn get_all_utxos_for_addr(&self, addr: &CMLAddress) -> Result<Vec<UTxO>>;
     /// Calculate the execution units for a transaction
-    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, ExecutionCost>>;
+    async fn calculate_ex_units(
+        &self,
+        tx: &CMLTransaction,
+    ) -> Result<HashMap<u64, ExecutionCost>>;
     /// Submit a transaction
     async fn submit_transaction(&self, tx: &CMLTransaction) -> Result<String>;
 }
@@ -244,7 +313,10 @@ where
         }
     }
 
-    async fn add_outputs_for_tx<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+    async fn add_outputs_for_tx<
+        Datum: PlutusDataInterop + Debug,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -256,8 +328,8 @@ where
                 .try_into()
                 .map_err(as_failed_to_issue_tx)?;
             let recipient = unbuilt_output.owner();
-            let recp_addr =
-                addr_from_bech_32(&recipient.to_string()).map_err(as_failed_to_issue_tx)?;
+            let recp_addr = addr_from_bech_32(&recipient.to_string())
+                .map_err(as_failed_to_issue_tx)?;
             let mut output = TransactionOutput::new(&recp_addr, &cml_values);
             let res = if let UnbuiltOutput::Validator { datum, .. } = unbuilt_output {
                 let data = datum.to_plutus_data();
@@ -281,7 +353,8 @@ where
     async fn cml_script_address(&self, cml_script: &PlutusScript) -> CMLAddress {
         let script_hash = cml_script.hash();
         let stake_cred = StakeCredential::from_scripthash(&script_hash);
-        let enterprise_addr = EnterpriseAddress::new(self.network_settings.network(), &stake_cred);
+        let enterprise_addr =
+            EnterpriseAddress::new(self.network_settings.network(), &stake_cred);
         enterprise_addr.to_address()
     }
 
@@ -357,7 +430,10 @@ where
         Ok(cml_input)
     }
 
-    async fn add_v1_script_input<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
+    async fn add_v1_script_input<
+        Datum: PlutusDataInterop + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
@@ -374,7 +450,10 @@ where
         Ok(())
     }
 
-    async fn add_v2_script_input<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
+    async fn add_v2_script_input<
+        Datum: PlutusDataInterop + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         input: &Output<Datum>,
@@ -391,7 +470,10 @@ where
         Ok(())
     }
 
-    async fn add_tokens_for_v1_minting<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_tokens_for_v1_minting<
+        Datum: PlutusDataInterop,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -406,7 +488,10 @@ where
         Ok(())
     }
 
-    async fn add_tokens_for_v2_minting<Datum: PlutusDataInterop, Redeemer: PlutusDataInterop>(
+    async fn add_tokens_for_v2_minting<
+        Datum: PlutusDataInterop,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -448,7 +533,10 @@ where
         Ok(res)
     }
 
-    async fn add_v1_script_inputs<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
+    async fn add_v1_script_inputs<
+        Datum: PlutusDataInterop + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -460,7 +548,10 @@ where
         Ok(())
     }
 
-    async fn add_v2_script_inputs<Datum: PlutusDataInterop + Clone, Redeemer: PlutusDataInterop>(
+    async fn add_v2_script_inputs<
+        Datum: PlutusDataInterop + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -514,7 +605,10 @@ where
         Ok(TxId::new(&submit_res))
     }
 
-    async fn issue_v1_tx<Datum: PlutusDataInterop + Debug + Clone, Redeemer: PlutusDataInterop>(
+    async fn issue_v1_tx<
+        Datum: PlutusDataInterop + Debug + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx: UnbuiltTransaction<Datum, Redeemer>,
         my_utxos: Vec<UTxO>,
@@ -524,19 +618,27 @@ where
         let mut tx_builder = vasil_v1_tx_builder()?;
         self.add_v1_script_inputs(&mut tx_builder, &tx).await?;
         self.add_tokens_for_v1_minting(&mut tx_builder, &tx).await?;
-        specify_utxos_available_for_input_selection(&mut tx_builder, &my_address, &my_utxos)
-            .await?;
+        specify_utxos_available_for_input_selection(
+            &mut tx_builder,
+            &my_address,
+            &my_utxos,
+        )
+        .await?;
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
         select_inputs_from_utxos(&mut tx_builder).await?;
         self.update_ex_units(&mut tx_builder, &my_address).await?;
-        let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        let mut signed_tx_builder =
+            build_tx_for_signing(&mut tx_builder, &my_address).await?;
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
         let tx_id = self.submit_tx(&tx).await?;
         Ok(tx_id)
     }
 
-    async fn issue_v2_tx<Datum: PlutusDataInterop + Debug + Clone, Redeemer: PlutusDataInterop>(
+    async fn issue_v2_tx<
+        Datum: PlutusDataInterop + Debug + Clone,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx: UnbuiltTransaction<Datum, Redeemer>,
         my_utxos: Vec<UTxO>,
@@ -547,20 +649,28 @@ where
         self.set_valid_range(&mut tx_builder, &tx).await?;
         self.add_v2_script_inputs(&mut tx_builder, &tx).await?;
         self.add_tokens_for_v2_minting(&mut tx_builder, &tx).await?;
-        specify_utxos_available_for_input_selection(&mut tx_builder, &my_address, &my_utxos)
-            .await?;
+        specify_utxos_available_for_input_selection(
+            &mut tx_builder,
+            &my_address,
+            &my_utxos,
+        )
+        .await?;
         self.add_specific_inputs(&mut tx_builder, &tx).await?;
         self.add_outputs_for_tx(&mut tx_builder, &tx).await?;
         add_collateral(&mut tx_builder, &my_address, &my_utxos).await?;
         select_inputs_from_utxos(&mut tx_builder).await?;
         self.update_ex_units(&mut tx_builder, &my_address).await?;
-        let mut signed_tx_builder = build_tx_for_signing(&mut tx_builder, &my_address).await?;
+        let mut signed_tx_builder =
+            build_tx_for_signing(&mut tx_builder, &my_address).await?;
         let tx = sign_tx(&mut signed_tx_builder, &priv_key).await?;
         let tx_id = self.submit_tx(&tx).await?;
         Ok(tx_id)
     }
 
-    async fn set_valid_range<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+    async fn set_valid_range<
+        Datum: PlutusDataInterop + Debug,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -587,7 +697,10 @@ where
         Ok(())
     }
 
-    async fn add_specific_inputs<Datum: PlutusDataInterop + Debug, Redeemer: PlutusDataInterop>(
+    async fn add_specific_inputs<
+        Datum: PlutusDataInterop + Debug,
+        Redeemer: PlutusDataInterop,
+    >(
         &self,
         tx_builder: &mut TransactionBuilder,
         tx: &UnbuiltTransaction<Datum, Redeemer>,
@@ -620,7 +733,8 @@ where
 }
 
 #[async_trait]
-impl<L, K, Datum, Redeemer> LedgerClient<Datum, Redeemer> for CMLLedgerCLient<L, K, Datum, Redeemer>
+impl<L, K, Datum, Redeemer> LedgerClient<Datum, Redeemer>
+    for CMLLedgerCLient<L, K, Datum, Redeemer>
 where
     L: Ledger + Send + Sync,
     K: Keys + Send + Sync,
@@ -651,8 +765,8 @@ where
         let addr_string = address
             .to_bech32()
             .map_err(|e| LedgerClientError::BadAddress(Box::new(e)))?;
-        let cml_addr =
-            addr_from_bech_32(&addr_string).map_err(as_failed_to_retrieve_by_address(address))?;
+        let cml_addr = addr_from_bech_32(&addr_string)
+            .map_err(as_failed_to_retrieve_by_address(address))?;
 
         let bf_utxos = self
             .ledger
@@ -673,8 +787,8 @@ where
         address: &Address,
     ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let addr_string = address.to_bech32().expect("Already Validated");
-        let cml_addr =
-            addr_from_bech_32(&addr_string).map_err(as_failed_to_retrieve_by_address(address))?;
+        let cml_addr = addr_from_bech_32(&addr_string)
+            .map_err(as_failed_to_retrieve_by_address(address))?;
 
         let bf_utxos = self
             .ledger
@@ -690,7 +804,10 @@ where
         Ok(utxos)
     }
 
-    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
+    async fn issue(
+        &self,
+        tx: UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<TxId> {
         let my_address = self
             .keys
             .base_addr()
@@ -710,8 +827,12 @@ where
             .map_err(as_failed_to_issue_tx)?;
 
         match tx.script_version {
-            TransactionVersion::V1 => self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await,
-            TransactionVersion::V2 => self.issue_v2_tx(tx, my_utxos, my_address, priv_key).await,
+            TransactionVersion::V1 => {
+                self.issue_v1_tx(tx, my_utxos, my_address, priv_key).await
+            }
+            TransactionVersion::V2 => {
+                self.issue_v2_tx(tx, my_utxos, my_address, priv_key).await
+            }
         }
     }
 

@@ -1,17 +1,31 @@
 use async_trait::async_trait;
-use naumachia::ledger_client::test_ledger_client::{
-    in_memory_storage::InMemoryStorage, TestLedgerClient, TestLedgerClientBuilder,
-};
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
-use naumachia::policy_id::PolicyId;
-use naumachia::scripts::context::TxContext;
-use naumachia::scripts::ExecutionCost;
 use naumachia::{
-    ledger_client::LedgerClient,
-    logic::SCLogic,
-    scripts::{MintingPolicy, ScriptResult},
-    smart_contract::SmartContract,
-    smart_contract::SmartContractTrait,
+    ledger_client::{
+        test_ledger_client::{
+            in_memory_storage::InMemoryStorage,
+            TestLedgerClient,
+            TestLedgerClientBuilder,
+        },
+        LedgerClient,
+    },
+    logic::{
+        error::{
+            SCLogicError,
+            SCLogicResult,
+        },
+        SCLogic,
+    },
+    policy_id::PolicyId,
+    scripts::{
+        context::TxContext,
+        ExecutionCost,
+        MintingPolicy,
+        ScriptResult,
+    },
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
     transaction::TxActions,
 };
 use pallas_addresses::Address;
@@ -92,11 +106,10 @@ async fn can_mint_from_always_true_minting_policy() {
 
     // Check my balance for minted tokens
     let expected = amount;
-    let actual = <TestLedgerClient<(), (), InMemoryStorage<()>> as LedgerClient<(), ()>>::balance_at_address(
-        contract.ledger_client(),
-        &me,
-        &policy,
-    )
+    let actual = <TestLedgerClient<(), (), InMemoryStorage<()>> as LedgerClient<
+        (),
+        (),
+    >>::balance_at_address(contract.ledger_client(), &me, &policy)
     .await
     .unwrap();
     assert_eq!(expected, actual)

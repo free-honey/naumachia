@@ -1,9 +1,14 @@
 use clap::Parser;
-use free_minting_contract::logic::FreeMintingEndpoints;
-use free_minting_contract::logic::FreeMintingLogic;
-use naumachia::smart_contract::SmartContractTrait;
+use free_minting_contract::logic::{
+    FreeMintingEndpoints,
+    FreeMintingLogic,
+};
 use naumachia::{
-    smart_contract::SmartContract, trireme_ledger_client::get_trireme_ledger_client_from_file,
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
+    trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 
 #[derive(Parser, Debug)]

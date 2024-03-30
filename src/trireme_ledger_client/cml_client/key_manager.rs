@@ -1,11 +1,26 @@
-use super::{error::*, Keys};
-use async_trait::async_trait;
-use bip39::{Language, Mnemonic};
-use cardano_multiplatform_lib::{
-    address::{BaseAddress, StakeCredential},
-    crypto::{Bip32PrivateKey, PrivateKey},
+use super::{
+    error::*,
+    Keys,
 };
-use std::{fs, path::Path};
+use async_trait::async_trait;
+use bip39::{
+    Language,
+    Mnemonic,
+};
+use cardano_multiplatform_lib::{
+    address::{
+        BaseAddress,
+        StakeCredential,
+    },
+    crypto::{
+        Bip32PrivateKey,
+        PrivateKey,
+    },
+};
+use std::{
+    fs,
+    path::Path,
+};
 use thiserror::Error;
 
 /// Standard implementation of the [`Keys`] trait
@@ -66,7 +81,8 @@ impl KeyManager {
         let pub_key = account_key.derive(0).derive(0).to_public();
         let stake_key = account_key.derive(2).derive(0).to_public();
         let pub_key_creds = StakeCredential::from_keyhash(&pub_key.to_raw_key().hash());
-        let stake_key_creds = StakeCredential::from_keyhash(&stake_key.to_raw_key().hash());
+        let stake_key_creds =
+            StakeCredential::from_keyhash(&stake_key.to_raw_key().hash());
         let base_addr = BaseAddress::new(self.network, &pub_key_creds, &stake_key_creds);
         Ok(base_addr)
     }

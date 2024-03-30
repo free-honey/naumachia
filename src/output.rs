@@ -1,6 +1,9 @@
 use crate::scripts::plutus_validator::plutus_data::PlutusData;
 use pallas_addresses::Address;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::values::Values;
 
@@ -147,7 +150,12 @@ impl OutputId {
 
 impl<Datum> Output<Datum> {
     /// Constructor for wallet output
-    pub fn new_wallet(tx_hash: Vec<u8>, index: u64, owner: Address, values: Values) -> Self {
+    pub fn new_wallet(
+        tx_hash: Vec<u8>,
+        index: u64,
+        owner: Address,
+        values: Values,
+    ) -> Self {
         let id = OutputId::new(tx_hash, index);
         let addr = owner.to_bech32().expect("Already Validated");
         Output {

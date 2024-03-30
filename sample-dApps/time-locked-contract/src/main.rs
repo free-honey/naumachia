@@ -1,11 +1,17 @@
 use clap::Parser;
 use naumachia::{
     output::OutputId,
-    smart_contract::{SmartContract, SmartContractTrait},
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 use time_locked_contract::logic::{
-    TimeLockedEndpoints, TimeLockedLogic, TimeLockedLookupResponses, TimeLockedLookups,
+    TimeLockedEndpoints,
+    TimeLockedLogic,
+    TimeLockedLookupResponses,
+    TimeLockedLookups,
 };
 
 #[derive(Parser, Debug)]

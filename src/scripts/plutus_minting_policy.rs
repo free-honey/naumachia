@@ -1,23 +1,43 @@
-use crate::scripts::ExecutionCost;
 use crate::{
-    scripts::context::TxContext,
-    scripts::raw_script::ValidatorBlueprint,
-    scripts::ScriptError,
     scripts::{
         as_failed_to_execute,
+        context::TxContext,
         plutus_validator::plutus_data::PlutusData,
-        raw_script::{PlutusScriptError, PlutusScriptFile, RawPlutusScriptResult},
-        MintingPolicy, ScriptResult,
+        raw_script::{
+            PlutusScriptError,
+            PlutusScriptFile,
+            RawPlutusScriptResult,
+            ValidatorBlueprint,
+        },
+        ExecutionCost,
+        MintingPolicy,
+        ScriptError,
+        ScriptResult,
     },
     transaction::TransactionVersion,
 };
-use cardano_multiplatform_lib::plutus::{PlutusScript, PlutusV1Script, PlutusV2Script};
-use minicbor::{Decoder, Encoder};
+use cardano_multiplatform_lib::plutus::{
+    PlutusScript,
+    PlutusV1Script,
+    PlutusV2Script,
+};
+use minicbor::{
+    Decoder,
+    Encoder,
+};
 use pallas_primitives::babbage::Language;
-use std::marker::PhantomData;
-use std::rc::Rc;
+use std::{
+    marker::PhantomData,
+    rc::Rc,
+};
 use uplc::{
-    ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
+    ast::{
+        Constant,
+        FakeNamedDeBruijn,
+        NamedDeBruijn,
+        Program,
+        Term,
+    },
     machine::cost_model::ExBudget,
 };
 
@@ -75,7 +95,8 @@ impl<R> PlutusMintingPolicy<R> {
 
     /// Constructor for new V2 [`PlutusMintingPolicy`] from a CBOR hex string
     pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
-        let cbor = hex::decode(cbor).map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let cbor = hex::decode(cbor)
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusMintingPolicy {
             version: TransactionVersion::V2,
             cbor,
@@ -228,7 +249,7 @@ where
         let program = program.apply_term(&ctx_term);
         let mut eval_result = match self.version {
             TransactionVersion::V1 => program.eval_version(&Language::PlutusV1),
-            TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
+            TransactionVersion::V2 => program.eval(ExBudget::default()), /* TODO: parameterize */
         };
         let logs = eval_result.logs();
         let cost = eval_result.cost();
@@ -246,15 +267,15 @@ where
         let cbor = self.script_hex().unwrap();
         let script = match self.version {
             TransactionVersion::V1 => {
-                let script_bytes =
-                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let script_bytes = hex::decode(&cbor)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 let v1 = PlutusV1Script::from_bytes(script_bytes)
                     .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 PlutusScript::from_v1(&v1)
             }
             TransactionVersion::V2 => {
-                let script_bytes =
-                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let script_bytes = hex::decode(&cbor)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 let v2 = PlutusV2Script::from_bytes(script_bytes)
                     .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 PlutusScript::from_v2(&v2)

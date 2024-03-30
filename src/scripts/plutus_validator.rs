@@ -2,30 +2,64 @@ use crate::{
     scripts::{
         as_failed_to_execute,
         context::TxContext,
-        plutus_validator::plutus_data::{BigInt, Constr, PlutusData},
-        raw_script::{
-            PlutusScriptError, PlutusScriptFile, RawPlutusScriptResult, ValidatorBlueprint,
+        plutus_validator::plutus_data::{
+            BigInt,
+            Constr,
+            PlutusData,
         },
-        ScriptError, ScriptResult, Validator,
+        raw_script::{
+            PlutusScriptError,
+            PlutusScriptFile,
+            RawPlutusScriptResult,
+            ValidatorBlueprint,
+        },
+        ScriptError,
+        ScriptResult,
+        Validator,
     },
     transaction::TransactionVersion,
 };
 use cardano_multiplatform_lib::{
-    address::{EnterpriseAddress, StakeCredential},
-    plutus::{PlutusScript, PlutusV1Script},
+    address::{
+        EnterpriseAddress,
+        StakeCredential,
+    },
+    plutus::{
+        PlutusScript,
+        PlutusV1Script,
+    },
 };
-use minicbor::{Decoder, Encoder};
+use minicbor::{
+    Decoder,
+    Encoder,
+};
 
 use crate::scripts::ExecutionCost;
 use cardano_multiplatform_lib::plutus::PlutusV2Script;
-use pallas_addresses::{Address, Network};
+use pallas_addresses::{
+    Address,
+    Network,
+};
 use pallas_primitives::babbage::Language;
-use std::marker::PhantomData;
-use std::rc::Rc;
+use std::{
+    marker::PhantomData,
+    rc::Rc,
+};
 use uplc::{
-    ast::{Constant, FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
-    machine::{cost_model::ExBudget, runtime::convert_constr_to_tag},
-    BigInt as AikenBigInt, Constr as AikenConstr, PlutusData as AikenPlutusData,
+    ast::{
+        Constant,
+        FakeNamedDeBruijn,
+        NamedDeBruijn,
+        Program,
+        Term,
+    },
+    machine::{
+        cost_model::ExBudget,
+        runtime::convert_constr_to_tag,
+    },
+    BigInt as AikenBigInt,
+    Constr as AikenConstr,
+    PlutusData as AikenPlutusData,
 };
 
 #[allow(missing_docs)]
@@ -93,7 +127,8 @@ impl<D, R> PlutusValidator<D, R> {
 
     /// Create a new V2 `PlutusValidator` from a CBOR string
     pub fn v2_from_cbor(cbor: String) -> RawPlutusScriptResult<Self> {
-        let cbor = hex::decode(cbor).map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
+        let cbor = hex::decode(cbor)
+            .map_err(|e| PlutusScriptError::AikenApply(e.to_string()))?;
         let v2_policy = PlutusValidator {
             version: TransactionVersion::V2,
             cbor,
@@ -175,12 +210,16 @@ impl From<PlutusData> for AikenPlutusData {
             PlutusData::Constr(constr) => AikenPlutusData::Constr(constr.into()),
             PlutusData::Map(map) => AikenPlutusData::Map(
                 map.into_iter()
-                    .map(|(key, value)| (AikenPlutusData::from(key), AikenPlutusData::from(value)))
+                    .map(|(key, value)| {
+                        (AikenPlutusData::from(key), AikenPlutusData::from(value))
+                    })
                     .collect::<Vec<_>>()
                     .into(),
             ),
             PlutusData::BigInt(big_int) => AikenPlutusData::BigInt(big_int.into()),
-            PlutusData::BoundedBytes(bytes) => AikenPlutusData::BoundedBytes(bytes.into()),
+            PlutusData::BoundedBytes(bytes) => {
+                AikenPlutusData::BoundedBytes(bytes.into())
+            }
             PlutusData::Array(data) => {
                 AikenPlutusData::Array(data.into_iter().map(Into::into).collect())
             }
@@ -208,9 +247,9 @@ impl From<BigInt> for AikenBigInt {
             BigInt::Int { neg, val } => {
                 let new_val = val as i128;
                 let final_val = if neg { -new_val } else { new_val };
-                let inner = final_val
-                    .try_into()
-                    .expect("Since this was converted from a u64, it should always be valid 🤞");
+                let inner = final_val.try_into().expect(
+                    "Since this was converted from a u64, it should always be valid 🤞",
+                );
                 AikenBigInt::Int(inner)
             }
             BigInt::BigUInt(bytes) => AikenBigInt::BigUInt(bytes.into()),
@@ -246,7 +285,7 @@ where
         let program = program.apply_term(&ctx_term);
         let mut eval_result = match self.version {
             TransactionVersion::V1 => program.eval_version(&Language::PlutusV1),
-            TransactionVersion::V2 => program.eval(ExBudget::default()), // TODO: parameterize
+            TransactionVersion::V2 => program.eval(ExBudget::default()), /* TODO: parameterize */
         };
         let logs = eval_result.logs();
         let cost = eval_result.cost();
@@ -270,15 +309,15 @@ where
         let cbor = self.script_hex().unwrap(); // TODO
         let script = match self.version {
             TransactionVersion::V1 => {
-                let script_bytes =
-                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let script_bytes = hex::decode(&cbor)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 let v1 = PlutusV1Script::from_bytes(script_bytes)
                     .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 PlutusScript::from_v1(&v1)
             }
             TransactionVersion::V2 => {
-                let script_bytes =
-                    hex::decode(&cbor).map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
+                let script_bytes = hex::decode(&cbor)
+                    .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 let v2 = PlutusV2Script::from_bytes(script_bytes)
                     .map_err(|e| ScriptError::IdRetrieval(e.to_string()))?;
                 PlutusScript::from_v2(&v2)

@@ -1,9 +1,17 @@
-use crate::scripts::plutus_validator::plutus_data::{BigInt, Constr, PlutusData};
+use crate::scripts::plutus_validator::plutus_data::{
+    BigInt,
+    Constr,
+    PlutusData,
+};
 use cardano_multiplatform_lib::{
     ledger::common::value::BigInt as CMLBigInt,
     plutus::{
-        ConstrPlutusData as CMLConstrPlutusData, PlutusData as CMLPlutusData, PlutusDataKind,
-        PlutusList as CMLPlutusList, PlutusList, PlutusMap as CMLPlutusMap,
+        ConstrPlutusData as CMLConstrPlutusData,
+        PlutusData as CMLPlutusData,
+        PlutusDataKind,
+        PlutusList as CMLPlutusList,
+        PlutusList,
+        PlutusMap as CMLPlutusMap,
     },
 };
 use std::collections::BTreeMap;
@@ -47,11 +55,15 @@ where
 impl From<PlutusData> for CMLPlutusData {
     fn from(data: PlutusData) -> Self {
         match data {
-            PlutusData::Constr(constr) => CMLPlutusData::new_constr_plutus_data(&constr.into()),
+            PlutusData::Constr(constr) => {
+                CMLPlutusData::new_constr_plutus_data(&constr.into())
+            }
             PlutusData::Map(map) => {
                 let mut plutus_map = CMLPlutusMap::new();
                 map.into_iter()
-                    .map(|(key, value)| (CMLPlutusData::from(key), CMLPlutusData::from(value)))
+                    .map(|(key, value)| {
+                        (CMLPlutusData::from(key), CMLPlutusData::from(value))
+                    })
                     .for_each(|(key, value)| {
                         plutus_map.insert(&key, &value);
                     });

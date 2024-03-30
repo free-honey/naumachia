@@ -1,27 +1,46 @@
 use crate::Error;
 use anyhow::Result;
-use dialoguer::{Input, Password as InputPassword, Select};
-use hex;
-use naumachia::scripts::context::pub_key_hash_from_address_if_available;
-use naumachia::trireme_ledger_client::get_current_client_config_from_file;
-use naumachia::trireme_ledger_client::terminal_password_phrase::{
-    encrypt_phrase, normalize_password,
+use dialoguer::{
+    Input,
+    Password as InputPassword,
+    Select,
 };
+use hex;
 use naumachia::{
     ledger_client::{
-        test_ledger_client::local_persisted_storage::LocalPersistedStorage, LedgerClient,
+        test_ledger_client::local_persisted_storage::LocalPersistedStorage,
+        LedgerClient,
     },
+    scripts::context::pub_key_hash_from_address_if_available,
     trireme_ledger_client::{
-        cml_client::blockfrost_ledger::BlockfrostApiKey, get_trireme_config_from_file,
-        get_trireme_ledger_client_from_file, path_to_client_config_file,
-        path_to_trireme_config_dir, path_to_trireme_config_file, read_toml_struct_from_file,
-        write_toml_struct_to_file, ClientConfig, ClientVariant, KeySource, LedgerSource, Network,
-        TriremeConfig, TriremeLedgerClient,
+        cml_client::blockfrost_ledger::BlockfrostApiKey,
+        get_current_client_config_from_file,
+        get_trireme_config_from_file,
+        get_trireme_ledger_client_from_file,
+        path_to_client_config_file,
+        path_to_trireme_config_dir,
+        path_to_trireme_config_file,
+        read_toml_struct_from_file,
+        terminal_password_phrase::{
+            encrypt_phrase,
+            normalize_password,
+        },
+        write_toml_struct_to_file,
+        ClientConfig,
+        ClientVariant,
+        KeySource,
+        LedgerSource,
+        Network,
+        TriremeConfig,
+        TriremeLedgerClient,
     },
     Address,
 };
 use rand::Rng;
-use std::{path::PathBuf, str::FromStr};
+use std::{
+    path::PathBuf,
+    str::FromStr,
+};
 use tokio::fs;
 
 #[derive(Clone, Copy)]
@@ -332,7 +351,8 @@ pub async fn active_signer_impl() -> Result<()> {
 }
 
 pub async fn get_address_impl() -> Result<()> {
-    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let ledger_client: TriremeLedgerClient<(), ()> =
+        get_trireme_ledger_client_from_file().await?;
     let address = ledger_client.signer_base_address().await?;
     let address_string = address.to_bech32()?;
     println!("Address: {address_string}");
@@ -340,11 +360,12 @@ pub async fn get_address_impl() -> Result<()> {
 }
 
 pub async fn get_pubkey_hash_impl() -> Result<()> {
-    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let ledger_client: TriremeLedgerClient<(), ()> =
+        get_trireme_ledger_client_from_file().await?;
     let address = ledger_client.signer_base_address().await?;
-    let pubkey_hash = pub_key_hash_from_address_if_available(&address).ok_or(Error::CLI(
-        "Could not derive Pubkey Hash from Address".to_string(),
-    ))?;
+    let pubkey_hash = pub_key_hash_from_address_if_available(&address).ok_or(
+        Error::CLI("Could not derive Pubkey Hash from Address".to_string()),
+    )?;
     let pubkey_hash_string = hex::encode(pubkey_hash.bytes());
     println!("Pubkey Hash: {pubkey_hash_string}");
     Ok(())
@@ -408,14 +429,16 @@ pub async fn current_time_impl() -> Result<()> {
 }
 
 pub async fn last_block_time_impl() -> Result<()> {
-    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let ledger_client: TriremeLedgerClient<(), ()> =
+        get_trireme_ledger_client_from_file().await?;
     let last_block_time = ledger_client.last_block_time_secs().await?;
     println!("Last block time: {}", last_block_time);
     Ok(())
 }
 
 pub async fn advance_blocks(count: i64) -> Result<()> {
-    let ledger_client: TriremeLedgerClient<(), ()> = get_trireme_ledger_client_from_file().await?;
+    let ledger_client: TriremeLedgerClient<(), ()> =
+        get_trireme_ledger_client_from_file().await?;
     ledger_client.advance_blocks(count).await?;
     println!("Advancing blocks by: {}", count);
     let block_time = ledger_client.current_time().await?;

@@ -1,8 +1,12 @@
 use super::*;
 use naumachia::{
     ledger_client::test_ledger_client::TestLedgerClientBuilder,
-    smart_contract::{SmartContract, SmartContractTrait},
-    Address, Network,
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
+    Address,
+    Network,
 };
 
 // Ignore because the game script is funky with Aiken

@@ -1,11 +1,16 @@
 use always_succeeds_contract::logic::{
-    AlwaysSucceedsEndpoints, AlwaysSucceedsLogic, AlwaysSucceedsLookupResponses,
+    AlwaysSucceedsEndpoints,
+    AlwaysSucceedsLogic,
+    AlwaysSucceedsLookupResponses,
     AlwaysSucceedsLookups,
 };
 use clap::Parser;
 use naumachia::{
     output::OutputId,
-    smart_contract::{SmartContract, SmartContractTrait},
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 

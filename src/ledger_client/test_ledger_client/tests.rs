@@ -1,15 +1,25 @@
 #![allow(non_snake_case)]
 
 use super::*;
-use crate::scripts::{ExecutionCost, MintingPolicy, ScriptError, ScriptResult, Validator};
-use crate::transaction::TransactionVersion;
 use crate::{
     ledger_client::{
-        test_ledger_client::{local_persisted_storage::starting_output, TestLedgerClient},
+        test_ledger_client::{
+            local_persisted_storage::starting_output,
+            TestLedgerClient,
+        },
         LedgerClient,
     },
     output::UnbuiltOutput,
-    PolicyId, UnbuiltTransaction,
+    scripts::{
+        ExecutionCost,
+        MintingPolicy,
+        ScriptError,
+        ScriptResult,
+        Validator,
+    },
+    transaction::TransactionVersion,
+    PolicyId,
+    UnbuiltTransaction,
 };
 
 const ALICE: &str = "addr_test1qrmezjhpelwzvz83wjl0e6mx766de7j3nksu2338s00yzx870xyxfa97xyz2zn5rknyntu5g0c66s7ktjnx0p6f0an6s3dyxwr";
@@ -210,15 +220,20 @@ async fn cannot_transfer_after_valid_range() {
 struct AlwaysTrueFakeValidator;
 
 impl Validator<(), ()> for AlwaysTrueFakeValidator {
-    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
+    fn execute(
+        &self,
+        _datum: (),
+        _redeemer: (),
+        _ctx: TxContext,
+    ) -> ScriptResult<ExecutionCost> {
         Ok(ExecutionCost::default())
     }
 
     fn address(&self, _network: Network) -> ScriptResult<Address> {
-        Ok(
-            Address::from_bech32("addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu")
-                .unwrap(),
+        Ok(Address::from_bech32(
+            "addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu",
         )
+        .unwrap())
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -302,17 +317,22 @@ async fn redeeming_datum() {
 struct AlwaysFailsFakeValidator;
 
 impl Validator<(), ()> for AlwaysFailsFakeValidator {
-    fn execute(&self, _datum: (), _redeemer: (), _ctx: TxContext) -> ScriptResult<ExecutionCost> {
+    fn execute(
+        &self,
+        _datum: (),
+        _redeemer: (),
+        _ctx: TxContext,
+    ) -> ScriptResult<ExecutionCost> {
         Err(ScriptError::FailedToExecute(
             "Should always fail!".to_string(),
         ))
     }
 
     fn address(&self, _network: Network) -> ScriptResult<Address> {
-        Ok(
-            Address::from_bech32("addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu")
-                .unwrap(),
+        Ok(Address::from_bech32(
+            "addr_test1wrme5jjggy97th309h2dwpv57wsphxskuc8jkw00c2kn47gu8mkzu",
         )
+        .unwrap())
     }
 
     fn script_hex(&self) -> ScriptResult<String> {
@@ -583,7 +603,8 @@ async fn spends_specific_script_value() {
     let mut values = Values::default();
     let policy = PolicyId::NativeToken(nft_policy_id.clone(), None);
     values.add_one_value(&policy, 1);
-    let input = Output::new_validator(vec![1, 2, 3, 4], 0, val_address.clone(), values, ());
+    let input =
+        Output::new_validator(vec![1, 2, 3, 4], 0, val_address.clone(), values, ());
 
     let output = starting_output::<()>(&minter, starting_amount);
     let outputs = vec![(minter.clone(), output), (val_address, input.clone())];

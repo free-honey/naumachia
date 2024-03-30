@@ -1,11 +1,18 @@
 use super::error::*;
-use crate::scripts::MintingPolicy;
 use crate::{
-    ledger_client::{LedgerClientError, LedgerClientResult},
+    ledger_client::{
+        LedgerClientError,
+        LedgerClientResult,
+    },
     output::Output,
-    scripts::Validator,
+    scripts::{
+        MintingPolicy,
+        Validator,
+    },
     trireme_ledger_client::cml_client::{
-        error::CMLLCError::JsError, plutus_data_interop::PlutusDataInterop, UTxO,
+        error::CMLLCError::JsError,
+        plutus_data_interop::PlutusDataInterop,
+        UTxO,
     },
     values::Values,
     PolicyId,
@@ -13,25 +20,55 @@ use crate::{
 use cardano_multiplatform_lib::{
     address::Address as CMLAddress,
     builders::{
-        input_builder::{InputBuilderResult, SingleInputBuilder},
+        input_builder::{
+            InputBuilderResult,
+            SingleInputBuilder,
+        },
         output_builder::TransactionOutputBuilder,
-        tx_builder::{ChangeSelectionAlgo, CoinSelectionStrategyCIP2, SignedTxBuilder},
-        tx_builder::{TransactionBuilder, TransactionBuilderConfigBuilder},
-        witness_builder::{PartialPlutusWitness, PlutusScriptWitness},
+        tx_builder::{
+            ChangeSelectionAlgo,
+            CoinSelectionStrategyCIP2,
+            SignedTxBuilder,
+            TransactionBuilder,
+            TransactionBuilderConfigBuilder,
+        },
+        witness_builder::{
+            PartialPlutusWitness,
+            PlutusScriptWitness,
+        },
     },
-    crypto::ScriptHash,
-    crypto::{PrivateKey, TransactionHash},
+    crypto::{
+        PrivateKey,
+        ScriptHash,
+        TransactionHash,
+    },
     ledger::{
         alonzo::fees::LinearFee,
-        common::hash::hash_transaction,
-        common::value::{Int, Value as CMLValue},
+        common::{
+            hash::hash_transaction,
+            value::{
+                Int,
+                Value as CMLValue,
+            },
+        },
         shelley::witness::make_vkey_witness,
     },
-    plutus::PlutusV2Script,
-    plutus::{CostModel, Costmdls, ExUnitPrices, Language},
-    plutus::{PlutusScript, PlutusV1Script},
-    AssetName, Assets, MultiAsset, Transaction as CMLTransaction, TransactionInput,
-    TransactionOutput, UnitInterval,
+    plutus::{
+        CostModel,
+        Costmdls,
+        ExUnitPrices,
+        Language,
+        PlutusScript,
+        PlutusV1Script,
+        PlutusV2Script,
+    },
+    AssetName,
+    Assets,
+    MultiAsset,
+    Transaction as CMLTransaction,
+    TransactionInput,
+    TransactionOutput,
+    UnitInterval,
 };
 use pallas_addresses::Address;
 use std::collections::BTreeMap;
@@ -55,16 +92,18 @@ pub fn vasil_v1_tx_builder() -> LedgerClientResult<TransactionBuilder> {
     let step_price = UnitInterval::new(&step_num, &step_den);
     let ex_unit_prices = ExUnitPrices::new(&mem_price, &step_price);
     let vasil_v1_cost_models = vec![
-        205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4, 23000,
-        100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100, 23000, 100,
-        19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525, 14068, 4, 2, 196500,
-        453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62, 1, 1060367, 12586, 1, 208512,
-        421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32, 1000, 32, 80556, 1, 57667, 4, 1000,
-        10, 197145, 156, 1, 197145, 156, 1, 204924, 473, 1, 208896, 511, 1, 52467, 32, 64832, 32,
-        65493, 32, 22558, 32, 16563, 32, 76511, 32, 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0,
-        1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 806990, 30482, 4,
-        1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32,
-        31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 9462713, 1021, 10,
+        205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475,
+        4, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100,
+        100, 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32,
+        497525, 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000,
+        216773, 62, 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436,
+        32, 43249, 32, 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145,
+        156, 1, 204924, 473, 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558,
+        32, 16563, 32, 76511, 32, 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1,
+        60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 806990,
+        30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1,
+        41182, 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32,
+        9462713, 1021, 10,
     ];
     let cm = CostModel::new(
         &Language::new_plutus_v1(),
@@ -109,17 +148,18 @@ pub fn vasil_v2_tx_builder() -> LedgerClientResult<TransactionBuilder> {
     let step_price = UnitInterval::new(&step_num, &step_den);
     let ex_unit_prices = ExUnitPrices::new(&mem_price, &step_price);
     let vasil_v2_cost_models: Vec<i64> = vec![
-        205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4, 23000,
-        100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100, 23000, 100,
-        19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525, 14068, 4, 2, 196500,
-        453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62, 1, 1060367, 12586, 1, 208512,
-        421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32, 1000, 32, 80556, 1, 57667, 4, 1000,
-        10, 197145, 156, 1, 197145, 156, 1, 204924, 473, 1, 208896, 511, 1, 52467, 32, 64832, 32,
-        65493, 32, 22558, 32, 16563, 32, 76511, 32, 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0,
-        1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670,
-        0, 2, 806990, 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1,
-        41182, 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10,
-        57996947, 18975, 10, 38887044, 32947, 10,
+        205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475,
+        4, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100,
+        100, 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32,
+        497525, 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000,
+        216773, 62, 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436,
+        32, 43249, 32, 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145,
+        156, 1, 204924, 473, 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558,
+        32, 16563, 32, 76511, 32, 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1,
+        60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724,
+        392670, 0, 2, 806990, 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32,
+        205665, 812, 1, 1, 41182, 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247,
+        32, 38314, 32, 35892428, 10, 57996947, 18975, 10, 38887044, 32947, 10,
     ];
     let cm = CostModel::new(
         &Language::new_plutus_v2(),
@@ -128,7 +168,9 @@ pub fn vasil_v2_tx_builder() -> LedgerClientResult<TransactionBuilder> {
             .map(|&i| Int::from_str(&i.to_string()))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| {
-                LedgerClientError::ConfigError(format!("Cost models misconfigured: {e:?}"))
+                LedgerClientError::ConfigError(format!(
+                    "Cost models misconfigured: {e:?}"
+                ))
             })?,
     );
     let mut cost_models = Costmdls::new();
@@ -180,7 +222,8 @@ impl TryFrom<Values> for CMLValue {
         //   1155080. Please look into
         // let mut ada = 1120600u64; // TODO: This is kinda buried. Maybe ref the CML value
         let mut ada = 1155080u64; // TODO: This is kinda buried. Maybe ref the CML value
-        let mut nau_assets: BTreeMap<String, BTreeMap<Option<String>, u64>> = BTreeMap::new();
+        let mut nau_assets: BTreeMap<String, BTreeMap<Option<String>, u64>> =
+            BTreeMap::new();
         for (policy_id, amount) in vals.as_iter() {
             match policy_id {
                 PolicyId::Lovelace => ada = *amount,
@@ -257,10 +300,12 @@ fn as_nau_values(cml_value: &CMLValue) -> LedgerClientResult<Values> {
                     let asset = assets_names.get(i);
                     if let Some(amt) = assets.get(&asset) {
                         let asset_bytes = asset.name();
-                        let asset_text =
-                            std::str::from_utf8(&asset_bytes).map_err(as_failed_to_issue_tx)?;
-                        let policy_id =
-                            PolicyId::native_token(&id.to_string(), &Some(asset_text.to_string()));
+                        let asset_text = std::str::from_utf8(&asset_bytes)
+                            .map_err(as_failed_to_issue_tx)?;
+                        let policy_id = PolicyId::native_token(
+                            &id.to_string(),
+                            &Some(asset_text.to_string()),
+                        );
                         values.add_one_value(&policy_id, amt.into());
                     }
                 }
@@ -290,7 +335,8 @@ pub(crate) async fn add_collateral(
 ) -> LedgerClientResult<()> {
     const MIN_COLLATERAL_AMT: u64 = 5_000_000;
 
-    let collateral_utxo = select_collateral_utxo(my_address, my_utxos, MIN_COLLATERAL_AMT)?;
+    let collateral_utxo =
+        select_collateral_utxo(my_address, my_utxos, MIN_COLLATERAL_AMT)?;
 
     tx_builder
         .add_collateral(&collateral_utxo)
@@ -330,7 +376,8 @@ pub(crate) fn select_collateral_utxo(
         }
     }
     let res = if let Some(utxo) = smallest_utxo_meets_qual {
-        let transaction_input = TransactionInput::new(utxo.tx_hash(), &utxo.output_index());
+        let transaction_input =
+            TransactionInput::new(utxo.tx_hash(), &utxo.output_index());
         let input_utxo = TransactionOutputBuilder::new()
             .with_address(my_cml_address)
             .next()
