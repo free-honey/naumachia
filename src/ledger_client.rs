@@ -6,12 +6,20 @@ pub mod test_ledger_client;
 use async_trait::async_trait;
 
 use crate::{
-    output::{Output, OutputId},
-    transaction::TxId,
-    transaction::UnbuiltTransaction,
+    output::{
+        Output,
+        OutputId,
+    },
+    transaction::{
+        TxId,
+        UnbuiltTransaction,
+    },
     PolicyId,
 };
-use pallas_addresses::{Address, Network};
+use pallas_addresses::{
+    Address,
+    Network,
+};
 use std::error;
 
 /// Interface defining interactions with your specific ledger--AKA the Cardano blockchain. The
@@ -60,7 +68,10 @@ pub trait LedgerClient<Datum, Redeemer>: Send + Sync {
     }
 
     /// Issue a transaction to the ledger signed by the signer key owned by the instance of `LedgerClient`
-    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId>;
+    async fn issue(
+        &self,
+        tx: UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<TxId>;
 
     /// Get the network identifier for the ledger
     async fn network(&self) -> LedgerClientResult<Network>;

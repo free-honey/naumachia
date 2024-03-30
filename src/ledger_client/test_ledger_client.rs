@@ -3,29 +3,49 @@ use std::{
     hash::Hash,
     marker::PhantomData,
     path::Path,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc,
+        Mutex,
+    },
 };
 
 use crate::{
     ledger_client::{
-        test_ledger_client::in_memory_storage::InMemoryStorage, LedgerClient, LedgerClientError,
+        test_ledger_client::in_memory_storage::InMemoryStorage,
+        LedgerClient,
+        LedgerClientError,
         LedgerClientResult,
     },
-    output::{DatumKind, Output, UnbuiltOutput},
-    scripts::context::{
-        pub_key_hash_from_address_if_available, CtxDatum, CtxOutput, CtxOutputReference,
+    output::{
+        DatumKind,
+        Output,
+        UnbuiltOutput,
     },
     scripts::{
-        context::{CtxScriptPurpose, CtxValue, Input, TxContext, ValidRange},
+        context::{
+            pub_key_hash_from_address_if_available,
+            CtxDatum,
+            CtxOutput,
+            CtxOutputReference,
+            CtxScriptPurpose,
+            CtxValue,
+            Input,
+            TxContext,
+            ValidRange,
+        },
         plutus_validator::plutus_data::PlutusData,
     },
     transaction::TxId,
     values::Values,
-    PolicyId, UnbuiltTransaction,
+    PolicyId,
+    UnbuiltTransaction,
 };
 use async_trait::async_trait;
 use local_persisted_storage::LocalPersistedStorage;
-use pallas_addresses::{Address, Network};
+use pallas_addresses::{
+    Address,
+    Network,
+};
 use rand::Rng;
 use thiserror::Error;
 
@@ -107,7 +127,9 @@ where
     }
 
     /// Build the [`TestLedgerClient`] with an _ephemeral_ [`InMemoryStorage`] for [`TestLedgerStorage`]
-    pub fn build_in_memory(&self) -> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>> {
+    pub fn build_in_memory(
+        &self,
+    ) -> TestLedgerClient<Datum, Redeemer, InMemoryStorage<Datum>> {
         TestLedgerClient::new_in_memory(
             self.signer.clone(),
             self.outputs.clone(),
@@ -119,8 +141,10 @@ where
 
 /// Sub-builder type of [`TestLedgerClientBuilder`] for building outputs that will be added to the
 /// parent [`TestLedgerClient`]
-pub struct OutputBuilder<Datum: PartialEq + Debug, Redeemer: Clone + Eq + PartialEq + Debug + Hash>
-{
+pub struct OutputBuilder<
+    Datum: PartialEq + Debug,
+    Redeemer: Clone + Eq + PartialEq + Debug + Hash,
+> {
     inner: TestLedgerClientBuilder<Datum, Redeemer>,
     owner: Address,
     values: Values,
@@ -133,7 +157,11 @@ where
     Redeemer: Clone + Eq + PartialEq + Debug + Hash + Send + Sync,
 {
     /// Add another value to current output
-    pub fn with_value(mut self, policy: PolicyId, amount: u64) -> OutputBuilder<Datum, Redeemer> {
+    pub fn with_value(
+        mut self,
+        policy: PolicyId,
+        amount: u64,
+    ) -> OutputBuilder<Datum, Redeemer> {
         let mut new_total = amount;
         if let Some(total) = self.values.get(&policy) {
             new_total += total;
@@ -200,7 +228,10 @@ pub trait TestLedgerStorage<Datum> {
         count: usize,
     ) -> LedgerClientResult<Vec<Output<Datum>>>;
     /// Get all UTxOs at the given address
-    async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>>;
+    async fn all_outputs(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>>;
     /// Remove the given output from the storage
     async fn remove_output(&self, output: &Output<Datum>) -> LedgerClientResult<()>;
     /// Add the given output to the storage
@@ -248,7 +279,8 @@ where
         }
     }
 }
-impl<T, Datum, Redeemer> TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<T, Datum>>
+impl<T, Datum, Redeemer>
+    TestLedgerClient<Datum, Redeemer, LocalPersistedStorage<T, Datum>>
 where
     Datum: Clone + Send + Sync + PartialEq + Into<PlutusData> + TryFrom<PlutusData>,
     T: AsRef<Path> + Send + Sync,
@@ -343,7 +375,10 @@ where
         self.storage.all_outputs(address).await
     }
 
-    async fn issue(&self, tx: UnbuiltTransaction<Datum, Redeemer>) -> LedgerClientResult<TxId> {
+    async fn issue(
+        &self,
+        tx: UnbuiltTransaction<Datum, Redeemer>,
+    ) -> LedgerClientResult<TxId> {
         // Setup
         let valid_range = tx.valid_range;
         let current_time = self.current_time_secs().await?;
@@ -558,7 +593,8 @@ fn mint_tx_context<Datum: Into<PlutusData> + Clone, Redeemer>(
     signer_address: &Address,
     policy_id: &str,
 ) -> LedgerClientResult<TxContext> {
-    let id = hex::decode(policy_id).map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
+    let id = hex::decode(policy_id)
+        .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
     let purpose = CtxScriptPurpose::Mint(id);
     tx_context(tx, signer_address, purpose)
 }

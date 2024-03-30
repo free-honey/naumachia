@@ -1,10 +1,20 @@
-use naumachia::scripts::plutus_validator::plutus_data::PlutusData;
-use naumachia::scripts::plutus_validator::PlutusValidator;
-use naumachia::scripts::raw_script::PlutusScriptFile;
-use naumachia::scripts::{ScriptError, ScriptResult};
-use serde::{Deserialize, Serialize};
-use sha2::Digest;
-use sha2::Sha256;
+use naumachia::scripts::{
+    plutus_validator::{
+        plutus_data::PlutusData,
+        PlutusValidator,
+    },
+    raw_script::PlutusScriptFile,
+    ScriptError,
+    ScriptResult,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use sha2::{
+    Digest,
+    Sha256,
+};
 
 // const SCRIPT_RAW: &str = include_str!("../../plutus/game_v1.plutus");
 const SCRIPT_RAW: &str = include_str!("../../plutus/game_v2.plutus");
@@ -67,8 +77,9 @@ impl TryFrom<PlutusData> for ClearString {
     fn try_from(value: PlutusData) -> Result<Self, Self::Error> {
         match value {
             PlutusData::BoundedBytes(ref bytes) => {
-                let inner = String::from_utf8(bytes.clone())
-                    .map_err(|_| ScriptError::RedeemerDeserialization(format!("{:?}", value)))?;
+                let inner = String::from_utf8(bytes.clone()).map_err(|_| {
+                    ScriptError::RedeemerDeserialization(format!("{:?}", value))
+                })?;
                 Ok(ClearString { inner })
             }
             _ => Err(ScriptError::RedeemerDeserialization(format!("{:?}", value))),
@@ -87,9 +98,16 @@ pub fn get_script() -> ScriptResult<PlutusValidator<HashedString, ClearString>> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
-    use naumachia::scripts::Validator;
-    use naumachia::Address;
+    use naumachia::{
+        scripts::{
+            context::{
+                pub_key_hash_from_address_if_available,
+                ContextBuilder,
+            },
+            Validator,
+        },
+        Address,
+    };
 
     // This is broken. I think it might have to do with the script itself.
     #[ignore]

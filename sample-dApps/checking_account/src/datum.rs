@@ -1,5 +1,10 @@
-use naumachia::scripts::context::PubKeyHash;
-use naumachia::scripts::plutus_validator::plutus_data::{Constr, PlutusData};
+use naumachia::scripts::{
+    context::PubKeyHash,
+    plutus_validator::plutus_data::{
+        Constr,
+        PlutusData,
+    },
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum CheckingAccountDatums {
@@ -149,7 +154,7 @@ fn allowed_puller(fields: &[PlutusData]) -> Result<CheckingAccountDatums, ()> {
     let datum = CheckingAccountDatums::AllowedPuller(AllowedPuller {
         owner,
         puller,
-        amount_lovelace: amount_lovelace as u64, //TODO
+        amount_lovelace: amount_lovelace as u64, // TODO
         next_pull,
         period,
         spending_token,

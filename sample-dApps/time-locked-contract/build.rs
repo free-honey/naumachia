@@ -1,6 +1,8 @@
 use aiken_lang::ast::Tracing;
-use aiken_project::telemetry::Terminal;
-use aiken_project::Project;
+use aiken_project::{
+    telemetry::Terminal,
+    Project,
+};
 
 const PROJECT: &str = "./time_locked";
 

@@ -4,10 +4,16 @@
 
 use crate::{
     policy_id::PolicyId,
-    transaction::{TxActions, UnbuiltTransaction},
+    transaction::{
+        TxActions,
+        UnbuiltTransaction,
+    },
 };
 
-pub use pallas_addresses::{Address, Network};
+pub use pallas_addresses::{
+    Address,
+    Network,
+};
 
 pub mod error;
 

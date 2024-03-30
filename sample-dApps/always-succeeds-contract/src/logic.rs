@@ -1,10 +1,18 @@
 use crate::logic::script::get_script;
 use async_trait::async_trait;
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::{
     ledger_client::LedgerClient,
-    logic::SCLogic,
-    output::{Output, OutputId},
+    logic::{
+        error::{
+            SCLogicError,
+            SCLogicResult,
+        },
+        SCLogic,
+    },
+    output::{
+        Output,
+        OutputId,
+    },
     policy_id::PolicyId,
     scripts::Validator,
     transaction::TxActions,
@@ -54,7 +62,9 @@ impl SCLogic for AlwaysSucceedsLogic {
         ledger_client: &LC,
     ) -> SCLogicResult<TxActions<Self::Datums, Self::Redeemers>> {
         match endpoint {
-            AlwaysSucceedsEndpoints::Lock { amount } => impl_lock(ledger_client, amount).await,
+            AlwaysSucceedsEndpoints::Lock { amount } => {
+                impl_lock(ledger_client, amount).await
+            }
             AlwaysSucceedsEndpoints::Claim { output_id } => {
                 impl_claim(ledger_client, output_id).await
             }

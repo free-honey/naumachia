@@ -1,5 +1,8 @@
 use context::TxContext;
-use pallas_addresses::{Address, Network};
+use pallas_addresses::{
+    Address,
+    Network,
+};
 use std::fmt::Debug;
 use thiserror::Error;
 
@@ -15,7 +18,12 @@ pub mod raw_script;
 /// Interface for a script locking UTxOs at a script address
 pub trait Validator<D, R>: Send + Sync {
     /// Execute the script with specified datum, redeemer, and tx context
-    fn execute(&self, datum: D, redeemer: R, ctx: TxContext) -> ScriptResult<ExecutionCost>;
+    fn execute(
+        &self,
+        datum: D,
+        redeemer: R,
+        ctx: TxContext,
+    ) -> ScriptResult<ExecutionCost>;
     /// Address of Outputs locked by this script
     fn address(&self, network: Network) -> ScriptResult<Address>;
     /// Hex bytes of the script

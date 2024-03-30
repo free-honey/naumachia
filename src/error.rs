@@ -2,9 +2,12 @@
 use pallas_addresses::Address;
 use thiserror::Error;
 
-use crate::logic::error::SCLogicError;
-use crate::scripts::ScriptError;
-use crate::{ledger_client::LedgerClientError, policy_id::PolicyId};
+use crate::{
+    ledger_client::LedgerClientError,
+    logic::error::SCLogicError,
+    policy_id::PolicyId,
+    scripts::ScriptError,
+};
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

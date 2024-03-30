@@ -1,10 +1,19 @@
 use crate::trireme_ledger_client::{
-    cml_client::error::{CMLLCError, Result as CMLLCResult},
+    cml_client::error::{
+        CMLLCError,
+        Result as CMLLCResult,
+    },
     raw_secret_phrase::RawSecretPhraseKeysError,
 };
-use bip39::{Language, Mnemonic};
+use bip39::{
+    Language,
+    Mnemonic,
+};
 use cardano_multiplatform_lib::{
-    address::{BaseAddress, StakeCredential},
+    address::{
+        BaseAddress,
+        StakeCredential,
+    },
     crypto::Bip32PrivateKey,
 };
 
@@ -25,7 +34,10 @@ pub fn secret_phrase_to_account_key(phrase: &str) -> CMLLCResult<Bip32PrivateKey
 }
 
 /// Get Base Address from Private Key
-pub fn private_key_to_base_address(account_key: &Bip32PrivateKey, network: u8) -> BaseAddress {
+pub fn private_key_to_base_address(
+    account_key: &Bip32PrivateKey,
+    network: u8,
+) -> BaseAddress {
     let pub_key = account_key.derive(0).derive(0).to_public();
     let stake_key = account_key.derive(2).derive(0).to_public();
     let pub_key_creds = StakeCredential::from_keyhash(&pub_key.to_raw_key().hash());

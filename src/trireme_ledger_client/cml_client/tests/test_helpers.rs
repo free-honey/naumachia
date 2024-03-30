@@ -1,19 +1,35 @@
-use crate::scripts::plutus_validator::PlutusValidator;
-use crate::scripts::raw_script::PlutusScriptFile;
-use crate::transaction::TransactionVersion;
-use crate::trireme_ledger_client::Network;
 use crate::{
-    output::{Output, UnbuiltOutput},
-    scripts::Validator,
+    output::{
+        Output,
+        UnbuiltOutput,
+    },
+    scripts::{
+        plutus_validator::PlutusValidator,
+        raw_script::PlutusScriptFile,
+        Validator,
+    },
+    transaction::TransactionVersion,
+    trireme_ledger_client::Network,
     values::Values,
-    Address, PolicyId, UnbuiltTransaction,
+    Address,
+    PolicyId,
+    UnbuiltTransaction,
 };
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress,
-    address::{EnterpriseAddress, StakeCredential},
-    plutus::{PlutusScript, PlutusV1Script},
+    address::{
+        Address as CMLAddress,
+        EnterpriseAddress,
+        StakeCredential,
+    },
+    plutus::{
+        PlutusScript,
+        PlutusV1Script,
+    },
 };
-use std::{fs::File, io::Read};
+use std::{
+    fs::File,
+    io::Read,
+};
 
 pub fn transfer_tx(recipient: Address, amount: u64) -> UnbuiltTransaction<(), ()> {
     let mut values = Values::default();
@@ -77,7 +93,9 @@ pub fn read_script_from_file(file_path: &str) -> PlutusScriptFile {
     serde_json::from_str(&data).unwrap()
 }
 
-pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTransaction<(), ()> {
+pub fn claim_always_succeeds_datum_tx(
+    script_input: &Output<()>,
+) -> UnbuiltTransaction<(), ()> {
     let script = PlutusValidator::new_v1(always_succeeds_hex()).unwrap();
     let script = Box::new(script) as Box<dyn Validator<(), ()>>;
     UnbuiltTransaction {
@@ -90,7 +108,10 @@ pub fn claim_always_succeeds_datum_tx(script_input: &Output<()>) -> UnbuiltTrans
     }
 }
 
-pub fn output_from_tx<'a, D>(tx_id: &'a str, outputs: &'a Vec<Output<D>>) -> Option<&'a Output<D>> {
+pub fn output_from_tx<'a, D>(
+    tx_id: &'a str,
+    outputs: &'a Vec<Output<D>>,
+) -> Option<&'a Output<D>> {
     for output in outputs {
         let id = output.id();
         let tx_hash = id.tx_hash();

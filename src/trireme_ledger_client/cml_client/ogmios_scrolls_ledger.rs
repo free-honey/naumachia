@@ -1,18 +1,37 @@
-use crate::trireme_ledger_client::cml_client::network_settings::NetworkSettings;
 use crate::trireme_ledger_client::cml_client::{
-    error::{CMLLCError, Result},
-    ExecutionCost, Ledger, UTxO,
+    error::{
+        CMLLCError,
+        Result,
+    },
+    network_settings::NetworkSettings,
+    ExecutionCost,
+    Ledger,
+    UTxO,
 };
 use async_trait::async_trait;
 use cardano_multiplatform_lib::{
-    address::Address as CMLAddress, crypto::TransactionHash,
-    ledger::common::value::Value as CMLValue, plutus::PlutusData, AssetName, Assets, MultiAsset,
-    PolicyID, Transaction as CMLTransaction,
+    address::Address as CMLAddress,
+    crypto::TransactionHash,
+    ledger::common::value::Value as CMLValue,
+    plutus::PlutusData,
+    AssetName,
+    Assets,
+    MultiAsset,
+    PolicyID,
+    Transaction as CMLTransaction,
 };
-use ogmios_client::{EvaluationResult, OgmiosClient, OgmiosLocalTxSubmission, OgmiosResponse};
+use ogmios_client::{
+    EvaluationResult,
+    OgmiosClient,
+    OgmiosLocalTxSubmission,
+    OgmiosResponse,
+};
 use pallas_addresses::Address;
 use scrolls_client::{
-    Amount as ScrollClientAmount, LastBlockInfo, ScrollsClient, UTxO as ScrollsClientUTxO,
+    Amount as ScrollClientAmount,
+    LastBlockInfo,
+    ScrollsClient,
+    UTxO as ScrollsClientUTxO,
     UTxOsByAddress,
 };
 use std::collections::HashMap;
@@ -49,8 +68,8 @@ fn cml_value_from_scroll_amount(amount: &[ScrollClientAmount]) -> Result<CMLValu
                 let asset_name_hex = &unit
                     .get(56..)
                     .ok_or(CMLLCError::InvalidPolicyId(unit.to_string()))?;
-                let asset_name_bytes =
-                    hex::decode(asset_name_hex).map_err(|e| CMLLCError::JsError(e.to_string()))?;
+                let asset_name_bytes = hex::decode(asset_name_hex)
+                    .map_err(|e| CMLLCError::JsError(e.to_string()))?;
                 let asset_name = AssetName::new(asset_name_bytes)
                     .map_err(|e| CMLLCError::JsError(e.to_string()))?;
                 let mut assets = Assets::new();
@@ -116,7 +135,11 @@ impl Ledger for OgmiosScrollsLedger {
         Ok(self.network_settings.posix_from_slot(slot))
     }
 
-    async fn get_utxos_for_addr(&self, addr: &CMLAddress, count: usize) -> Result<Vec<UTxO>> {
+    async fn get_utxos_for_addr(
+        &self,
+        addr: &CMLAddress,
+        count: usize,
+    ) -> Result<Vec<UTxO>> {
         let outputs = self
             .get_utxos(addr)
             .await?
@@ -130,7 +153,10 @@ impl Ledger for OgmiosScrollsLedger {
         self.get_utxos(addr).await
     }
 
-    async fn calculate_ex_units(&self, tx: &CMLTransaction) -> Result<HashMap<u64, ExecutionCost>> {
+    async fn calculate_ex_units(
+        &self,
+        tx: &CMLTransaction,
+    ) -> Result<HashMap<u64, ExecutionCost>> {
         let bytes = tx.to_bytes();
         let res = self.ogmios_client.evaluate_tx(&bytes, vec![]).await?;
         check_for_error(&res)?;

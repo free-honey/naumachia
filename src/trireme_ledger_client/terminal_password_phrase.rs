@@ -1,20 +1,44 @@
-use crate::trireme_ledger_client::secret_phrase::{
-    private_key_to_base_address, secret_phrase_to_account_key,
+use crate::{
+    error::{
+        Error,
+        Result,
+    },
+    trireme_ledger_client::{
+        cml_client::Keys,
+        secret_phrase::{
+            private_key_to_base_address,
+            secret_phrase_to_account_key,
+        },
+    },
 };
-use crate::{error::Error, error::Result, trireme_ledger_client::cml_client::Keys};
 use async_trait::async_trait;
-use cardano_multiplatform_lib::{address::BaseAddress, crypto::PrivateKey};
+use cardano_multiplatform_lib::{
+    address::BaseAddress,
+    crypto::PrivateKey,
+};
 use chacha20::{
-    cipher::{KeyIvInit, StreamCipher},
+    cipher::{
+        KeyIvInit,
+        StreamCipher,
+    },
     ChaCha20,
 };
 use dialoguer::Password as InputPassword;
-use secrecy::{ExposeSecret, Secret};
-use serde::{Deserialize, Serialize};
+use secrecy::{
+    ExposeSecret,
+    Secret,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use std::path::PathBuf;
 use tokio::fs;
 
-use crate::trireme_ledger_client::cml_client::error::{CMLLCError, Result as CMLResult};
+use crate::trireme_ledger_client::cml_client::error::{
+    CMLLCError,
+    Result as CMLResult,
+};
 
 /// Type for representing a password protected phrase
 pub struct PasswordProtectedPhraseKeys<P: Password> {

@@ -1,21 +1,38 @@
-use pallas_addresses::{Address, Network};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::Path;
+use pallas_addresses::{
+    Address,
+    Network,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use std::{
+    collections::HashMap,
     fmt::Debug,
     fs::File,
-    io::{Read, Write},
+    io::{
+        Read,
+        Write,
+    },
     marker::PhantomData,
+    path::Path,
 };
 use thiserror::Error;
 
-use crate::ledger_client::test_ledger_client::arbitrary_tx_id;
-use crate::output::OutputId;
-use crate::scripts::plutus_validator::plutus_data::PlutusData;
 use crate::{
-    ledger_client::{test_ledger_client::TestLedgerStorage, LedgerClientError, LedgerClientResult},
-    output::Output,
+    ledger_client::{
+        test_ledger_client::{
+            arbitrary_tx_id,
+            TestLedgerStorage,
+        },
+        LedgerClientError,
+        LedgerClientResult,
+    },
+    output::{
+        Output,
+        OutputId,
+    },
+    scripts::plutus_validator::plutus_data::PlutusData,
     values::Values,
     PolicyId,
 };
@@ -251,7 +268,8 @@ where
 {
     async fn signer(&self) -> LedgerClientResult<Address> {
         let signer = self.get_data().active_signer;
-        Address::from_bech32(&signer).map_err(|e| LedgerClientError::BadAddress(Box::new(e)))
+        Address::from_bech32(&signer)
+            .map_err(|e| LedgerClientError::BadAddress(Box::new(e)))
     }
 
     async fn outputs_by_count(
@@ -271,7 +289,10 @@ where
         Ok(outputs)
     }
 
-    async fn all_outputs(&self, address: &Address) -> LedgerClientResult<Vec<Output<Datum>>> {
+    async fn all_outputs(
+        &self,
+        address: &Address,
+    ) -> LedgerClientResult<Vec<Output<Datum>>> {
         let data = self.get_data();
         let outputs = data
             .outputs

@@ -1,6 +1,9 @@
 use super::*;
 use crate::scripts::context::pub_key_hash_from_address_if_available;
-use sha2::{Digest, Sha256};
+use sha2::{
+    Digest,
+    Sha256,
+};
 
 struct HashedString {
     inner: Vec<u8>,

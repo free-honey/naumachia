@@ -1,11 +1,27 @@
-use crate::scripts::context::{
-    CtxDatum, CtxOutput, CtxOutputReference, CtxScriptPurpose, CtxValue, Input, PubKeyHash,
-    TxContext, ValidRange,
+use crate::scripts::{
+    context::{
+        CtxDatum,
+        CtxOutput,
+        CtxOutputReference,
+        CtxScriptPurpose,
+        CtxValue,
+        Input,
+        PubKeyHash,
+        TxContext,
+        ValidRange,
+    },
+    ScriptError,
 };
-use crate::scripts::ScriptError;
 use cardano_multiplatform_lib::ledger::common::hash::hash_plutus_data;
-use pallas_addresses::{Address, ShelleyDelegationPart, ShelleyPaymentPart};
-use serde::{Deserialize, Serialize};
+use pallas_addresses::{
+    Address,
+    ShelleyDelegationPart,
+    ShelleyPaymentPart,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
@@ -117,7 +133,8 @@ impl From<TxContext> for PlutusData {
     fn from(ctx: TxContext) -> Self {
         let inputs = PlutusData::Array(ctx.inputs.into_iter().map(Into::into).collect());
         let reference_inputs = PlutusData::Array(vec![]);
-        let outputs = PlutusData::Array(ctx.outputs.into_iter().map(Into::into).collect());
+        let outputs =
+            PlutusData::Array(ctx.outputs.into_iter().map(Into::into).collect());
         let fee = PlutusData::Map(BTreeMap::from([(
             PlutusData::BoundedBytes(Vec::new()),
             PlutusData::Map(BTreeMap::from([(
@@ -135,7 +152,8 @@ impl From<TxContext> for PlutusData {
         let dcert = PlutusData::Array(vec![]);
         let wdrl = PlutusData::Map(BTreeMap::new());
         let valid_range = ctx.range.into();
-        let mut signers: Vec<_> = ctx.extra_signatories.into_iter().map(Into::into).collect();
+        let mut signers: Vec<_> =
+            ctx.extra_signatories.into_iter().map(Into::into).collect();
         signers.push(ctx.signer.into());
         let signatories = PlutusData::Array(signers);
         let redeemers = PlutusData::Map(BTreeMap::new());
@@ -217,7 +235,8 @@ impl From<Address> for PlutusData {
                         wrap_with_constr(0, inner)
                     }
                     ShelleyDelegationPart::Script(script_keyhash) => {
-                        let bytes_data = PlutusData::BoundedBytes(script_keyhash.to_vec());
+                        let bytes_data =
+                            PlutusData::BoundedBytes(script_keyhash.to_vec());
                         let inner = wrap_with_constr(1, bytes_data);
                         wrap_with_constr(0, inner)
                     }
@@ -235,7 +254,10 @@ impl From<Address> for PlutusData {
                     ShelleyDelegationPart::Null => empty_constr(1),
                 };
 
-                wrap_multiple_with_constr(0, vec![payment_part_plutus_data, stake_part_plutus_data])
+                wrap_multiple_with_constr(
+                    0,
+                    vec![payment_part_plutus_data, stake_part_plutus_data],
+                )
             }
             _ => todo!(),
         }

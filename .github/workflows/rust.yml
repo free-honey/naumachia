@@ -20,9 +20,25 @@ jobs:
       run: cargo build --verbose --workspace
     - name: Run tests
       run: cargo test --verbose --workspace
-    - name: Lint
-      run: cargo fmt --all -- --check
     - name: Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install latest nightly
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt
+      - name: Rustfmt check
+        run: cargo +nightly fmt --all -- --check
+
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
     - name: Audit
       run: cargo audit

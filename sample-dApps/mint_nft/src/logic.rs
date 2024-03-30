@@ -1,13 +1,23 @@
 // use crate::logic::script::{get_parameterized_script, OutputReference};
 use async_trait::async_trait;
-use naumachia::output::Output;
-use naumachia::policy_id::PolicyId;
-use naumachia::scripts::ScriptError;
-use naumachia::{ledger_client::LedgerClient, logic::SCLogic, transaction::TxActions};
+use naumachia::{
+    ledger_client::LedgerClient,
+    logic::SCLogic,
+    output::Output,
+    policy_id::PolicyId,
+    scripts::ScriptError,
+    transaction::TxActions,
+};
 use thiserror::Error;
 
-use nau_scripts::one_shot::{get_parameterized_script, OutputReference};
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
+use nau_scripts::one_shot::{
+    get_parameterized_script,
+    OutputReference,
+};
+use naumachia::logic::error::{
+    SCLogicError,
+    SCLogicResult,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MintNFTLogic;

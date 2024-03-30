@@ -1,15 +1,26 @@
-use crate::transaction::nested_value_map::{add_amount_to_nested_map, nested_map_to_vecs};
 use crate::{
     error::*,
-    output::{Output, UnbuiltOutput},
+    output::{
+        Output,
+        UnbuiltOutput,
+    },
     policy_id::PolicyId,
-    scripts::{MintingPolicy, Validator},
+    scripts::{
+        MintingPolicy,
+        Validator,
+    },
+    transaction::nested_value_map::{
+        add_amount_to_nested_map,
+        nested_map_to_vecs,
+    },
     values::Values,
 };
 use pallas_addresses::Address;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt::Debug;
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fmt::Debug,
+};
 
 pub(crate) mod nested_value_map;
 
@@ -75,7 +86,7 @@ pub enum Action<Datum, Redeemer> {
         /// Redeemer used with the validator
         redeemer: Redeemer,
         /// Validator used to validate the transaction
-        script: Box<dyn Validator<Datum, Redeemer>>, // Is there a way to do this without `dyn`?
+        script: Box<dyn Validator<Datum, Redeemer>>, /* Is there a way to do this without `dyn`? */
     },
     /// Specify a specific input to use in the transaction
     SpecificInput {
@@ -120,7 +131,12 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
     /// Add a transfer to the actions.
     /// This will transfer `amount` of `policy_id` to `recipient` without specifying specific inputs
     /// and outputs.
-    pub fn with_transfer(mut self, amount: u64, recipient: Address, policy_id: PolicyId) -> Self {
+    pub fn with_transfer(
+        mut self,
+        amount: u64,
+        recipient: Address,
+        policy_id: PolicyId,
+    ) -> Self {
         let action = Action::Transfer {
             amount,
             recipient,
@@ -152,7 +168,12 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
 
     /// Add a script init to the actions.
     /// This will lock the `values` at the `address` with the `datum`.
-    pub fn with_script_init(mut self, datum: Datum, values: Values, address: Address) -> Self {
+    pub fn with_script_init(
+        mut self,
+        datum: Datum,
+        values: Values,
+        address: Address,
+    ) -> Self {
         let action = Action::InitScript {
             datum,
             values,
@@ -191,7 +212,11 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
     }
 
     /// Specify valid range in seconds since the Unix epoch
-    pub fn with_valid_range_secs(mut self, lower: Option<i64>, upper: Option<i64>) -> Self {
+    pub fn with_valid_range_secs(
+        mut self,
+        lower: Option<i64>,
+        upper: Option<i64>,
+    ) -> Self {
         self.valid_range = (lower, upper);
         self
     }
@@ -217,7 +242,12 @@ impl<Datum: Clone, Redeemer> TxActions<Datum, Redeemer> {
                     recipient,
                     policy_id: policy,
                 } => {
-                    add_amount_to_nested_map(&mut min_output_values, amount, &recipient, &policy);
+                    add_amount_to_nested_map(
+                        &mut min_output_values,
+                        amount,
+                        &recipient,
+                        &policy,
+                    );
                 }
                 Action::Mint {
                     amount,
@@ -273,12 +303,13 @@ fn create_outputs_for<Datum>(
     let outputs: Result<Vec<_>> = values
         .into_iter()
         .map(|(owner, val_vec)| {
-            let values = val_vec
-                .iter()
-                .fold(Values::default(), |mut acc, (policy, amt)| {
-                    acc.add_one_value(policy, *amt);
-                    acc
-                });
+            let values =
+                val_vec
+                    .iter()
+                    .fold(Values::default(), |mut acc, (policy, amt)| {
+                        acc.add_one_value(policy, *amt);
+                        acc
+                    });
             let addr = Address::from_bech32(&owner)
                 .map_err(|e| Error::Address(format!("Bad Bech32: {e:?}")))?;
             Ok(UnbuiltOutput::new_wallet(addr, values))

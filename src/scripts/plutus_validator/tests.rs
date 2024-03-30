@@ -1,5 +1,8 @@
 use super::*;
-use crate::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
+use crate::scripts::context::{
+    pub_key_hash_from_address_if_available,
+    ContextBuilder,
+};
 
 mod game;
 mod hello;

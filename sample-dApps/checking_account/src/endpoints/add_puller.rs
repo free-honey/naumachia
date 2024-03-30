@@ -1,14 +1,26 @@
 use crate::{
-    pull_validator, spend_token_policy, AllowedPuller, CheckingAccountDatums, CheckingAccountError,
+    pull_validator,
+    spend_token_policy,
+    AllowedPuller,
+    CheckingAccountDatums,
+    CheckingAccountError,
     SPEND_TOKEN_ASSET_NAME,
 };
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
 use naumachia::{
     ledger_client::LedgerClient,
+    logic::error::{
+        SCLogicError,
+        SCLogicResult,
+    },
     policy_id::PolicyId,
-    scripts::context::{pub_key_hash_from_address_if_available, PubKeyHash},
-    scripts::MintingPolicy,
-    scripts::Validator,
+    scripts::{
+        context::{
+            pub_key_hash_from_address_if_available,
+            PubKeyHash,
+        },
+        MintingPolicy,
+        Validator,
+    },
     transaction::TxActions,
     values::Values,
 };
@@ -29,9 +41,10 @@ pub async fn add_puller<LC: LedgerClient<CheckingAccountDatums, ()>>(
         .signer_base_address()
         .await
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let owner = pub_key_hash_from_address_if_available(&me).ok_or(SCLogicError::Endpoint(
-        Box::new(CheckingAccountError::InvalidAddress(me.clone())),
-    ))?;
+    let owner =
+        pub_key_hash_from_address_if_available(&me).ok_or(SCLogicError::Endpoint(
+            Box::new(CheckingAccountError::InvalidAddress(me.clone())),
+        ))?;
 
     let nft_id_bytes = hex::decode(checking_account_nft_id).unwrap();
     let my_pubkey = pub_key_hash_from_address_if_available(&me).unwrap();

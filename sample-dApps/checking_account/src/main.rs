@@ -1,13 +1,18 @@
 use anyhow::Result;
 use checking::{
-    CheckingAccountEndpoints, CheckingAccountLogic, CheckingAccountLookupResponses,
+    CheckingAccountEndpoints,
+    CheckingAccountLogic,
+    CheckingAccountLookupResponses,
     CheckingAccountLookups,
 };
 use clap::Parser;
-use naumachia::scripts::context::PubKeyHash;
-use naumachia::transaction::TxId;
 use naumachia::{
-    smart_contract::{SmartContract, SmartContractTrait},
+    scripts::context::PubKeyHash,
+    smart_contract::{
+        SmartContract,
+        SmartContractTrait,
+    },
+    transaction::TxId,
     trireme_ledger_client::get_trireme_ledger_client_from_file,
 };
 
@@ -36,7 +41,9 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Args::parse();
     match args.action {
-        ActionParams::Init { starting_ada } => init_checking_account_impl(starting_ada).await?,
+        ActionParams::Init { starting_ada } => {
+            init_checking_account_impl(starting_ada).await?
+        }
         ActionParams::MyAccounts => my_account_impl().await?,
         ActionParams::AddPuller => add_puller_impl().await?,
     }
@@ -51,7 +58,9 @@ async fn hit_endpoint(endpoint: CheckingAccountEndpoints) -> Result<TxId> {
     Ok(res)
 }
 
-async fn run_lookup(lookup: CheckingAccountLookups) -> Result<CheckingAccountLookupResponses> {
+async fn run_lookup(
+    lookup: CheckingAccountLookups,
+) -> Result<CheckingAccountLookupResponses> {
     let logic = CheckingAccountLogic;
     let ledger_client = get_trireme_ledger_client_from_file().await?;
     let contract = SmartContract::new(logic, ledger_client);

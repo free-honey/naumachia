@@ -1,10 +1,14 @@
-use naumachia::scripts::raw_script::BlueprintFile;
 use naumachia::{
     output::Output as NauOutput,
     scripts::{
         plutus_minting_policy::OneParamPlutusPolicy,
-        plutus_validator::plutus_data::{Constr, PlutusData},
-        ScriptError, ScriptResult,
+        plutus_validator::plutus_data::{
+            Constr,
+            PlutusData,
+        },
+        raw_script::BlueprintFile,
+        ScriptError,
+        ScriptResult,
     },
 };
 
@@ -53,16 +57,16 @@ impl From<OutputReference> for PlutusData {
     }
 }
 
-pub fn get_parameterized_script() -> ScriptResult<OneParamPlutusPolicy<OutputReference, ()>> {
+pub fn get_parameterized_script(
+) -> ScriptResult<OneParamPlutusPolicy<OutputReference, ()>> {
     let script_file: BlueprintFile = serde_json::from_str(BLUEPRINT)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
-    let validator_blueprint =
-        script_file
-            .get_validator(VALIDATOR_NAME)
-            .ok_or(ScriptError::FailedToConstruct(format!(
-                "Validator not listed in Blueprint: {:?}",
-                VALIDATOR_NAME
-            )))?;
+    let validator_blueprint = script_file.get_validator(VALIDATOR_NAME).ok_or(
+        ScriptError::FailedToConstruct(format!(
+            "Validator not listed in Blueprint: {:?}",
+            VALIDATOR_NAME
+        )),
+    )?;
     let raw_script_validator = OneParamPlutusPolicy::from_blueprint(validator_blueprint)
         .map_err(|e| ScriptError::FailedToConstruct(e.to_string()))?;
     Ok(raw_script_validator)
@@ -72,10 +76,17 @@ pub fn get_parameterized_script() -> ScriptResult<OneParamPlutusPolicy<OutputRef
 #[cfg(test)]
 mod tests {
     use super::*;
-    use naumachia::output::Output;
-    use naumachia::scripts::context::{pub_key_hash_from_address_if_available, ContextBuilder};
-    use naumachia::scripts::MintingPolicy;
-    use naumachia::Address;
+    use naumachia::{
+        output::Output,
+        scripts::{
+            context::{
+                pub_key_hash_from_address_if_available,
+                ContextBuilder,
+            },
+            MintingPolicy,
+        },
+        Address,
+    };
 
     #[test]
     fn execute__succeeds_when_output_included() {

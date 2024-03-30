@@ -1,11 +1,19 @@
 use crate::logic::script::get_script;
 use async_trait::async_trait;
-use naumachia::logic::error::{SCLogicError, SCLogicResult};
-use naumachia::output::DatumKind;
 use naumachia::{
     ledger_client::LedgerClient,
-    logic::SCLogic,
-    output::{Output, OutputId},
+    logic::{
+        error::{
+            SCLogicError,
+            SCLogicResult,
+        },
+        SCLogic,
+    },
+    output::{
+        DatumKind,
+        Output,
+        OutputId,
+    },
     policy_id::PolicyId,
     scripts::Validator,
     transaction::TxActions,
@@ -59,7 +67,9 @@ impl SCLogic for TimeLockedLogic {
                 amount,
                 after_secs: timestamp,
             } => impl_lock(ledger_client, amount, timestamp).await,
-            TimeLockedEndpoints::Claim { output_id } => impl_claim(ledger_client, output_id).await,
+            TimeLockedEndpoints::Claim { output_id } => {
+                impl_claim(ledger_client, output_id).await
+            }
         }
     }
 
@@ -140,10 +150,16 @@ mod tests {
     use super::*;
     use naumachia::{
         error::Error,
-        ledger_client::test_ledger_client::TestLedgerClientBuilder,
-        ledger_client::LedgerClientError,
-        smart_contract::{SmartContract, SmartContractTrait},
-        Address, Network,
+        ledger_client::{
+            test_ledger_client::TestLedgerClientBuilder,
+            LedgerClientError,
+        },
+        smart_contract::{
+            SmartContract,
+            SmartContractTrait,
+        },
+        Address,
+        Network,
     };
 
     #[tokio::test]

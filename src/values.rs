@@ -1,11 +1,19 @@
 use crate::{
-    error::{Error, Result},
+    error::{
+        Error,
+        Result,
+    },
     output::Output,
     PolicyId,
 };
-use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::collections::HashMap;
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+};
 
 /// Domain representation of value on the Cardano blockchain
 #[serde_with::serde_as]
@@ -106,7 +114,11 @@ impl Values {
     }
 }
 
-pub(crate) fn add_to_map(h_map: &mut HashMap<PolicyId, u64>, policy: PolicyId, amount: u64) {
+pub(crate) fn add_to_map(
+    h_map: &mut HashMap<PolicyId, u64>,
+    policy: PolicyId,
+    amount: u64,
+) {
     let mut new_total = amount;
     if let Some(total) = h_map.get(&policy) {
         new_total += total;

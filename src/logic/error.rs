@@ -1,5 +1,7 @@
-use crate::ledger_client::LedgerClientError;
-use crate::scripts::ScriptError;
+use crate::{
+    ledger_client::LedgerClientError,
+    scripts::ScriptError,
+};
 use std::error;
 use thiserror::Error;
 
@@ -21,7 +23,9 @@ pub enum SCLogicError {
 
 pub type SCLogicResult<T> = crate::error::Result<T, SCLogicError>;
 
-pub fn as_endpoint_err<E: error::Error + Send + Sync + 'static>(error: E) -> SCLogicError {
+pub fn as_endpoint_err<E: error::Error + Send + Sync + 'static>(
+    error: E,
+) -> SCLogicError {
     SCLogicError::Endpoint(Box::new(error))
 }
 

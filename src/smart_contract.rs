@@ -1,8 +1,12 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::transaction::TxId;
-use crate::{error::Result, ledger_client::LedgerClient, logic::SCLogic};
+use crate::{
+    error::Result,
+    ledger_client::LedgerClient,
+    logic::SCLogic,
+    transaction::TxId,
+};
 
 /// Interface defining how to interact with your smart contract
 #[async_trait]
@@ -77,7 +81,10 @@ where
         let tx = tx_actions.to_unbuilt_tx()?;
         match self.ledger_client.issue(tx).await {
             Ok(tx_id) => {
-                tracing::info!("Successfully submitted transaction with id: {:?}", &tx_id);
+                tracing::info!(
+                    "Successfully submitted transaction with id: {:?}",
+                    &tx_id
+                );
                 Ok(tx_id)
             }
             Err(err) => {
