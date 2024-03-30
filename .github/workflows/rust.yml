@@ -30,10 +30,10 @@ jobs:
       - name: Install latest nightly
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          toolchain: nightly
           components: rustfmt
       - name: Rustfmt check
-        run: cargo +${{ env.NIGHTLY_RUST_VERSION }} fmt --all -- --check
+        run: cargo +nightly fmt --all -- --check
 
 
   audit:
