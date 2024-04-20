@@ -448,7 +448,7 @@ where
                     acc
                 });
 
-        let maybe_remainder = total_input_value
+        let remainder = total_input_value
             .try_subtract(&total_output_value)
             .map_err(|_| TestLCError::NotEnoughInputs)
             .map_err(|e| LedgerClientError::FailedToIssueTx(Box::new(e)))?;
@@ -458,7 +458,7 @@ where
         }
 
         let mut combined_outputs = Vec::new();
-        if let Some(remainder) = maybe_remainder {
+        if  !remainder.is_empty() {
             combined_outputs.push(new_wallet_output(
                 &signer,
                 &remainder,

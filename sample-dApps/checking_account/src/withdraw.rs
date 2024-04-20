@@ -54,8 +54,6 @@ pub async fn withdraw_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     sub_values.add_one_value(&PolicyId::Lovelace, amount);
     let new_value = old_values
         .try_subtract(&sub_values)
-        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-        .ok_or(CheckingAccountError::OutputNotFound(output_id))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     let actions = TxActions::v2()
         .with_script_redeem(output, redeemer, script)

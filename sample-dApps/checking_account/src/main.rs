@@ -34,6 +34,11 @@ enum ActionParams {
     MyAccounts,
     /// Starts a dialogue to add a puller for a checking account
     AddPuller,
+    /// Pull from a checking account
+    Pull {
+        /// Checking account NFT
+        checking_account_nft: String,
+    },
 }
 
 #[tokio::main]
@@ -46,6 +51,9 @@ async fn main() -> Result<()> {
         }
         ActionParams::MyAccounts => my_account_impl().await?,
         ActionParams::AddPuller => add_puller_impl().await?,
+        ActionParams::Pull {
+            checking_account_nft,
+        } => pull_impl(checking_account_nft).await?,
     }
     Ok(())
 }
@@ -82,7 +90,10 @@ async fn my_account_impl() -> Result<()> {
     let res = run_lookup(lookup).await?;
     match res {
         CheckingAccountLookupResponses::MyAccounts(accounts) => {
-            accounts.iter().for_each(|account| {
+            if accounts.is_empty() {
+                println!("No accounts found");
+            } else {
+                accounts.iter().for_each(|account| {
                 println!("==========================================");
                 println!("{:?} ADA", account.balance_ada);
                 if let Some(nft) = &account.nft {
@@ -96,6 +107,7 @@ async fn my_account_impl() -> Result<()> {
                     println!("puller: {pkh:?}, amount: {amount:?} ADA, period: {period:?} ms, next pull: {next_pull:?} ms");
                 }
             })
+            }
         }
     }
     Ok(())
@@ -131,4 +143,12 @@ async fn add_puller_impl() -> Result<()> {
     let tx_id = hit_endpoint(endpoint).await?;
     println!("TxId: {:?}", tx_id);
     Ok(())
+}
+
+async fn pull_impl(_checking_account_nft: String) -> Result<()> {
+    todo!()
+    // let endpoint = CheckingAccountEndpoints::PullFromCheckingAccount { checking_account_nft };
+    // let tx_id = hit_endpoint(endpoint).await?;
+    // println!("TxId: {:?}", tx_id);
+    // Ok(())
 }

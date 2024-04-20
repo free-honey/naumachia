@@ -35,6 +35,22 @@ pub struct AllowedPuller {
     pub checking_account_nft: Vec<u8>,
 }
 
+impl AllowedPuller {
+    pub fn next(&self) -> Self {
+        let AllowedPuller {
+            next_pull,
+            period,
+            ..
+        } = self;
+        let old_pull_time = next_pull;
+        let next_pull = old_pull_time + period;
+        AllowedPuller {
+            next_pull,
+            ..self.clone()
+        }
+    }
+}
+
 impl From<AllowedPuller> for CheckingAccountDatums {
     fn from(value: AllowedPuller) -> Self {
         CheckingAccountDatums::AllowedPuller(value)
