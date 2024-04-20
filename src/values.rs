@@ -36,7 +36,6 @@ impl Values {
     pub fn try_subtract(&self, other: &Values) -> Result<Values> {
         let mut remainders = Vec::new();
         let mut mine_cloned = self.values.clone();
-        let mut there_is_a_difference = false;
         if !other.is_empty() {
             for (policy, amt) in other.as_iter() {
                 if let Some(available) = mine_cloned.remove(policy) {
@@ -44,32 +43,25 @@ impl Values {
                         Ordering::Less => {
                             let remaining = available - amt;
                             remainders.push((policy.clone(), remaining));
-                            there_is_a_difference = true;
                         }
                         Ordering::Greater => {
                             return Err(Error::InsufficientAmountOf(policy.to_owned()))
                         }
-                        _ => {}
+                        _ => {
+                            // no need to add anything to resulting values since the amount is 0
+                        }
                     }
                 } else {
                     return Err(Error::InsufficientAmountOf(policy.to_owned()));
                 }
             }
-        } else {
-            there_is_a_difference = true; // We just keep what we started with
         }
 
         let other_remainders: Vec<_> = mine_cloned.into_iter().collect();
         remainders.extend(other_remainders);
 
         let values = remainders.into_iter().collect();
-        // if there_is_a_difference {
-        //     let difference = Values { values };
-        //     Ok(Some(difference))
-        // } else {
-        //     Ok(None)
-        // }
-        Ok(Values{ values })
+        Ok(Values { values })
     }
 
     /// Add one value to the `self`

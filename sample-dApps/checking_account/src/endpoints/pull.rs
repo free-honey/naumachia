@@ -10,13 +10,15 @@ use naumachia::{
         SCLogicError,
         SCLogicResult,
     },
-    output::OutputId,
+    output::{
+        Output,
+        OutputId,
+    },
     policy_id::PolicyId,
     scripts::Validator,
     transaction::TxActions,
     values::Values,
 };
-use naumachia::output::Output;
 
 pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
@@ -59,12 +61,13 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let allow_pull_script = Box::new(allow_pull_validator);
     let allow_pull_value = allow_pull_output.values().clone();
 
-    let (old_allow_pull_datum, new_allow_pull_datum) = if let CheckingAccountDatums::AllowedPuller(old) = old_allow_pull_datum {
-        let new = old.next();
-        (old, new)
-    } else {
-        unimplemented!()
-    };
+    let (old_allow_pull_datum, new_allow_pull_datum) =
+        if let CheckingAccountDatums::AllowedPuller(old) = old_allow_pull_datum {
+            let new = old.next();
+            (old, new)
+        } else {
+            unimplemented!()
+        };
     let amount = old_allow_pull_datum.amount_lovelace;
 
     let old_pull_time = old_allow_pull_datum.next_pull;
@@ -74,11 +77,16 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let checking_account_script = Box::new(validator);
 
     let new_checking_account_datum = get_datum_from_output(&checking_account_output)?;
-    let new_account_value = calculate_new_account_value(&checking_account_output, amount)?;
+    let new_account_value =
+        calculate_new_account_value(&checking_account_output, amount)?;
 
     let actions = TxActions::v2()
         .with_script_redeem(allow_pull_output, allow_pull_redeemer, allow_pull_script)
-        .with_script_init(new_allow_pull_datum.into(), allow_pull_value, allow_pull_address)
+        .with_script_init(
+            new_allow_pull_datum.into(),
+            allow_pull_value,
+            allow_pull_address,
+        )
         .with_script_redeem(
             checking_account_output,
             checking_account_redeemer,
@@ -93,7 +101,10 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     Ok(actions)
 }
 
-fn calculate_new_account_value(checking_account_output: &Output<CheckingAccountDatums>, subtract: u64) -> SCLogicResult<Values> {
+fn calculate_new_account_value(
+    checking_account_output: &Output<CheckingAccountDatums>,
+    subtract: u64,
+) -> SCLogicResult<Values> {
     let old_values = checking_account_output.values().to_owned();
     let mut sub_values = Values::default();
     sub_values.add_one_value(&PolicyId::Lovelace, subtract);
@@ -103,19 +114,25 @@ fn calculate_new_account_value(checking_account_output: &Output<CheckingAccountD
     Ok(new_account_values)
 }
 
-fn get_datum_from_output(output: &Output<CheckingAccountDatums>) -> SCLogicResult<CheckingAccountDatums> {
+fn get_datum_from_output(
+    output: &Output<CheckingAccountDatums>,
+) -> SCLogicResult<CheckingAccountDatums> {
     output
         .typed_datum()
-        .ok_or(CheckingAccountError::DatumNotFoundForOutput(output.id().clone()))
+        .ok_or(CheckingAccountError::DatumNotFoundForOutput(
+            output.id().clone(),
+        ))
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))
         .map(|d| d.clone())
 }
 
-fn actions() -> TxActions<CheckingAccountDatums, ()> {
-    TxActions::v2()
-}
-
-async fn valid_time_to_pull<LC>(ledger_client: LC, old_pull_time: i64) -> SCLogicResult<i64> where LC: LedgerClient<CheckingAccountDatums, ()> {
+async fn valid_time_to_pull<LC>(
+    ledger_client: &LC,
+    old_pull_time: i64,
+) -> SCLogicResult<i64>
+where
+    LC: LedgerClient<CheckingAccountDatums, ()>,
+{
     let current_time = ledger_client
         .current_time_secs()
         .await

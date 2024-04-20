@@ -51,9 +51,9 @@ async fn main() -> Result<()> {
         }
         ActionParams::MyAccounts => my_account_impl().await?,
         ActionParams::AddPuller => add_puller_impl().await?,
-        ActionParams::Pull { checking_account_nft } => {
-            pull_impl(checking_account_nft).await?
-        }
+        ActionParams::Pull {
+            checking_account_nft,
+        } => pull_impl(checking_account_nft).await?,
     }
     Ok(())
 }
@@ -93,8 +93,7 @@ async fn my_account_impl() -> Result<()> {
             if accounts.is_empty() {
                 println!("No accounts found");
             } else {
-
-            accounts.iter().for_each(|account| {
+                accounts.iter().for_each(|account| {
                 println!("==========================================");
                 println!("{:?} ADA", account.balance_ada);
                 if let Some(nft) = &account.nft {
@@ -107,7 +106,8 @@ async fn my_account_impl() -> Result<()> {
                     let next_pull = puller.next_pull;
                     println!("puller: {pkh:?}, amount: {amount:?} ADA, period: {period:?} ms, next pull: {next_pull:?} ms");
                 }
-            }) }
+            })
+            }
         }
     }
     Ok(())
@@ -145,7 +145,7 @@ async fn add_puller_impl() -> Result<()> {
     Ok(())
 }
 
-async fn pull_impl(checking_account_nft: String) -> Result<()> {
+async fn pull_impl(_checking_account_nft: String) -> Result<()> {
     todo!()
     // let endpoint = CheckingAccountEndpoints::PullFromCheckingAccount { checking_account_nft };
     // let tx_id = hit_endpoint(endpoint).await?;
