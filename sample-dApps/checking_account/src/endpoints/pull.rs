@@ -22,7 +22,6 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
     allow_pull_output_id: OutputId,
     checking_account_output_id: OutputId,
-    amount: u64,
 ) -> SCLogicResult<TxActions<CheckingAccountDatums, ()>> {
     let network = ledger_client.network().await?;
     let allow_pull_validator = pull_validator()?;
@@ -60,25 +59,14 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let allow_pull_script = Box::new(allow_pull_validator);
     let allow_pull_value = allow_pull_output.values().clone();
 
-    #[allow(unused_assignments)]
-    let old_pull_time;
-    let new_allow_pull_datum = match old_allow_pull_datum {
-        CheckingAccountDatums::AllowedPuller(old_allowed_puller) => {
-            let AllowedPuller {
-                next_pull, period, ..
-            } = old_allowed_puller;
-            old_pull_time = next_pull;
-            let next_pull = old_pull_time + period;
-            AllowedPuller {
-                next_pull,
-                ..old_allowed_puller
-            }
-            .into()
-        }
-        _ => {
-            unimplemented!()
-        }
+    let (old_allow_pull_datum, new_allow_pull_datum) = if let CheckingAccountDatums::AllowedPuller(old) = old_allow_pull_datum {
+        let new = old.next();
+        (old, new)
+    } else {
+        unimplemented!()
     };
+    let old_pull_time = old_allow_pull_datum.next_pull;
+    let amount = old_allow_pull_datum.amount_lovelace;
 
     let current_time = ledger_client
         .current_time_secs()
@@ -104,19 +92,20 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     let checking_account_script = Box::new(validator);
 
     let old_values = checking_account_output.values().to_owned();
-    let mut sub_values = Values::default();
-    sub_values.add_one_value(&PolicyId::Lovelace, amount);
-    let new_account_value = old_values
-        .try_subtract(&sub_values)
-        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-        .ok_or(CheckingAccountError::OutputNotFound(
-            checking_account_output_id.clone(),
-        ))
-        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    // let mut sub_values = Values::default();
+    // sub_values.add_one_value(&PolicyId::Lovelace, amount);
+    // let new_account_value = old_values
+    //     .try_subtract(&sub_values)
+    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
+    //     .ok_or(CheckingAccountError::OutputNotFound(
+    //         checking_account_output_id.clone(),
+    //     ))
+    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let new_account_value = calculate_new_account_value(&old_values, amount)?;
 
     let actions = TxActions::v2()
         .with_script_redeem(allow_pull_output, allow_pull_redeemer, allow_pull_script)
-        .with_script_init(new_allow_pull_datum, allow_pull_value, allow_pull_address)
+        .with_script_init(new_allow_pull_datum.into(), allow_pull_value, allow_pull_address)
         .with_script_redeem(
             checking_account_output,
             checking_account_redeemer,
@@ -129,4 +118,13 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
         )
         .with_valid_range_secs(Some(current_time / 1000), None);
     Ok(actions)
+}
+
+fn calculate_new_account_value(old_values: &Values, subtract: u64) -> SCLogicResult<Values> {
+    let mut sub_values = Values::default();
+    sub_values.add_one_value(&PolicyId::Lovelace, subtract);
+    let new_account_values = old_values
+        .try_subtract(&sub_values)
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    Ok(new_account_values)
 }

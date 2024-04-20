@@ -334,7 +334,6 @@ async fn pull_from_account__replaces_existing_balances_with_updated_amounts_and_
     let pull_endpoint = CheckingAccountEndpoints::PullFromCheckingAccount {
         allow_pull_output_id,
         checking_account_output_id,
-        amount: pull_amount,
     };
     contract.hit_endpoint(pull_endpoint).await.unwrap();
 
@@ -449,9 +448,9 @@ async fn pull_from_account__fails_if_time_not_past_next_pull_time() {
     let pull_endpoint = CheckingAccountEndpoints::PullFromCheckingAccount {
         allow_pull_output_id,
         checking_account_output_id,
-        amount: pull_amount,
     };
     let err = contract.hit_endpoint(pull_endpoint).await.unwrap_err();
 
+    // Then
     assert!(matches!(err, Error::SCLogic(SCLogicError::Endpoint(_))));
 }

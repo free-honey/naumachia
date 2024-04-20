@@ -76,7 +76,6 @@ pub enum CheckingAccountEndpoints {
     PullFromCheckingAccount {
         allow_pull_output_id: OutputId,
         checking_account_output_id: OutputId,
-        amount: u64,
     },
 }
 
@@ -171,13 +170,11 @@ impl SCLogic for CheckingAccountLogic {
             CheckingAccountEndpoints::PullFromCheckingAccount {
                 allow_pull_output_id,
                 checking_account_output_id,
-                amount,
             } => {
                 pull_from_account(
                     ledger_client,
                     allow_pull_output_id,
                     checking_account_output_id,
-                    amount,
                 )
                 .await
             }

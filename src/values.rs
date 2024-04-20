@@ -33,7 +33,7 @@ impl Values {
     }
 
     /// Try to remove the `other` `Values` from `self`
-    pub fn try_subtract(&self, other: &Values) -> Result<Option<Values>> {
+    pub fn try_subtract(&self, other: &Values) -> Result<Values> {
         let mut remainders = Vec::new();
         let mut mine_cloned = self.values.clone();
         let mut there_is_a_difference = false;
@@ -63,12 +63,13 @@ impl Values {
         remainders.extend(other_remainders);
 
         let values = remainders.into_iter().collect();
-        if there_is_a_difference {
-            let difference = Values { values };
-            Ok(Some(difference))
-        } else {
-            Ok(None)
-        }
+        // if there_is_a_difference {
+        //     let difference = Values { values };
+        //     Ok(Some(difference))
+        // } else {
+        //     Ok(None)
+        // }
+        Ok(Values{ values })
     }
 
     /// Add one value to the `self`
