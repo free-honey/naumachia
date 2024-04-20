@@ -1,7 +1,6 @@
 use crate::{
     checking_account_validator,
     pull_validator,
-    AllowedPuller,
     CheckingAccountDatums,
     CheckingAccountError,
 };
@@ -17,6 +16,7 @@ use naumachia::{
     transaction::TxActions,
     values::Values,
 };
+use naumachia::output::Output;
 
 pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     ledger_client: &LC,
@@ -65,43 +65,16 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
     } else {
         unimplemented!()
     };
-    let old_pull_time = old_allow_pull_datum.next_pull;
     let amount = old_allow_pull_datum.amount_lovelace;
 
-    let current_time = ledger_client
-        .current_time_secs()
-        .await
-        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+    let old_pull_time = old_allow_pull_datum.next_pull;
+    let valid_pull_time = valid_time_to_pull(ledger_client, old_pull_time).await?;
 
-    if current_time < old_pull_time {
-        let err = CheckingAccountError::TooEarlyToPull {
-            next_pull: old_pull_time,
-            current_time,
-        };
-        return Err(SCLogicError::Endpoint(Box::new(err)));
-    }
-
-    let new_checking_account_datum = checking_account_output
-        .typed_datum()
-        .ok_or(CheckingAccountError::DatumNotFoundForOutput(
-            checking_account_output_id.clone(),
-        ))
-        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-        .clone();
     let checking_account_redeemer = ();
     let checking_account_script = Box::new(validator);
 
-    let old_values = checking_account_output.values().to_owned();
-    // let mut sub_values = Values::default();
-    // sub_values.add_one_value(&PolicyId::Lovelace, amount);
-    // let new_account_value = old_values
-    //     .try_subtract(&sub_values)
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?
-    //     .ok_or(CheckingAccountError::OutputNotFound(
-    //         checking_account_output_id.clone(),
-    //     ))
-    //     .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
-    let new_account_value = calculate_new_account_value(&old_values, amount)?;
+    let new_checking_account_datum = get_datum_from_output(&checking_account_output)?;
+    let new_account_value = calculate_new_account_value(&checking_account_output, amount)?;
 
     let actions = TxActions::v2()
         .with_script_redeem(allow_pull_output, allow_pull_redeemer, allow_pull_script)
@@ -116,15 +89,45 @@ pub async fn pull_from_account<LC: LedgerClient<CheckingAccountDatums, ()>>(
             new_account_value,
             checking_account_address,
         )
-        .with_valid_range_secs(Some(current_time / 1000), None);
+        .with_valid_range_secs(Some(valid_pull_time / 1000), None);
     Ok(actions)
 }
 
-fn calculate_new_account_value(old_values: &Values, subtract: u64) -> SCLogicResult<Values> {
+fn calculate_new_account_value(checking_account_output: &Output<CheckingAccountDatums>, subtract: u64) -> SCLogicResult<Values> {
+    let old_values = checking_account_output.values().to_owned();
     let mut sub_values = Values::default();
     sub_values.add_one_value(&PolicyId::Lovelace, subtract);
     let new_account_values = old_values
         .try_subtract(&sub_values)
         .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
     Ok(new_account_values)
+}
+
+fn get_datum_from_output(output: &Output<CheckingAccountDatums>) -> SCLogicResult<CheckingAccountDatums> {
+    output
+        .typed_datum()
+        .ok_or(CheckingAccountError::DatumNotFoundForOutput(output.id().clone()))
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))
+        .map(|d| d.clone())
+}
+
+fn actions() -> TxActions<CheckingAccountDatums, ()> {
+    TxActions::v2()
+}
+
+async fn valid_time_to_pull<LC>(ledger_client: LC, old_pull_time: i64) -> SCLogicResult<i64> where LC: LedgerClient<CheckingAccountDatums, ()> {
+    let current_time = ledger_client
+        .current_time_secs()
+        .await
+        .map_err(|e| SCLogicError::Endpoint(Box::new(e)))?;
+
+    if current_time < old_pull_time {
+        let err = CheckingAccountError::TooEarlyToPull {
+            next_pull: old_pull_time,
+            current_time,
+        };
+        return Err(SCLogicError::Endpoint(Box::new(err)));
+    }
+
+    Ok(current_time)
 }
